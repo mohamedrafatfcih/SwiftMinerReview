@@ -359,7 +359,7 @@
       return;
     }
     try {
-      const response = await fetch("raw/" + encodeURIComponent(caseID) + ".json", { cache: "no-store" });
+      const response = await fetch("raw/" + encodeURIComponent(caseID) + ".json?v=2", { cache: "no-store" });
       if (!response.ok) throw new Error("Detection not found.");
       const reviewCase = await response.json();
       document.title = reviewCase.refactoringType + " · SwiftMiner Review";
