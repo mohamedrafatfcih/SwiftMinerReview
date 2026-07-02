@@ -1,6 +1,27 @@
 (() => {
   const reviewerStorageKey = "swiftminer.reviewer_id";
+  const themeStorageKey = "swiftminer.theme";
   const params = new URLSearchParams(location.search);
+
+  function initializeTheme() {
+    const saved = localStorage.getItem(themeStorageKey);
+    const theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.dataset.theme = theme;
+    const button = document.querySelector("[data-theme-toggle]");
+    if (!button) return;
+    const render = value => {
+      button.setAttribute("aria-label", value === "dark" ? "Switch to light theme" : "Switch to dark theme");
+      button.setAttribute("aria-pressed", String(value === "dark"));
+      button.querySelector("[data-theme-icon]").textContent = value === "dark" ? "☀" : "☾";
+    };
+    render(theme);
+    button.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem(themeStorageKey, next);
+      render(next);
+    });
+  }
 
   function randomReviewerID() {
     const value = crypto.randomUUID ? crypto.randomUUID().replaceAll("-", "") : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
@@ -18,6 +39,7 @@
     return value;
   }
 
+  initializeTheme();
   const reviewer = reviewerID();
   const reviewStorageKey = "swiftminer.reviews." + reviewer;
   const profileStorageKey = "swiftminer.profile_complete." + reviewer;
@@ -34,16 +56,64 @@
   }
 
   function caseURL(caseID, runID) {
-    const query = new URLSearchParams({
-      case_id: caseID,
-      reviewer_id: reviewer,
-      run_id: runID || "",
-      review_key: reviewer + "--" + caseID
-    });
+    const query = new URLSearchParams({ case_id: caseID, reviewer_id: reviewer, run_id: runID || "", review_key: reviewer + "--" + caseID });
     return "case.html?" + query;
   }
 
+  function preserveReviewerLinks() {
+    for (const anchor of document.querySelectorAll("[data-preserve-reviewer]")) {
+      const url = new URL(anchor.getAttribute("href"), location.href);
+      if (url.origin !== location.origin) continue;
+      url.searchParams.set("reviewer_id", reviewer);
+      anchor.href = url.pathname + "?" + url.searchParams + url.hash;
+    }
+  }
+
+  function updateProgress(total) {
+    const reviewed = Math.min(Object.keys(storedReviews()).length, total);
+    document.querySelectorAll("[data-reviewed-count]").forEach(node => node.textContent = reviewed);
+    document.querySelectorAll("[data-total-count]").forEach(node => node.textContent = total);
+    document.querySelectorAll("[data-review-progress]").forEach(node => { node.max = Math.max(total, 1); node.value = reviewed; });
+  }
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+    } catch {}
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    if (!copied) throw new Error("Copy is unavailable");
+  }
+
+  function initializeCopyButtons() {
+    for (const button of document.querySelectorAll("[data-copy-target]")) {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copyTarget);
+        if (!target) return;
+        const original = button.textContent;
+        try {
+          await copyText(target.textContent);
+          button.textContent = "Copied";
+        } catch {
+          button.textContent = "Copy failed";
+        }
+        setTimeout(() => { button.textContent = original; }, 1400);
+      });
+    }
+  }
+
   function initializeHomePage() {
+    const total = Number(document.body.dataset.totalCases || 0);
+    updateProgress(total);
     const start = document.getElementById("start-reviewing");
     if (!start) return;
     start.href = "cases.html?reviewer_id=" + encodeURIComponent(reviewer);
@@ -72,13 +142,16 @@
   function initializeCasesPage() {
     const rows = Array.from(document.querySelectorAll("tbody tr"));
     const reviews = storedReviews();
+    updateProgress(rows.length);
     for (const row of rows) {
       const reviewed = Boolean(reviews[row.dataset.caseId]);
       row.dataset.reviewed = String(reviewed);
       const status = row.querySelector("[data-review-status]");
-      if (status) status.textContent = reviewed ? "Reviewed by me" : "Not reviewed";
-      const link = row.querySelector("[data-case-link]");
-      if (link) link.href = caseURL(row.dataset.caseId, row.dataset.runId);
+      if (status) {
+        status.textContent = reviewed ? "Reviewed" : "Not reviewed";
+        status.classList.toggle("is-reviewed", reviewed);
+      }
+      for (const link of row.querySelectorAll("[data-case-link]")) link.href = caseURL(row.dataset.caseId, row.dataset.runId);
     }
 
     const search = document.getElementById("case-search");
@@ -100,6 +173,14 @@
       visibleCount.textContent = visible;
     }
     [search, repo, type, status].forEach(control => control.addEventListener(control === search ? "input" : "change", applyFilters));
+    document.getElementById("clear-filters")?.addEventListener("click", () => {
+      search.value = "";
+      repo.value = "";
+      type.value = "";
+      status.value = "";
+      applyFilters();
+      search.focus();
+    });
     for (const toggle of document.querySelectorAll(".column-toggle")) {
       toggle.addEventListener("change", event => {
         for (const cell of document.querySelectorAll('[data-column="' + event.target.dataset.column + '"]')) cell.hidden = !event.target.checked;
@@ -160,9 +241,12 @@
       back.href = "cases.html?reviewer_id=" + encodeURIComponent(reviewer);
       const button = document.getElementById("review-button");
       const status = document.getElementById("review-status");
+      const badge = document.getElementById("case-review-badge");
       const previous = storedReviews()[caseID];
       if (previous) {
         button.textContent = "Edit review";
+        badge.textContent = "Reviewed";
+        badge.classList.add("is-reviewed");
         status.textContent = "Reviewed by you. A new submission will replace it in the final analysis while preserving the revision history.";
         const savedReview = document.getElementById("my-review");
         savedReview.hidden = false;
@@ -189,6 +273,8 @@
               const answers = Object.fromEntries((payload.fields || []).map(field => [field.title, field.answer?.value]));
               saveReview(caseID, { submissionID: payload.id, submittedAt: payload.createdAt, answers });
               button.textContent = "Edit review";
+              badge.textContent = "Reviewed";
+              badge.classList.add("is-reviewed");
               status.textContent = "Review saved. You may edit it later.";
               const savedReview = document.getElementById("my-review");
               savedReview.hidden = false;
@@ -206,6 +292,8 @@
     }
   }
 
+  preserveReviewerLinks();
+  initializeCopyButtons();
   if (document.body.dataset.page === "home") initializeHomePage();
   if (document.body.dataset.page === "cases") initializeCasesPage();
   if (document.body.dataset.page === "case") initializeCasePage();
