@@ -159,26 +159,51 @@
     const type = document.getElementById("type-filter");
     const status = document.getElementById("review-filter");
     const visibleCount = document.getElementById("visible-count");
-    function applyFilters() {
+    const pageSizeControl = document.getElementById("page-size");
+    const previous = document.getElementById("previous-page");
+    const next = document.getElementById("next-page");
+    const pageIndicator = document.getElementById("page-indicator");
+    const rangeSummary = document.getElementById("range-summary");
+    let page = 1;
+
+    function matchingRows() {
       const query = search.value.trim().toLowerCase();
-      let visible = 0;
-      for (const row of rows) {
-        const show = (!query || row.textContent.toLowerCase().includes(query))
+      return rows.filter(row => (!query || row.textContent.toLowerCase().includes(query))
           && (!repo.value || row.dataset.repository === repo.value)
           && (!type.value || row.dataset.type === type.value)
-          && (!status.value || row.dataset.reviewed === status.value);
-        row.hidden = !show;
-        if (show) visible += 1;
-      }
-      visibleCount.textContent = visible;
+          && (!status.value || row.dataset.reviewed === status.value));
     }
-    [search, repo, type, status].forEach(control => control.addEventListener(control === search ? "input" : "change", applyFilters));
+
+    function renderPage() {
+      const matches = matchingRows();
+      const pageSize = Number(pageSizeControl.value);
+      const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
+      page = Math.min(Math.max(page, 1), pageCount);
+      const start = (page - 1) * pageSize;
+      const end = Math.min(start + pageSize, matches.length);
+      const pageRows = new Set(matches.slice(start, end));
+      for (const row of rows) row.hidden = !pageRows.has(row);
+      visibleCount.textContent = matches.length;
+      rangeSummary.textContent = matches.length ? `Showing ${start + 1}–${end} of ${matches.length}` : "Showing 0 of 0";
+      pageIndicator.textContent = `Page ${page} of ${pageCount}`;
+      previous.disabled = page === 1;
+      next.disabled = page === pageCount;
+    }
+
+    function resetAndRender() {
+      page = 1;
+      renderPage();
+    }
+    [search, repo, type, status].forEach(control => control.addEventListener(control === search ? "input" : "change", resetAndRender));
+    pageSizeControl.addEventListener("change", resetAndRender);
+    previous.addEventListener("click", () => { page -= 1; renderPage(); });
+    next.addEventListener("click", () => { page += 1; renderPage(); });
     document.getElementById("clear-filters")?.addEventListener("click", () => {
       search.value = "";
       repo.value = "";
       type.value = "";
       status.value = "";
-      applyFilters();
+      resetAndRender();
       search.focus();
     });
     for (const toggle of document.querySelectorAll(".column-toggle")) {
@@ -186,6 +211,7 @@
         for (const cell of document.querySelectorAll('[data-column="' + event.target.dataset.column + '"]')) cell.hidden = !event.target.checked;
       });
     }
+    renderPage();
   }
 
   function addMetadata(container, label, value, link) {
@@ -209,6 +235,118 @@
     return typeof value === "string" ? value : JSON.stringify(value, null, 2);
   }
 
+  function renderLocation(container, evidence) {
+    container.replaceChildren();
+    if (!evidence) {
+      container.textContent = "Structured detector evidence";
+      return;
+    }
+    const label = evidence.filePath + " · L" + evidence.focusedStartLine
+      + (evidence.focusedEndLine === evidence.focusedStartLine ? "" : "–L" + evidence.focusedEndLine);
+    if (evidence.sourceURL) {
+      const link = document.createElement("a");
+      link.href = evidence.sourceURL;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = label;
+      container.append(link);
+    } else container.textContent = label;
+  }
+
+  function renderSource(targetID, locationID, evidence, fallback) {
+    const code = document.getElementById(targetID).firstElementChild;
+    code.replaceChildren();
+    renderLocation(document.getElementById(locationID), evidence);
+    if (!evidence) {
+      code.textContent = fallback;
+      return;
+    }
+    evidence.source.split("\n").forEach((text, index) => {
+      const lineNumber = evidence.contextStartLine + index;
+      const line = document.createElement("span");
+      line.className = "source-line";
+      line.dataset.line = lineNumber;
+      line.classList.toggle("is-focused", lineNumber >= evidence.focusedStartLine && lineNumber <= evidence.focusedEndLine);
+      line.textContent = text;
+      code.append(line);
+    });
+  }
+
+  function lineDiff(before, after) {
+    const oldLines = before.split("\n");
+    const newLines = after.split("\n");
+    if (oldLines.length * newLines.length > 200000) {
+      return oldLines.map(text => ({ type: "remove", text }))
+        .concat(newLines.map(text => ({ type: "add", text })));
+    }
+    const table = Array.from({ length: oldLines.length + 1 }, () => new Uint32Array(newLines.length + 1));
+    for (let oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex -= 1) {
+      for (let newIndex = newLines.length - 1; newIndex >= 0; newIndex -= 1) {
+        table[oldIndex][newIndex] = oldLines[oldIndex] === newLines[newIndex]
+          ? table[oldIndex + 1][newIndex + 1] + 1
+          : Math.max(table[oldIndex + 1][newIndex], table[oldIndex][newIndex + 1]);
+      }
+    }
+    const result = [];
+    let oldIndex = 0;
+    let newIndex = 0;
+    while (oldIndex < oldLines.length || newIndex < newLines.length) {
+      if (oldIndex < oldLines.length && newIndex < newLines.length && oldLines[oldIndex] === newLines[newIndex]) {
+        result.push({ type: "same", text: oldLines[oldIndex] });
+        oldIndex += 1;
+        newIndex += 1;
+      } else if (newIndex < newLines.length && (oldIndex === oldLines.length || table[oldIndex][newIndex + 1] > table[oldIndex + 1][newIndex])) {
+        result.push({ type: "add", text: newLines[newIndex++] });
+      } else {
+        result.push({ type: "remove", text: oldLines[oldIndex++] });
+      }
+    }
+    return result;
+  }
+
+  function renderUnified(beforeText, afterText, beforeStart, afterStart) {
+    const code = document.getElementById("unified-content").firstElementChild;
+    code.replaceChildren();
+    let oldLine = beforeStart;
+    let newLine = afterStart;
+    for (const entry of lineDiff(beforeText, afterText)) {
+      const line = document.createElement("span");
+      line.className = "source-line diff-line diff-line--" + entry.type;
+      line.dataset.oldLine = entry.type === "add" ? "" : oldLine;
+      line.dataset.newLine = entry.type === "remove" ? "" : newLine;
+      line.dataset.prefix = entry.type === "add" ? "+" : (entry.type === "remove" ? "−" : " ");
+      line.textContent = entry.text;
+      code.append(line);
+      if (entry.type !== "add") oldLine += 1;
+      if (entry.type !== "remove") newLine += 1;
+    }
+  }
+
+  function initializeSourceView() {
+    const buttons = Array.from(document.querySelectorAll("[data-source-view]"));
+    for (const button of buttons) {
+      button.addEventListener("click", () => {
+        for (const candidate of buttons) candidate.setAttribute("aria-pressed", String(candidate === button));
+        for (const panel of document.querySelectorAll("[data-source-panel]")) panel.hidden = panel.dataset.sourcePanel !== button.dataset.sourceView;
+      });
+    }
+  }
+
+  function renderCaseEvidence(reviewCase) {
+    const before = reviewCase.beforeSource;
+    const after = reviewCase.afterSource;
+    const beforeText = before?.source ?? contentFor(reviewCase, "old");
+    const afterText = after?.source ?? contentFor(reviewCase, "current");
+    renderSource("old-content", "old-location", before, beforeText);
+    renderSource("current-content", "current-location", after, afterText);
+    document.getElementById("source-evidence-note").textContent = before && after
+      ? "Focused source lines are highlighted; three surrounding lines provide context."
+      : "A source excerpt was unavailable on one or both sides, so structured detector evidence is shown as a fallback.";
+    document.getElementById("unified-location").textContent = (before?.filePath || "Before") + " → " + (after?.filePath || "After");
+    renderUnified(beforeText, afterText, before?.contextStartLine || 1, after?.contextStartLine || 1);
+    initializeSourceView();
+  }
+
   async function initializeCasePage() {
     const caseID = params.get("case_id") || "";
     const loading = document.getElementById("case-loading");
@@ -227,8 +365,7 @@
       document.title = reviewCase.refactoringType + " · SwiftMiner Review";
       document.getElementById("case-id").textContent = reviewCase.caseID;
       document.getElementById("case-type").textContent = reviewCase.refactoringType;
-      document.getElementById("old-content").firstElementChild.textContent = contentFor(reviewCase, "old");
-      document.getElementById("current-content").firstElementChild.textContent = contentFor(reviewCase, "current");
+      renderCaseEvidence(reviewCase);
       document.getElementById("raw-json").firstElementChild.textContent = JSON.stringify(reviewCase.rawRefactoring, null, 2);
       const metadata = document.getElementById("case-metadata");
       addMetadata(metadata, "Repository", reviewCase.repoName || reviewCase.repoID, reviewCase.repoURL);
