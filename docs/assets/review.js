@@ -229,6 +229,78 @@
     container.append(dt, dd);
   }
 
+  function readableCategory(value) {
+    if (value === "swift") return "Swift-specific";
+    return value ? value.charAt(0).toUpperCase() + value.slice(1) : "Not provided";
+  }
+
+  function readableLabel(value) {
+    if (value == null || value === "") return "No external label";
+    return value === "_" ? "_ (suppressed)" : String(value);
+  }
+
+  function addDetectionValue(container, label, value) {
+    if (value == null || value === "") return;
+    const field = document.createElement("div");
+    field.className = "detection-field";
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    field.append(dt, dd);
+    container.append(field);
+  }
+
+  function addDetectionChange(container, label, before, after, formatter = value => value == null ? "Not provided" : String(value)) {
+    if (before == null && after == null) return;
+    const oldValue = formatter(before);
+    const newValue = formatter(after);
+    const field = document.createElement("div");
+    field.className = "detection-field";
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.className = "change-values";
+    const oldCode = document.createElement("code");
+    oldCode.textContent = oldValue;
+    const arrow = document.createElement("span");
+    arrow.className = "change-arrow";
+    arrow.setAttribute("aria-label", "changed to");
+    arrow.textContent = "→";
+    const newCode = document.createElement("code");
+    newCode.textContent = newValue;
+    dd.append(oldCode, arrow, newCode);
+    if (oldValue === newValue) {
+      const unchanged = document.createElement("span");
+      unchanged.className = "unchanged-label";
+      unchanged.textContent = "unchanged";
+      dd.append(unchanged);
+    }
+    field.append(dt, dd);
+    container.append(field);
+  }
+
+  function renderDetectionSummary(reviewCase) {
+    const raw = reviewCase.rawRefactoring || {};
+    const oldContent = raw.old_content ?? raw.oldContent;
+    const currentContent = raw.current_content ?? raw.currentContent;
+    const fields = document.getElementById("detection-summary-fields");
+    addDetectionValue(fields, "Type", reviewCase.refactoringType);
+    addDetectionValue(fields, "Category", readableCategory(raw.category));
+
+    const functionName = raw.function_name ?? raw.functionName;
+    addDetectionValue(fields, "Function", functionName);
+    if (!oldContent || !currentContent || typeof oldContent !== "object" || typeof currentContent !== "object") return;
+    const order = currentContent.order ?? oldContent.order;
+    if (Number.isInteger(order)) addDetectionValue(fields, "Parameter position", String(order + 1));
+    if ("label" in oldContent || "label" in currentContent) {
+      addDetectionChange(fields, "External label", oldContent.label, currentContent.label, readableLabel);
+    }
+    if ("name" in oldContent || "name" in currentContent) {
+      addDetectionChange(fields, functionName ? "Internal name" : "Name", oldContent.name, currentContent.name);
+    }
+  }
+
   function contentFor(raw, side) {
     const value = raw?.rawRefactoring?.[side + "_content"] ?? raw?.rawRefactoring?.[side === "old" ? "oldContent" : "currentContent"];
     if (value == null) return "No " + (side === "old" ? "before" : "after") + " payload for this detection.";
@@ -365,6 +437,7 @@
       document.title = reviewCase.refactoringType + " · SwiftMiner Review";
       document.getElementById("case-id").textContent = reviewCase.caseID;
       document.getElementById("case-type").textContent = reviewCase.refactoringType;
+      renderDetectionSummary(reviewCase);
       renderCaseEvidence(reviewCase);
       document.getElementById("raw-json").firstElementChild.textContent = JSON.stringify(reviewCase.rawRefactoring, null, 2);
       const metadata = document.getElementById("case-metadata");
