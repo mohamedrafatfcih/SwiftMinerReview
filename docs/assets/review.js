@@ -478,6 +478,39 @@
     addCoreDetectorChanges(fields, reviewCase);
   }
 
+  function renderDetectorDetails(raw) {
+    const container = document.getElementById("detector-details-content");
+    if (!container) return;
+    container.replaceChildren();
+    const sections = [
+      ["Old content", detectorSide(raw, "old"), "old-content-json"],
+      ["Current content", detectorSide(raw, "current"), "current-content-json"]
+    ];
+    for (const [label, value, id] of sections) {
+      const details = document.createElement("details");
+      details.className = "json-section";
+      details.open = true;
+      const summary = document.createElement("summary");
+      summary.textContent = label;
+      const content = document.createElement("div");
+      content.className = "details-card__content";
+      const copy = document.createElement("button");
+      copy.className = "copy-button copy-button--float";
+      copy.type = "button";
+      copy.dataset.copyTarget = id;
+      copy.textContent = "Copy JSON";
+      const pre = document.createElement("pre");
+      pre.id = id;
+      const code = document.createElement("code");
+      code.textContent = JSON.stringify(value ?? null, null, 2);
+      pre.append(code);
+      content.append(copy, pre);
+      details.append(summary, content);
+      container.append(details);
+    }
+    initializeCopyButtons();
+  }
+
   function cleanStructuredValue(value) {
     if (value == null) return null;
     if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
@@ -559,7 +592,7 @@
       document.getElementById("case-id").textContent = reviewCase.caseID;
       document.getElementById("case-type").textContent = detectorType(reviewCase);
       renderDetectionSummary(reviewCase);
-      document.getElementById("raw-json").firstElementChild.textContent = JSON.stringify(reviewCase.rawRefactoring, null, 2);
+      renderDetectorDetails(reviewCase.rawRefactoring || {});
       const metadata = document.getElementById("case-metadata");
       addMetadata(metadata, "Repository", reviewCase.repoName || reviewCase.repoID, reviewCase.repoURL);
       addMetadata(metadata, "Commit", reviewCase.commitHash, reviewCase.commitURL);
