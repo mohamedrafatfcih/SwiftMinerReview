@@ -473,19 +473,19 @@
     fields.replaceChildren();
     addDetectionValue(fields, "Type", detectorType(reviewCase));
     addDetectionValue(fields, "Category", readableCategory(raw.category));
-    const functionName = raw.function_name ?? raw.functionName;
-    addDetectionValue(fields, "Function", functionName);
-    addCoreDetectorChanges(fields, reviewCase);
   }
 
   function renderDetectorDetails(raw) {
     const container = document.getElementById("detector-details-content");
     if (!container) return;
     container.replaceChildren();
+    const type = String(raw?.type || "").toLowerCase();
+    const isAdd = type.startsWith("add ") || type.includes(" add ");
+    const isRemove = type.startsWith("remove ") || type.startsWith("delete ") || type.includes(" remove ") || type.includes(" delete ");
     const sections = [
       ["Old content", detectorSide(raw, "old"), "old-content-json"],
       ["Current content", detectorSide(raw, "current"), "current-content-json"]
-    ];
+    ].filter(([label]) => !(isAdd && label === "Old content") && !(isRemove && label === "Current content"));
     for (const [label, value, id] of sections) {
       const details = document.createElement("details");
       details.className = "json-section";
