@@ -1,0 +1,2666 @@
+{
+  "caseID" : "case-ea81148b2d597138c825036f",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "(any EventMonitor)?",
+    "(any RequestInterceptor)?",
+    "(queue: DispatchQueue,\n                                  handler: @Sendable (_ response: HTTPURLResponse,\n                                                      _ completionHandler: @Sendable @escaping (ResponseDisposition) -> Void) -> Void)?",
+    "@Sendable @escaping (AFDataResponse<Data>) -> Void",
+    "@Sendable @escaping (AFDataResponse<Serializer.SerializedObject>) -> Void",
+    "@Sendable @escaping (AFDataResponse<String>) -> Void",
+    "@Sendable @escaping (AFDataResponse<Value>) -> Void",
+    "@Sendable @escaping (AFDataResponse<any Any & Sendable>) -> Void"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "name" : "Sendable"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Request"
+        },
+        {
+          "name" : "Sendable"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "super.reset()\n\n        dataMutableState.write { mutableState in\n            mutableState.data = nil\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 3736,
+              "start_position" : 3583
+            }
+          },
+          "modifiers" : [
+            "override"
+          ],
+          "name" : "reset",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dataMutableState.write { mutableState in\n            if mutableState.data == nil {\n                mutableState.data = data\n            } else {\n                mutableState.data?.append(data)\n            }\n        }\n\n        updateDownloadProgress()"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 4209,
+              "start_position" : 3736
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didReceive",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 3941,
+                  "start_position" : 3931
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dataMutableState.read { dataMutableState in\n            guard let httpResponseHandler = dataMutableState.httpResponseHandler else {\n                underlyingQueue.async { completionHandler(.allow) }\n                return\n            }\n\n            httpResponseHandler.queue.async {\n                httpResponseHandler.handler(response) { disposition in\n                    if disposition == .cancel {\n                        self.mutableState.write { mutableState in\n                            mutableState.state = .cancelled\n                            mutableState.error = mutableState.error ?? AFError.explicitlyCancelled\n                        }\n                    }\n\n                    self.underlyingQueue.async {\n                        completionHandler(disposition.sessionDisposition)\n                    }\n                }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 5228,
+              "start_position" : 4209
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didReceiveResponse",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 4268,
+                  "start_position" : 4239
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (URLSession.ResponseDisposition) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 4347,
+                  "start_position" : 4268
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let copiedRequest = request\n        return session.dataTask(with: copiedRequest)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 5419,
+              "start_position" : 5228
+            }
+          },
+          "modifiers" : [
+            "override"
+          ],
+          "name" : "task",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 5278,
+                  "start_position" : 5253
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "using",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 5303,
+                  "start_position" : 5278
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "URLSessionTask"
+            },
+            "description" : "-> URLSessionTask"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let totalBytesReceived = Int64(data?.count ?? 0)\n        let totalBytesExpected = task?.response?.expectedContentLength ?? NSURLSessionTransferSizeUnknown\n\n        downloadProgress.totalUnitCount = totalBytesExpected\n        downloadProgress.completedUnitCount = totalBytesReceived\n\n        downloadProgressHandler?.queue.async { self.downloadProgressHandler?.handler(self.downloadProgress) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 5928,
+              "start_position" : 5419
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateDownloadProgress",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let validator: () -> Void = { [unowned self] in\n            guard error == nil, let response else { return }\n\n            let result = validation(request, response, data)\n\n            if case let .failure(error) = result { self.error = error.asAFError(or: .responseValidationFailed(reason: .customValidationFailed(error: error))) }\n\n            eventMonitor?.request(self,\n                                  didValidateRequest: request,\n                                  response: response,\n                                  data: data,\n                                  withResult: result)\n        }\n\n        validators.write { $0.append(validator) }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 7049,
+              "start_position" : 5928
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "validate",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping Validation"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 6352,
+                  "start_position" : 6318
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "validation",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "_disfavoredOverload"
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "dataMutableState.write { mutableState in\n            mutableState.httpResponseHandler = (queue, handler)\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 8094,
+              "start_position" : 7049
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "onHTTPResponse",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "on",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 7727,
+                  "start_position" : 7686
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (_ response: HTTPURLResponse,\n                                              _ completionHandler: @Sendable @escaping (ResponseDisposition) -> Void) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "perform",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 7928,
+                  "start_position" : 7727
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "onHTTPResponse(on: queue) { response, completionHandler in\n            handler(response)\n            completionHandler(.allow)\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 8819,
+              "start_position" : 8094
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "onHTTPResponse",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "on",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 8542,
+                  "start_position" : 8510
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (HTTPURLResponse) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "perform",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 8636,
+                  "start_position" : 8542
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "appendResponseSerializer {\n            // Start work that should be on the serialization queue.\n            let result = AFResult<Data?>(value: self.data, error: self.error)\n            // End work that should be on the serialization queue.\n\n            self.underlyingQueue.async {\n                let response = DataResponse(request: self.request,\n                                            response: self.response,\n                                            data: self.data,\n                                            metrics: self.metrics,\n                                            serializationDuration: 0,\n                                            result: result)\n\n                self.eventMonitor?.request(self, didParseResponse: response)\n\n                self.responseSerializerDidComplete { queue.async { completionHandler(response) } }\n            }\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 10294,
+              "start_position" : 8819
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "response",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 9299,
+                  "start_position" : 9269
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (AFDataResponse<Data?>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 9369,
+                  "start_position" : 9299
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "appendResponseSerializer {\n            // Start work that should be on the serialization queue.\n            let start = ProcessInfo.processInfo.systemUptime\n            let result: AFResult<Serializer.SerializedObject> = Result {\n                try responseSerializer.serialize(request: self.request,\n                                                 response: self.response,\n                                                 data: self.data,\n                                                 error: self.error)\n            }.mapError { error in\n                error.asAFError(or: .responseSerializationFailed(reason: .customSerializationFailed(error: error)))\n            }\n\n            let end = ProcessInfo.processInfo.systemUptime\n            // End work that should be on the serialization queue.\n\n            self.underlyingQueue.async {\n                let response = DataResponse(request: self.request,\n                                            response: self.response,\n                                            data: self.data,\n                                            metrics: self.metrics,\n                                            serializationDuration: end - start,\n                                            result: result)\n\n                self.eventMonitor?.request(self, didParseResponse: response)\n\n                guard !self.isCancelled, let serializerError = result.failure, let delegate = self.delegate else {\n                    self.responseSerializerDidComplete { queue.async { completionHandler(response) } }\n                    return\n                }\n\n                delegate.retryResult(for: self, dueTo: serializerError) { retryResult in\n                    var didComplete: (@Sendable () -> Void)?\n\n                    defer {\n                        if let didComplete {\n                            self.responseSerializerDidComplete { queue.async { didComplete() } }\n                        }\n                    }\n\n                    switch retryResult {\n                    case .doNotRetry:\n                        didComplete = { completionHandler(response) }\n\n                    case let .doNotRetryWithError(retryError):\n                        let result: AFResult<Serializer.SerializedObject> = .failure(retryError.asAFError(orFailWith: \"Received retryError was not already AFError\"))\n\n                        let response = DataResponse(request: self.request,\n                                                    response: self.response,\n                                                    data: self.data,\n                                                    metrics: self.metrics,\n                                                    serializationDuration: end - start,\n                                                    result: result)\n\n                        didComplete = { completionHandler(response) }\n\n                    case .retry, .retryWithDelay:\n                        delegate.retryRequest(self, withDelay: retryResult.delay)\n                    }\n                }\n            }\n        }\n\n        return self"
+          },
+          "generic_clause" : "<Serializer: DataResponseSerializerProtocol>",
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 13777,
+              "start_position" : 10294
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_response",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 10396,
+                  "start_position" : 10367
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Serializer"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 10499,
+                  "start_position" : 10396
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "responseSerializer",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (AFDataResponse<Serializer.SerializedObject>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 10663,
+                  "start_position" : 10499
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "_response(queue: queue, responseSerializer: responseSerializer, completionHandler: completionHandler)"
+          },
+          "generic_clause" : "<Serializer: DataResponseSerializerProtocol>",
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 14780,
+              "start_position" : 13777
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "response",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 14382,
+                  "start_position" : 14353
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Serializer"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 14483,
+                  "start_position" : 14382
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "responseSerializer",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (AFDataResponse<Serializer.SerializedObject>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 14645,
+                  "start_position" : 14483
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "_response(queue: queue, responseSerializer: responseSerializer, completionHandler: completionHandler)"
+          },
+          "generic_clause" : "<Serializer: ResponseSerializer>",
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 15747,
+              "start_position" : 14780
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "response",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 15373,
+                  "start_position" : 15344
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Serializer"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 15462,
+                  "start_position" : 15373
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "responseSerializer",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (AFDataResponse<Serializer.SerializedObject>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 15612,
+                  "start_position" : 15462
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "response(queue: queue,\n                 responseSerializer: DataResponseSerializer(dataPreprocessor: dataPreprocessor,\n                                                            emptyResponseCodes: emptyResponseCodes,\n                                                            emptyRequestMethods: emptyRequestMethods),\n                 completionHandler: completionHandler)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 17511,
+              "start_position" : 15747
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "responseData",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 16663,
+                  "start_position" : 16634
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any DataPreprocessor"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultDataPreprocessor"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 16781,
+                  "start_position" : 16663
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataPreprocessor",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<Int>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyResponseCodes"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 16891,
+                  "start_position" : 16781
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyResponseCodes",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<HTTPMethod>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyRequestMethods"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 17010,
+                  "start_position" : 16891
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyRequestMethods",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (AFDataResponse<Data>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 17109,
+                  "start_position" : 17010
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 4
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "response(queue: queue,\n                 responseSerializer: StringResponseSerializer(dataPreprocessor: dataPreprocessor,\n                                                              encoding: encoding,\n                                                              emptyResponseCodes: emptyResponseCodes,\n                                                              emptyRequestMethods: emptyRequestMethods),\n                 completionHandler: completionHandler)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 19692,
+              "start_position" : 17511
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "responseString",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 18675,
+                  "start_position" : 18646
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any DataPreprocessor"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultDataPreprocessor"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 18797,
+                  "start_position" : 18675
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataPreprocessor",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String.Encoding?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 18862,
+                  "start_position" : 18797
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "encoding",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<Int>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyResponseCodes"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 18976,
+                  "start_position" : 18862
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyResponseCodes",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<HTTPMethod>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyRequestMethods"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 19099,
+                  "start_position" : 18976
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyRequestMethods",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (AFDataResponse<String>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 19202,
+                  "start_position" : 19099
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 5
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "*"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "deprecated"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "message",
+                  "value" : "responseJSON deprecated and will be removed in Alamofire 6. Use responseDecodable instead."
+                }
+              ]
+            },
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "response(queue: queue,\n                 responseSerializer: JSONResponseSerializer(dataPreprocessor: dataPreprocessor,\n                                                            emptyResponseCodes: emptyResponseCodes,\n                                                            emptyRequestMethods: emptyRequestMethods,\n                                                            options: options),\n                 completionHandler: completionHandler)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 21938,
+              "start_position" : 19692
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "responseJSON",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 20908,
+                  "start_position" : 20879
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any DataPreprocessor"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultDataPreprocessor"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 21026,
+                  "start_position" : 20908
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataPreprocessor",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<Int>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyResponseCodes"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 21136,
+                  "start_position" : 21026
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyResponseCodes",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<HTTPMethod>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyRequestMethods"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 21255,
+                  "start_position" : 21136
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyRequestMethods",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "JSONSerialization.ReadingOptions"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "allowFragments"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 21345,
+                  "start_position" : 21255
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "options",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (AFDataResponse<any Any & Sendable>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 21458,
+                  "start_position" : 21345
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 5
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "response(queue: queue,\n                 responseSerializer: DecodableResponseSerializer(dataPreprocessor: dataPreprocessor,\n                                                                 decoder: decoder,\n                                                                 emptyResponseCodes: emptyResponseCodes,\n                                                                 emptyRequestMethods: emptyRequestMethods),\n                 completionHandler: completionHandler)"
+          },
+          "generic_clause" : "<Value>",
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 24290,
+              "start_position" : 21938
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "responseDecodable",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Value.Type"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "self"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "of",
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 23065,
+                  "start_position" : 23032
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "type",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 23136,
+                  "start_position" : 23065
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any DataPreprocessor"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultDataPreprocessor"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 23278,
+                  "start_position" : 23136
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataPreprocessor",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any DataDecoder"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "JSONDecoder",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Core/DataRequest.swift",
+                        "location" : {
+                          "end_position" : 23360,
+                          "start_position" : 23347
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 23361,
+                  "start_position" : 23278
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "decoder",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<Int>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyResponseCodes"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 23495,
+                  "start_position" : 23361
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyResponseCodes",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Set<HTTPMethod>"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultEmptyRequestMethods"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 23638,
+                  "start_position" : 23495
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "emptyRequestMethods",
+              "order" : 5
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@Sendable @escaping (AFDataResponse<Value>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 23750,
+                  "start_position" : 23638
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completionHandler",
+              "order" : 6
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          },
+          "where_clause" : "where Value: Decodable, Value: Sendable"
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 3583,
+              "start_position" : 2017
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UUID"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "UUID",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Core/DataRequest.swift",
+                        "location" : {
+                          "end_position" : 2997,
+                          "start_position" : 2991
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 2998,
+                  "start_position" : 2980
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any URLRequestConvertible"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 3047,
+                  "start_position" : 2998
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "convertible",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 3088,
+                  "start_position" : 3047
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "underlyingQueue",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 3132,
+                  "start_position" : 3088
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "serializationQueue",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any EventMonitor)?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 3176,
+                  "start_position" : 3132
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "eventMonitor",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any RequestInterceptor)?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 3225,
+                  "start_position" : 3176
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "interceptor",
+              "order" : 5
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any RequestDelegate"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 3264,
+                  "start_position" : 3225
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "delegate",
+              "order" : 6
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/DataRequest.swift",
+        "location" : {
+          "end_position" : 24292,
+          "start_position" : 1221
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "DataRequest",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 1951,
+              "start_position" : 1607
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "DataMutableState",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Data?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 1670,
+                  "start_position" : 1659
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(queue: DispatchQueue,\n                                  handler: @Sendable (_ response: HTTPURLResponse,\n                                                      _ completionHandler: @Sendable @escaping (ResponseDisposition) -> Void) -> Void)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/DataRequest.swift",
+                "location" : {
+                  "end_position" : 1945,
+                  "start_position" : 1683
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "httpResponseHandler"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "any URLRequestConvertible"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 1510,
+              "start_position" : 1472
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "convertible"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Data?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "dataMutableState.data"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 1607,
+              "start_position" : 1570
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "data"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "value" : "DataMutableState()"
+                    }
+                  ],
+                  "call" : "Protected",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Core/DataRequest.swift",
+                    "location" : {
+                      "end_position" : 2017,
+                      "start_position" : 1988
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/DataRequest.swift",
+            "location" : {
+              "end_position" : 2017,
+              "start_position" : 1969
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "dataMutableState"
+        }
+      ]
+    },
+    "type" : "Add Confromed Type Refactoring"
+  },
+  "refactoringIndex" : 125,
+  "refactoringType" : "Add Confromed Type Refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Core/DataRequest.swift"
+  ]
+}

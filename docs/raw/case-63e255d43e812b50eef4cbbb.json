@@ -1,0 +1,97 @@
+{
+  "caseID" : "case-63e255d43e812b50eef4cbbb",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "ContainerConfiguration",
+    "config",
+    "configureInitialProcess",
+    "czConfig",
+    "inout LinuxContainer.Configuration"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let process = config.initProcess\n\n        czConfig.process.arguments = [process.executable] + process.arguments\n        czConfig.process.environmentVariables = process.environment\n\n        if config.ssh {\n            if !czConfig.process.environmentVariables.contains(where: { $0.starts(with: \"\\(Self.sshAuthSocketEnvVar)=\") }) {\n                czConfig.process.environmentVariables.append(\"\\(Self.sshAuthSocketEnvVar)=\\(Self.sshAuthSocketGuestPath)\")\n            }\n        }\n\n        czConfig.process.terminal = process.terminal\n        czConfig.process.workingDirectory = process.workingDirectory\n        try czConfig.process.rlimits = process.rlimits.map {\n            LinuxRLimit(\n                kind: try LinuxRLimit.Kind($0.limit),\n                hard: $0.hard,\n                soft: $0.soft\n            )\n        }\n        czConfig.process.capabilities = try Self.effectiveCapabilities(\n            capAdd: config.capAdd,\n            capDrop: config.capDrop\n        )\n        switch process.user {\n        case .raw(let name):\n            czConfig.process.user = .init(\n                uid: 0,\n                gid: 0,\n                umask: nil,\n                additionalGids: process.supplementalGroups,\n                username: name\n            )\n        case .id(let uid, let gid):\n            czConfig.process.user = .init(\n                uid: uid,\n                gid: gid,\n                umask: nil,\n                additionalGids: process.supplementalGroups,\n                username: \"\"\n            )\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location" : {
+          "end_position" : 42935,
+          "start_position" : 41229
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "configureInitialProcess",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "inout LinuxContainer.Configuration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 41333,
+              "start_position" : 41279
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "czConfig",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ContainerConfiguration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 41373,
+              "start_position" : 41333
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "config",
+          "order" : 1
+        }
+      ],
+      "specifiers_decl" : {
+        "description" : "throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 199,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
+  ]
+}

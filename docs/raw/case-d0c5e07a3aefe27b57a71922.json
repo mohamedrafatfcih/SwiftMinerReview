@@ -1,0 +1,45 @@
+{
+  "caseID" : "case-d0c5e07a3aefe27b57a71922",
+  "commitHash" : "1da2d91fa6316690ef97f46b450262286231c261",
+  "commitMessage" : "Add Separate Response Hooks (#3762)\n\n### Issue Link :link:\r\n#3401\r\n\r\n### Goals :soccer:\r\nThis PR adds `onHTTPResponse` closure hooks to `DataRequest` /\r\n`UploadRequest` and `DataStreamRequest` to enable the cancellation of\r\nrequests before data is transferred, requests that need to check\r\nresponse info for later parsing, or peculiar requests that may trigger\r\nmultiple response callbacks, like MJPEG streams.\r\n\r\n### Implementation Details :construction:\r\nLike the other value hooks, this API accepts a single closure. The only\r\nunique bit here is that there's second, disfavored, version of the API\r\nthat allows the user to return `ResponseDisposition` value to cancel or\r\nend the request without the body.\r\n\r\n### Testing Details :mag:\r\nStreaming tests are being updated to check these events always fire\r\nbefore the other events. More tests are needed around cancellation or\r\nending behavior to ensure that's really possible.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/1da2d91fa6316690ef97f46b450262286231c261",
+  "durationSeconds" : 13.914338946342468,
+  "entityNames" : [
+    "testThatDataRequestOnHTTPResponseCanCancel"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let url = Endpoint.get.url\n        var initialResponse: HTTPURLResponse?\n        let didReceiveResponse = expectation(description: \"didReceiveResponse\")\n        let didComplete = expectation(description: \"GET request should succeed: \\(url)\")\n        var response: DataResponse<Data?, AFError>?\n\n        // When\n        let request = AF.request(url, parameters: [\"foo\": \"bar\"])\n            .onHTTPResponse { response, completionHandler in\n                initialResponse = response\n                didReceiveResponse.fulfill()\n                completionHandler(.cancel)\n            }\n            .response { resp in\n                response = resp\n                didComplete.fulfill()\n            }\n\n        wait(for: [didReceiveResponse, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertEqual(initialResponse, response?.response)\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNil(response?.data)\n        XCTAssertTrue(request.isCancelled, \"onHTTPResponse cancelled request should have isCancelled == true\")\n        XCTAssertTrue(response?.error?.isExplicitlyCancelledError == true, \"onHTTPResponse cancelled request should be explicitly cancelled\")"
+      },
+      "location_info" : {
+        "file_path" : "Tests/RequestTests.swift",
+        "location" : {
+          "end_position" : 5435,
+          "start_position" : 4102
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataRequestOnHTTPResponseCanCancel",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 109,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/RequestTests.swift"
+  ]
+}

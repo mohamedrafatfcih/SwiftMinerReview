@@ -1,0 +1,418 @@
+{
+  "caseID" : "case-b1e2d995087c381e3fa33fd5",
+  "commitHash" : "c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "commitMessage" : "Reorganize Swift package targets for network plugin. (#1615)\n\n- Part of #1404.\n- Updates containerization to 0.33.2.\n- Reorganizes network plugin targets into:\n  - `ContainerNetworkClient` - network plugin client and default types\n- `ContainerNetworkServer` - separate protocols for `Network` which\nmanages the underlying virtual network, `NetworkService`, which takes a\nnetwork and implements the API, and an actor `NetworkHarness` that\nmarshals between the API and the XPC protocol. The service-harness\nseparation will help us ensure XPC protocol compatibility in both\ndirections as we evolve the plugin APIs.\n- Removes `disableAllocator()` which is no longer used since #1545\nswitched over to using XPC connections between runtime and network\nplugin instances to track whether a network has attached containers.",
+  "commitURL" : "https://github.com/apple/container/commit/c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "durationSeconds" : 8.8029299974441528,
+  "entityNames" : [
+    "(attachment: Attachment, additionalData: XPCMessage?)",
+    "Attachment?",
+    "MACAddress?",
+    "NetworkClient",
+    "NetworkState",
+    "String",
+    "XPCClient",
+    "XPCClientSession"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "NetworkClient"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: NetworkRoutes.state.rawValue)\n        let client = createClient()\n\n        let response = try await client.send(request)\n        let state = try response.state()\n        return state"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+            "location" : {
+              "end_position" : 1802,
+              "start_position" : 1518
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "state",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NetworkState"
+            },
+            "description" : "-> NetworkState"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: NetworkRoutes.allocate.rawValue)\n        request.set(key: NetworkKeys.hostname.rawValue, value: hostname)\n        if let macAddress = macAddress {\n            request.set(key: NetworkKeys.macAddress.rawValue, value: macAddress.description)\n        }\n\n        let client = createClient()\n\n        let response = try await client.send(request)\n        let attachment = try response.attachment()\n        let additionalData = response.additionalData()\n        return (attachment, additionalData)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+            "location" : {
+              "end_position" : 2509,
+              "start_position" : 1802
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "allocate",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+                "location" : {
+                  "end_position" : 1855,
+                  "start_position" : 1829
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "hostname",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "MACAddress?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+                "location" : {
+                  "end_position" : 1893,
+                  "start_position" : 1855
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "macAddress",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "(attachment: Attachment, additionalData: XPCMessage?)"
+            },
+            "description" : "-> (attachment: Attachment, additionalData: XPCMessage?)"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "createClient().openSession()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+            "location" : {
+              "end_position" : 2855,
+              "start_position" : 2509
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "connect",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCClientSession"
+            },
+            "description" : "-> XPCClientSession"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: NetworkRoutes.allocate.rawValue)\n        request.set(key: NetworkKeys.hostname.rawValue, value: hostname)\n        if let macAddress = macAddress {\n            request.set(key: NetworkKeys.macAddress.rawValue, value: macAddress.description)\n        }\n        let response = try await session.send(request)\n        let attachment = try response.attachment()\n        let additionalData = response.additionalData()\n        return (attachment, additionalData)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+            "location" : {
+              "end_position" : 3852,
+              "start_position" : 2855
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "allocate",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+                "location" : {
+                  "end_position" : 3197,
+                  "start_position" : 3171
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "hostname",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "MACAddress?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+                "location" : {
+                  "end_position" : 3236,
+                  "start_position" : 3197
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "macAddress",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCClientSession"
+              },
+              "is_variadic" : false,
+              "label" : "on",
+              "location_info" : {
+                "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+                "location" : {
+                  "end_position" : 3273,
+                  "start_position" : 3236
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "(attachment: Attachment, additionalData: XPCMessage?)"
+            },
+            "description" : "-> (attachment: Attachment, additionalData: XPCMessage?)"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: NetworkRoutes.lookup.rawValue)\n        request.set(key: NetworkKeys.hostname.rawValue, value: hostname)\n\n        let client = createClient()\n\n        let response = try await client.send(request)\n        return try response.dataNoCopy(key: NetworkKeys.attachment.rawValue).map {\n            try JSONDecoder().decode(Attachment.self, from: $0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+            "location" : {
+              "end_position" : 4323,
+              "start_position" : 3852
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "lookup",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+                "location" : {
+                  "end_position" : 3893,
+                  "start_position" : 3877
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "hostname",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "Attachment?"
+            },
+            "description" : "-> Attachment?"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XPCClient(service: machServiceLabel)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+            "location" : {
+              "end_position" : 4422,
+              "start_position" : 4323
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createClient",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCClient"
+            },
+            "description" : "-> XPCClient"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/Network/Client/NetworkClient.swift",
+        "location" : {
+          "end_position" : 4424,
+          "start_position" : 1472
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add Extension refactoring"
+  },
+  "refactoringIndex" : 87,
+  "refactoringType" : "Add Extension refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/Network/Client/NetworkClient.swift"
+  ]
+}

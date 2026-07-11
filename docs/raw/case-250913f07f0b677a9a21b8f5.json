@@ -1,0 +1,602 @@
+{
+  "caseID" : "case-250913f07f0b677a9a21b8f5",
+  "commitHash" : "3842977f4aa4c53cc9b9df65900aa1ab4498fdc1",
+  "commitMessage" : "Migrate basic system tests to new test support types. (#1841)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/3842977f4aa4c53cc9b9df65900aa1ab4498fdc1",
+  "durationSeconds" : 0.67437291145324707,
+  "entityNames" : [
+    "Codable",
+    "String",
+    "TestCLIVersion",
+    "VersionInfo",
+    "VersionInfo?",
+    "VersionOutput",
+    "appName",
+    "buildType"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "#if DEBUG\n        return \"debug\"\n        #else\n        return \"release\"\n        #endif"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 1438,
+              "start_position" : 1287
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "expectedBuildType",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"version\"])\n            #expect(result.status == 0, \"system version should succeed, stderr: \\(result.error)\")\n            #expect(!result.output.isEmpty)\n\n            let lines = result.output.trimmingCharacters(in: .whitespacesAndNewlines)\n                .components(separatedBy: .newlines)\n            #expect(lines.count >= 2)\n            #expect(\n                lines[0].contains(\"COMPONENT\") && lines[0].contains(\"VERSION\")\n                    && lines[0].contains(\"BUILD\") && lines[0].contains(\"COMMIT\"))\n            #expect(lines[1].hasPrefix(\"container\"))\n\n            let expected = expectedBuildType()\n            #expect(lines.joined(separator: \"\\n\").contains(\" \\(expected) \"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 2292,
+              "start_position" : 1438
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "defaultDisplaysTable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"version\", \"--format\", \"json\"])\n            #expect(result.status == 0, \"system version --format json should succeed, stderr: \\(result.error)\")\n            #expect(!result.output.isEmpty)\n\n            let decoded = try JSONDecoder().decode([VersionOutput].self, from: result.outputData)\n            #expect(decoded[0].appName == \"container\")\n            #expect(!decoded[0].version.isEmpty)\n            #expect(!decoded[0].commit.isEmpty)\n            #expect(decoded[0].buildType == expectedBuildType())\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 2949,
+              "start_position" : 2292
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "jsonFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"version\", \"--format\", \"yaml\"])\n            #expect(result.status == 0, \"system version --format yaml should succeed, stderr: \\(result.error)\")\n            #expect(!result.output.isEmpty)\n\n            let decoded = try YAMLDecoder().decode([VersionOutput].self, from: result.outputData)\n            #expect(decoded[0].appName == \"container\")\n            #expect(!decoded[0].version.isEmpty)\n            #expect(!decoded[0].commit.isEmpty)\n            #expect(decoded[0].buildType == expectedBuildType())\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 3606,
+              "start_position" : 2949
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "yamlFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"version\", \"--format\", \"table\"])\n            #expect(result.status == 0, \"system version --format table should succeed, stderr: \\(result.error)\")\n            #expect(!result.output.isEmpty)\n\n            let lines = result.output.trimmingCharacters(in: .whitespacesAndNewlines)\n                .components(separatedBy: .newlines)\n            #expect(lines.count >= 2)\n            #expect(\n                lines[0].contains(\"COMPONENT\") && lines[0].contains(\"VERSION\")\n                    && lines[0].contains(\"BUILD\") && lines[0].contains(\"COMMIT\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 4317,
+              "start_position" : 3606
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "explicitTableFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"version\", \"--format\", \"json\"])\n            #expect(result.status == 0, \"version --format json should succeed, stderr: \\(result.error)\")\n\n            let decoded = try JSONDecoder().decode([VersionOutput].self, from: result.outputData)\n            let expected = expectedBuildType()\n            #expect(\n                decoded[0].buildType == expected,\n                \"Expected build type \\(expected) but got \\(decoded[0].buildType)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 4919,
+              "start_position" : 4317
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "buildTypeMatchesBinary",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+        "location" : {
+          "end_position" : 4921,
+          "start_position" : 831
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIVersion",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 1098,
+              "start_position" : 945
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "VersionInfo",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1007,
+                  "start_position" : 992
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "version"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1037,
+                  "start_position" : 1020
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "buildType"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1064,
+                  "start_position" : 1050
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "commit"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1092,
+                  "start_position" : 1077
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "appName"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 1287,
+              "start_position" : 1098
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "VersionOutput",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1163,
+                  "start_position" : 1148
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "version"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1193,
+                  "start_position" : 1176
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "buildType"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1220,
+                  "start_position" : 1206
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "commit"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1248,
+                  "start_position" : 1233
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "appName"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "VersionInfo?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1281,
+                  "start_position" : 1261
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "server"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 18,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/System/TestCLIVersion.swift"
+  ]
+}

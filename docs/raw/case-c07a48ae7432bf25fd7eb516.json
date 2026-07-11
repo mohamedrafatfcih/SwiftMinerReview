@@ -1,0 +1,83 @@
+{
+  "caseID" : "case-c07a48ae7432bf25fd7eb516",
+  "commitHash" : "17c7f9b03121cea798fe281c37a7133f2675aa72",
+  "commitMessage" : "Allow Empty EventMonitors And Try To Fix `CompositeEventMonitor` Thread-Safety (#3894)\n\n### Issue Link :link:\r\n#3635, #3667\r\n\r\n### Goals :soccer:\r\nThis PR attempts to fix unreproducible `CompositeEventMonitor` crashes\r\nin two ways:\r\n\r\n1. Passing `[]` to the `Session` inits now creates a\r\n`CompositeEventMonitor` that's properly empty rather than always\r\nincluding an `AlamofireNotifications` monitor. This should allow anyone\r\nseeing this crash to empty out the monitors to see if the crash is\r\nresolved. **Technically this is a breaking change** as anyone passing\r\n`[]` currently has notification support. This should be rare, and this\r\nfix is important enough to justify breaking that non-obvious usage.\r\n2. The stored monitors in the `CompositeEventMonitor` are now protected\r\nand accessed through a lock, so should be made safer. Of course, I could\r\nnever figure out how any access there could be unsafe since it should\r\nalways be accessed on the serial internal queue, so we'll see if that\r\nhelps anything.\r\n\r\n### Implementation Details :construction:\r\n`Session` init updated, lock added.\r\n\r\n### Testing Details :mag:\r\nNo tests added, test suite passes.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/17c7f9b03121cea798fe281c37a7133f2675aa72",
+  "durationSeconds" : 10.551203012466431,
+  "entityNames" : [
+    "@escaping (EventMonitor) -> Void",
+    "event",
+    "performEvent"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "depth" : 0,
+      "description" : "for monitor in monitors {\n                    monitor.queue.async { event(monitor) }\n                }",
+      "index" : 0
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "queue.async {\n            self.monitors.read { monitors in\n                for monitor in monitors {\n                    monitor.queue.async { event(monitor) }\n                }\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Source/Features/EventMonitor.swift",
+        "location" : {
+          "end_position" : 19066,
+          "start_position" : 18782
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "performEvent",
+      "parameters" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping (EventMonitor) -> Void"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 18847,
+              "start_position" : 18806
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "event",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 30,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Features/EventMonitor.swift"
+  ]
+}

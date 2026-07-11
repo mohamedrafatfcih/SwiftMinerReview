@@ -1,0 +1,60 @@
+{
+  "caseID" : "case-36f5db8c8550a690587ce837",
+  "commitHash" : "b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
+  "commitMessage" : "Prevent Duplicate Serializer Completion Calls (#3999)\n\n### Issue Link :link:\nFixes #3978\n\n### Goals :soccer:\nThis PR fixes the possible duplicate completion handler calls that cause\n#3978.\n\nDue to multiple paths into `processNextResponseSerializer()` there was a\nlogical race where the same response serializer could be completed\nmultiple times when cancelled, leading to a concurrency runtime crash\ndue to resuming a continuation more than once.\n\n### Implementation Details :construction:\nAdditional state was added to track whether a `Request` had currently\nenqueued a serializer which is checked upon entering\n`processNextResponseSerializer()`, allowing it to return early if a\nserializer is in flight. This ensures that no matter how many times\n`processNextResponseSerializer()` is called, only one attempt will\nenqueue a particular serializer and, potentially, its completion.\n\n### Testing Details :mag:\nAdditional test added which could locally reproduce the issue.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
+  "durationSeconds" : 31.487722039222717,
+  "entityNames" : [
+    "sessionWideRetrierCanTimeOutMultipleRequests"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Test"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let didStop = Protected(false)\n        let pathAvailable: Protected<DispatchWorkItem?> = .init(nil)\n        let monitor = PathMonitor { queue, onResult in\n            let work = DispatchWorkItem { onResult(.pathAvailable) }\n            pathAvailable.write(work)\n            // Given: path available after one second.\n            queue.asyncAfter(deadline: .now() + .seconds(1), execute: work)\n        } stop: {\n            pathAvailable.write { $0?.cancel() }\n            didStop.write(true)\n        }\n\n        // When\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .milliseconds(10)) { _ in true }\n        let session = Session(interceptor: retrier)\n        // When: multiple requests are started which initially fail due to validation.\n        async let first = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let second = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let third = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let fourth = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n\n        // Then: all requests succeed after retry.\n        await #expect(first.isSuccess == false)\n        await #expect(second.isSuccess == false)\n        await #expect(third.isSuccess == false)\n        await #expect(fourth.isSuccess == false)\n        // Then: monitor has stopped due to `Session` deinit.\n        #expect(didStop.value == true)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/OfflineRetrierTests.swift",
+        "location" : {
+          "end_position" : 9168,
+          "start_position" : 7507
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "sessionWideRetrierCanTimeOutMultipleRequests",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "old_specifier" : "throws",
+    "type" : "Remove Throws Specifier"
+  },
+  "refactoringIndex" : 53,
+  "refactoringType" : "Remove Throws Specifier",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/OfflineRetrierTests.swift"
+  ]
+}

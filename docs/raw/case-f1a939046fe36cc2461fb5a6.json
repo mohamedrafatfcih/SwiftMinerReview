@@ -1,0 +1,187 @@
+{
+  "caseID" : "case-f1a939046fe36cc2461fb5a6",
+  "commitHash" : "4879a465e6588b2d214f930b299348ff22fe4198",
+  "commitMessage" : "data: prevent duplicate VMs from appearing\n\nThanks @DevSecTim for triaging.\n\nFixes #7533\n",
+  "commitURL" : "https://github.com/utmapp/UTM/commit/4879a465e6588b2d214f930b299348ff22fe4198",
+  "durationSeconds" : 4.108564019203186,
+  "entityNames" : [
+    "Bool",
+    "URL",
+    "asShortcut",
+    "importUTM",
+    "url"
+  ],
+  "rawRefactoring" : {
+    "binding_kind" : "guard let",
+    "category" : "swift",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard url.isFileURL else { return }\n        let isScopedAccess = url.startAccessingSecurityScopedResource()\n        defer {\n            if isScopedAccess {\n                url.stopAccessingSecurityScopedResource()\n            }\n        }\n\n        logger.info(\"importing: \\(url)\")\n        // attempt to turn temp URL to presistent bookmark early otherwise,\n        // when stopAccessingSecurityScopedResource() is called, we lose access\n        let bookmark = try url.persistentBookmarkData()\n        let url = try URL(resolvingPersistentBookmarkData: bookmark)\n        let fileBasePath = url.deletingLastPathComponent()\n        let fileName = url.lastPathComponent\n        let dest = documentsURL.appendingPathComponent(fileName, isDirectory: true)\n        if let vm = virtualMachines.first(where: { vm -> Bool in\n            return isSameFile(vm.pathUrl, as: url)\n        }) {\n            logger.info(\"found existing vm!\")\n            if !vm.isLoaded {\n                logger.info(\"existing vm is wrapped\")\n                try vm.load()\n            } else {\n                logger.info(\"existing vm is not wrapped\")\n                listSelect(vm: vm)\n            }\n            return\n        }\n        // check if VM is valid\n        guard let _ = try? VMData(url: url) else {\n            throw UTMDataError.importFailed\n        }\n        let vm: VMData?\n        if (fileBasePath.resolvingSymlinksInPath().path == documentsURL.appendingPathComponent(\"Inbox\", isDirectory: true).path) {\n            logger.info(\"moving from Inbox\")\n            try fileManager.moveItem(at: url, to: dest)\n            vm = try VMData(url: dest)\n        } else if asShortcut {\n            logger.info(\"loading as a shortcut\")\n            vm = try VMData(url: url)\n        } else {\n            logger.info(\"copying to Documents\")\n            try fileManager.copyItem(at: url, to: dest)\n            vm = try VMData(url: dest)\n        }\n        guard let vm = vm else {\n            throw UTMDataError.importParseFailed\n        }\n        listAdd(vm: vm)\n        listSelect(vm: vm)\n        // warn user if imported .utm has custom arguments\n        if let qemuConfig = vm.wrapped?.config as? UTMQemuConfiguration, !qemuConfig.qemu.additionalArguments.isEmpty {\n            showLocalizedErrorAlert(\"This virtual machine uses custom QEMU arguments which is potentially dangerous and can cause damage to your machine. You should only run this virtual machine if you trust it.\")\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Platform/UTMData.swift",
+        "location" : {
+          "end_position" : 26339,
+          "start_position" : 23424
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "importUTM",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URL"
+          },
+          "is_variadic" : false,
+          "label" : "from",
+          "location_info" : {
+            "file_path" : "Platform/UTMData.swift",
+            "location" : {
+              "end_position" : 23825,
+              "start_position" : 23810
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "url",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "true"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Platform/UTMData.swift",
+            "location" : {
+              "end_position" : 23848,
+              "start_position" : 23825
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "asShortcut",
+          "order" : 1
+        }
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "force_unwrapped_expression" : "vm",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard url.isFileURL else { return }\n        let isScopedAccess = url.startAccessingSecurityScopedResource()\n        defer {\n            if isScopedAccess {\n                url.stopAccessingSecurityScopedResource()\n            }\n        }\n\n        logger.info(\"importing: \\(url)\")\n        // attempt to turn temp URL to presistent bookmark early otherwise,\n        // when stopAccessingSecurityScopedResource() is called, we lose access\n        let bookmark = try url.persistentBookmarkData()\n        let url = try URL(resolvingPersistentBookmarkData: bookmark)\n        let fileBasePath = url.deletingLastPathComponent()\n        let fileName = url.lastPathComponent\n        let dest = documentsURL.appendingPathComponent(fileName, isDirectory: true)\n        if let vm = virtualMachines.first(where: { vm -> Bool in\n            return vm.pathUrl.standardizedFileURL == url.standardizedFileURL\n        }) {\n            logger.info(\"found existing vm!\")\n            if !vm.isLoaded {\n                logger.info(\"existing vm is wrapped\")\n                try vm.load()\n            } else {\n                logger.info(\"existing vm is not wrapped\")\n                listSelect(vm: vm)\n            }\n            return\n        }\n        // check if VM is valid\n        guard let _ = try? VMData(url: url) else {\n            throw UTMDataError.importFailed\n        }\n        let vm: VMData?\n        if (fileBasePath.resolvingSymlinksInPath().path == documentsURL.appendingPathComponent(\"Inbox\", isDirectory: true).path) {\n            logger.info(\"moving from Inbox\")\n            try fileManager.moveItem(at: url, to: dest)\n            vm = try VMData(url: dest)\n        } else if asShortcut {\n            logger.info(\"loading as a shortcut\")\n            vm = try VMData(url: url)\n        } else {\n            logger.info(\"copying to Documents\")\n            try fileManager.copyItem(at: url, to: dest)\n            vm = try VMData(url: dest)\n        }\n        guard let vm = vm else {\n            throw UTMDataError.importParseFailed\n        }\n        listAdd(vm: vm)\n        listSelect(vm: vm)\n        // warn user if imported .utm has custom arguments\n        if let qemuConfig = vm.wrapped?.config as? UTMQemuConfiguration, !qemuConfig.qemu.additionalArguments.isEmpty {\n            showLocalizedErrorAlert(\"This virtual machine uses custom QEMU arguments which is potentially dangerous and can cause damage to your machine. You should only run this virtual machine if you trust it.\")\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Platform/UTMData.swift",
+        "location" : {
+          "end_position" : 25784,
+          "start_position" : 22839
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "importUTM",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URL"
+          },
+          "is_variadic" : false,
+          "label" : "from",
+          "location_info" : {
+            "file_path" : "Platform/UTMData.swift",
+            "location" : {
+              "end_position" : 23244,
+              "start_position" : 23229
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "url",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "true"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Platform/UTMData.swift",
+            "location" : {
+              "end_position" : 23267,
+              "start_position" : 23244
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "asShortcut",
+          "order" : 1
+        }
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Safe Unwrap Optional"
+  },
+  "refactoringIndex" : 0,
+  "refactoringType" : "Safe Unwrap Optional",
+  "repoID" : "utmapp-utm",
+  "repoName" : "utmapp/UTM",
+  "repoURL" : "https://github.com/utmapp/UTM.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Platform/UTMData.swift"
+  ]
+}

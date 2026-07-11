@@ -1,0 +1,66 @@
+{
+  "caseID" : "case-badc3ab1a0bb70acb38fc936",
+  "commitHash" : "02184d37b6dc65709009ac05c496347e5ebe4f56",
+  "commitMessage" : "ui: new playlist sidebar\n",
+  "commitURL" : "https://github.com/iina/iina/commit/02184d37b6dc65709009ac05c496347e5ebe4f56",
+  "durationSeconds" : 31.784569978713989,
+  "entityNames" : [
+    "buttonTag",
+    "viewDidLoad"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "description" : "tabViewController.selectedTabViewItemIndex = TabViewType.video.buttonTag",
+      "left_operand" : "tabViewController.selectedTabViewItemIndex",
+      "location_info" : {
+        "file_path" : "iina/QuickSettingViewController.swift",
+        "location" : {
+          "end_position" : 8146,
+          "start_position" : 8067
+        }
+      },
+      "operator_value" : "=",
+      "right_operand" : {
+        "reference" : {
+          "arguments" : [
+
+          ],
+          "name" : "buttonTag"
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "super.viewDidLoad()\n\n    self.tabButtonsStackView = NSStackView()\n    tabButtonsStackView.translatesAutoresizingMaskIntoConstraints = false\n    tabButtonsStackView.orientation = .horizontal\n    view.addSubview(tabButtonsStackView)\n    topConstraint = tabButtonsStackView.topAnchor.constraint(equalTo: view.topAnchor)\n    topConstraint.isActive = true\n    tabButtonsLeadingConstraint = tabButtonsStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor)\n    tabButtonsLeadingConstraint.isActive = true\n    tabButtonsTrailingConstraint = view.trailingAnchor.constraint(equalTo: tabButtonsStackView.trailingAnchor)\n    tabButtonsTrailingConstraint.isActive = true\n    tabButtonsHeightConstraint = tabButtonsStackView.heightAnchor.constraint(equalToConstant: 64)\n    tabButtonsHeightConstraint.isActive = true\n\n    self.tabViewController = AnimatedTabViewController()\n    view.addSubview(tabViewController.view)\n\n    tabViewController.view.padding(.bottom, .horizontal)\n      .spacing(.top(1), to: tabButtonsStackView)\n\n    tabViewController.tabView.padding(.all)\n    tabViewController.tabView.wantsLayer = true\n\n    layoutTabScrollView = SidebarLayoutPane(player: player)\n    videoTabScrollView = SidebarVideoPane(player: player)\n    audioTabScrollView = SidebarAudioPane(player: player)\n    subtitlesTabScrollView = SidebarSubtitlesPane(player: player)\n\n    // set up the tab buttons\n\n    self.tabButtonsSegmentControl = NSSegmentedControl()\n    tabButtonsSegmentControl.segmentCount = 4\n\n    for config in tabConfig {\n      tabButtonsSegmentControl.setImage(config.1, forSegment: config.2)\n      tabButtonsSegmentControl.setTag(config.2, forSegment: config.2)\n    }\n    tabButtonsSegmentControl.target = self\n    tabButtonsSegmentControl.action = #selector(tabBtnSegmentControlAction(_:))\n\n    self.closeSidebarBtn = NSButton(\n      image: .sf(\"sidebar.squares.leading\")!,\n      target: self, action: #selector(dismissSidebar)\n    )\n    closeSidebarBtn.widthAnchor.constraint(equalTo: closeSidebarBtn.heightAnchor).isActive = true\n    closeSidebarBtnSizeConstraint = closeSidebarBtn.widthAnchor.constraint(equalToConstant: 28)\n    closeSidebarBtnSizeConstraint.isActive = true\n    if #available(macOS 26.0, *) {\n      if #available(macOS 27.0, *) {\n        closeSidebarBtn.bezelStyle = .glass\n        closeSidebarBtn.borderShape = .circle\n      } else {\n        closeSidebarBtn.bezelStyle = .circular\n      }\n    } else {\n      closeSidebarBtn.bezelStyle = .circular\n    }\n\n    func makeTabButton(_ title: String, image: NSImage?, tag: Int) -> NSButton {\n      let item = TabButton(title: title,\n                           target: self, action: #selector(tabBtnAction))\n      item.bezelStyle = .smallSquare\n      item.isBordered = false\n      if let image {\n        image.size = .init(width: 26, height: 18)\n        item.image = image\n        item.imageScaling = .scaleProportionallyUpOrDown\n        item.imagePosition = .imageAbove\n      }\n      item.font = .systemFont(ofSize: 11, weight: .regular)\n      item.tag = tag\n      return item\n    }\n\n    self.dismissBtn = NSButton(\n      image: .sf(\"chevron.forward\")!,\n      target: self, action: #selector(dismissSidebar(_:))\n    )\n    self.layoutTabBtn = makeTabButton(\"Layout\", image: .sf(\"paintbrush.fill\"), tag: 0)\n    self.videoTabBtn = makeTabButton(\"Video\", image: .tabVideo, tag: 1)\n    self.audioTabBtn = makeTabButton(\"Audio\", image: .tabAudio, tag: 2)\n    self.subTabBtn = makeTabButton(\"Subtitles\", image: .tabSub, tag: 3)\n\n    prefObserver.addAll(.compactUI, .sidebarSettingsDisplayAtLeading, runNow: true) {\n      [unowned self] key in\n      let compactUI = Preference.bool(for: .compactUI)\n      let isLeading = Preference.bool(for: .sidebarSettingsDisplayAtLeading)\n\n      let height: CGFloat = (compactUI && !isLeading) ? 48 : 52\n      tabButtonsHeightConstraint.constant = height\n\n      if #available(macOS 26.0, *), !compactUI {\n        tabButtonsSegmentControl.controlSize = .extraLarge\n      } else {\n        tabButtonsSegmentControl.controlSize = .large\n      }\n\n      closeSidebarBtnSizeConstraint.constant =  compactUI ? 28 : 36\n\n      if key == .sidebarSettingsDisplayAtLeading {\n        updateTabButtons()\n        updateTabActiveStatus()\n      }\n    }\n\n    // add pages\n\n    func createViewController(_ view: NSView) -> NSViewController {\n      let vc = NSViewController()\n      vc.view = view\n      return vc\n    }\n\n    let tabScrollViews = [layoutTabScrollView, videoTabScrollView, audioTabScrollView, subtitlesTabScrollView]\n\n    for view in tabScrollViews {\n      view?.horizontalScroll = self.switchTabByScroll(_:)\n      let viewItem = NSTabViewItem(viewController: createViewController(view!))\n      tabViewController.addTabViewItem(viewItem)\n    }\n\n    // handle pending switch tab request\n    if pendingSwitchRequest != nil {\n      switchToTab(pendingSwitchRequest!)\n      pendingSwitchRequest = nil\n    } else {\n      tabViewController.selectedTabViewItemIndex = TabViewType.video.buttonTag\n    }"
+      },
+      "location_info" : {
+        "file_path" : "iina/QuickSettingViewController.swift",
+        "location" : {
+          "end_position" : 8156,
+          "start_position" : 3129
+        }
+      },
+      "modifiers" : [
+        "override"
+      ],
+      "name" : "viewDidLoad",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 162,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "iina-iina",
+  "repoName" : "iina/iina",
+  "repoURL" : "https://github.com/iina/iina.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "iina/QuickSettingViewController.swift"
+  ]
+}

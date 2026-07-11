@@ -1,0 +1,64 @@
+{
+  "caseID" : "case-487538a165e7bcccd4643819",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "testThatSessionCallsRequestAdaptersWhenCreatingDownloadRequest"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "annotation" : {
+        "unsupported" : {
+          "_0" : "MainActor"
+        }
+      },
+      "arguments" : [
+
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let endpoint = Endpoint()\n\n        let methodAdapter = HTTPMethodAdapter(method: .post)\n        let headerAdapter = HeaderAdapter()\n        let monitor = ClosureEventMonitor()\n\n        let session = Session(startRequestsImmediately: false, interceptor: methodAdapter, eventMonitors: [monitor])\n\n        // When\n        let expectation1 = expectation(description: \"Request 1 created\")\n        monitor.requestDidCreateTask = { _, _ in expectation1.fulfill() }\n\n        let request1 = session.download(endpoint)\n        waitForExpectations(timeout: timeout)\n\n        let expectation2 = expectation(description: \"Request 2 created\")\n        monitor.requestDidCreateTask = { _, _ in expectation2.fulfill() }\n\n        let request2 = session.download(endpoint, interceptor: headerAdapter)\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(request1.task?.originalRequest?.httpMethod, methodAdapter.method.rawValue)\n        XCTAssertEqual(request2.task?.originalRequest?.httpMethod, methodAdapter.method.rawValue)\n        XCTAssertEqual(request2.task?.originalRequest?.allHTTPHeaderFields?.count, 1)\n        XCTAssertEqual(methodAdapter.adaptedCount.value, 2)\n        XCTAssertEqual(headerAdapter.adaptedCount.value, 1)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/SessionTests.swift",
+        "location" : {
+          "end_position" : 28788,
+          "start_position" : 27418
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatSessionCallsRequestAdaptersWhenCreatingDownloadRequest",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add attribute refactoring"
+  },
+  "refactoringIndex" : 880,
+  "refactoringType" : "Add attribute refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/SessionTests.swift"
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "caseID" : "case-b93bb97e444ef7df6b14ff15",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "Attachment",
+    "[PublishPort]",
+    "attachment",
+    "publishedPorts",
+    "startSocketForwarders"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard !publishedPorts.isEmpty else {\n            return\n        }\n        LocalNetworkPrivacy.triggerLocalNetworkPrivacyAlert()\n\n        var forwarders: [SocketForwarderResult] = []\n        guard !publishedPorts.hasOverlaps() else {\n            throw ContainerizationError(.invalidArgument, message: \"host ports for different publish port specs may not overlap\")\n        }\n\n        try await withThrowingTaskGroup(of: SocketForwarderResult.self) { group in\n            for publishedPort in publishedPorts {\n                for index in 0..<publishedPort.count {\n                    let proxyAddress = try SocketAddress(ipAddress: publishedPort.hostAddress.description, port: Int(publishedPort.hostPort + index))\n                    let containerIPAddress: String\n                    switch publishedPort.hostAddress {\n                    case .v4(_):\n                        containerIPAddress = attachment.ipv4Address.address.description\n                    case .v6(_):\n                        guard let ipv6Address = attachment.ipv6Address else {\n                            throw ContainerizationError(.invalidState, message: \"cannot configure IPv6 port forwarding for container with unknown IPv6 address\")\n                        }\n                        containerIPAddress = ipv6Address.address.description\n                    }\n                    let serverAddress = try SocketAddress(ipAddress: containerIPAddress, port: Int(publishedPort.containerPort + index))\n                    log.info(\n                        \"creating forwarder for\",\n                        metadata: [\n                            \"proxy\": \"\\(proxyAddress)\",\n                            \"server\": \"\\(serverAddress)\",\n                            \"protocol\": \"\\(publishedPort.proto)\",\n                        ])\n                    group.addTask {\n                        let forwarder: SocketForwarder\n                        switch publishedPort.proto {\n                        case .tcp:\n                            forwarder = try TCPForwarder(\n                                proxyAddress: proxyAddress,\n                                serverAddress: serverAddress,\n                                eventLoopGroup: self.eventLoopGroup,\n                                log: self.log\n                            )\n                        case .udp:\n                            forwarder = try UDPForwarder(\n                                proxyAddress: proxyAddress,\n                                serverAddress: serverAddress,\n                                eventLoopGroup: self.eventLoopGroup,\n                                log: self.log\n                            )\n                        }\n                        do {\n                            return try await forwarder.run().get()\n                        } catch let error as IOError where error.errnoCode == EACCES {\n                            if let port = proxyAddress.port, port < 1024 {\n                                throw ContainerizationError(\n                                    .invalidArgument,\n                                    message: \"Permission denied while binding to host port \\(port). Binding to ports below 1024 requires root privileges.\"\n                                )\n                            }\n                            throw error\n                        }\n                    }\n                }\n            }\n            for try await result in group {\n                forwarders.append(result)\n            }\n        }\n\n        self.socketForwarders = forwarders"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location" : {
+          "end_position" : 36974,
+          "start_position" : 33298
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "startSocketForwarders",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Attachment"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 33363,
+              "start_position" : 33339
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "attachment",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[PublishPort]"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 33392,
+              "start_position" : 33363
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "publishedPorts",
+          "order" : 1
+        }
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 194,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
+  ]
+}

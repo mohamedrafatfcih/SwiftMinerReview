@@ -1,0 +1,82 @@
+{
+  "caseID" : "case-8aae06c7ce85c1ddaefbe657",
+  "commitHash" : "85f92c04c7964aba085d108a5d0dc01ea3897bfd",
+  "commitMessage" : "security: pin MASShortcut, confirm URL tasks, harden config auto-load (#1765)\n\nAddresses three issues identified in a source-level security audit\n(see SECURITY_AUDIT.md for the full report):\n\n1. [High] MASShortcut SPM dependency was pinned to `branch = master`,\n   meaning every build pulled the latest tip with no review gate. Pin\n   to the current HEAD revision SHA so future upstream changes require\n   an explicit bump.\n\n2. [Medium] `rectangle://execute-task=ignore-app/unignore-app` URL\n   actions silently mutated the disabled-apps defaults when triggered\n   from outside Rectangle (e.g. a web page). Require an NSAlert\n   confirmation, surfacing the bundle-id, unless Rectangle itself is\n   frontmost.\n\n3. [Medium] `Config.loadFromSupportDir()` silently auto-loaded any\n   RectangleConfig.json dropped in Application Support on launch. Add\n   a confirmation prompt, reject symlinks and world-writable files,\n   and apply a 1 MiB size cap to the loader (defense against OOM via\n   giant config).\n\nAlso includes SECURITY_AUDIT.md documenting the full review, including\nconfirmation that the app contains no telemetry, analytics, or crash\nreporting and that the only outbound network channel is the\nEdDSA-signed Sparkle update feed.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
+  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/85f92c04c7964aba085d108a5d0dc01ea3897bfd",
+  "durationSeconds" : 1.7711130380630493,
+  "entityNames" : [
+    "URL",
+    "fileUrl",
+    "load"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "expression" : {
+        "other" : {
+          "_0" : ""
+        }
+      },
+      "location_info" : {
+        "file_path" : "Rectangle/PrefsWindow/Config.swift",
+        "location" : {
+          "end_position" : 2810,
+          "start_position" : 2791
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard let dictTransformer = ValueTransformer(forName: NSValueTransformerName(rawValue: MASDictionaryTransformerName)) else { return }\n        \n        // Size cap: legitimate configs are ~tens of KB; refuse anything that\n        // looks abusive (defense against OOM via a giant config file).\n        if let attrs = try? FileManager.default.attributesOfItem(atPath: fileUrl.path),\n           let size = attrs[.size] as? NSNumber, size.intValue > 1_048_576 {\n            return\n        }\n        \n        guard let jsonString = try? String(contentsOf: fileUrl, encoding: .utf8),\n              let config = convert(jsonString: jsonString) else { return }\n\n        for availableDefault in Defaults.array {\n            if let codedDefault = config.defaults[availableDefault.key] {\n                availableDefault.load(from: codedDefault)\n            }\n        }\n        \n        for action in WindowAction.active {\n            if let shortcut = config.shortcuts[action.name]?.toMASSHortcut() {\n                let dictValue = dictTransformer.reverseTransformedValue(shortcut)\n                UserDefaults.standard.setValue(dictValue, forKey: action.name)\n            }\n        }\n        for defaultsKey in TodoManager.defaultsKeys {\n            if let shortcut = config.shortcuts[defaultsKey]?.toMASSHortcut() {\n                let dictValue = dictTransformer.reverseTransformedValue(shortcut)\n                UserDefaults.standard.setValue(dictValue, forKey: defaultsKey)\n            }\n        }\n        \n        Notification.Name.configImported.post()"
+      },
+      "location_info" : {
+        "file_path" : "Rectangle/PrefsWindow/Config.swift",
+        "location" : {
+          "end_position" : 3890,
+          "start_position" : 2283
+        }
+      },
+      "modifiers" : [
+        "static"
+      ],
+      "name" : "load",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URL"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Rectangle/PrefsWindow/Config.swift",
+            "location" : {
+              "end_position" : 2322,
+              "start_position" : 2310
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "fileUrl",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 5,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "rxhanson-rectangle",
+  "repoName" : "rxhanson/Rectangle",
+  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Rectangle/PrefsWindow/Config.swift"
+  ]
+}

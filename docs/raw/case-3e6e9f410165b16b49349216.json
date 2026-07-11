@@ -1,0 +1,434 @@
+{
+  "caseID" : "case-3e6e9f410165b16b49349216",
+  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds" : 14.10075306892395,
+  "entityNames" : [
+    "CLITest",
+    "TestCLIRemove",
+    "testDeleteAlias",
+    "testDeleteAllForce",
+    "testDeleteAllSkipsRunning",
+    "testDeleteAllStopped",
+    "testDeleteDuplicateIds",
+    "testDeleteExplicitIdsConflictWithAll"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = testName\n        defer { try? doRemove(name: name, force: true) }\n\n        // Create without --rm so the container persists after being stopped\n        let (_, _, createError, createStatus) = try run(arguments: [\"create\", \"--name\", name, alpine, \"sleep\", \"infinity\"])\n        #expect(createStatus == 0, \"create failed: \\(createError)\")\n\n        let (_, _, deleteError, deleteStatus) = try run(arguments: [\"delete\", name])\n        #expect(deleteStatus == 0, \"delete failed: \\(deleteError)\")\n        #expect(throws: CLIError.self) { try self.inspectContainer(name) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 1492,
+              "start_position" : 851
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteStopped",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = testName\n        defer { try? doRemove(name: name, force: true) }\n\n        let (_, _, createError, createStatus) = try run(arguments: [\"create\", \"--name\", name, alpine, \"sleep\", \"infinity\"])\n        #expect(createStatus == 0, \"create failed: \\(createError)\")\n\n        let (_, _, rmError, rmStatus) = try run(arguments: [\"rm\", name])\n        #expect(rmStatus == 0, \"rm failed: \\(rmError)\")\n        #expect(throws: CLIError.self) { try self.inspectContainer(name) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 2030,
+              "start_position" : 1492
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteAlias",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = testName\n        defer { try? doRemove(name: name, force: true) }\n\n        try doLongRun(name: name, autoRemove: false)\n        try waitForContainerRunning(name)\n\n        try doRemove(name: name, force: true)\n        #expect(throws: CLIError.self) { try self.inspectContainer(name) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 2395,
+              "start_position" : 2030
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteForceRunning",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name1 = testName + \"-1\"\n        let name2 = testName + \"-2\"\n        defer {\n            try? doRemove(name: name1, force: true)\n            try? doRemove(name: name2, force: true)\n        }\n\n        let (_, _, e1, s1) = try run(arguments: [\"create\", \"--name\", name1, alpine, \"sleep\", \"infinity\"])\n        #expect(s1 == 0, \"create \\(name1) failed: \\(e1)\")\n        let (_, _, e2, s2) = try run(arguments: [\"create\", \"--name\", name2, alpine, \"sleep\", \"infinity\"])\n        #expect(s2 == 0, \"create \\(name2) failed: \\(e2)\")\n\n        let (_, _, deleteError, deleteStatus) = try run(arguments: [\"delete\", \"--all\"])\n        #expect(deleteStatus == 0, \"delete --all failed: \\(deleteError)\")\n        #expect(throws: CLIError.self) { try self.inspectContainer(name1) }\n        #expect(throws: CLIError.self) { try self.inspectContainer(name2) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 3301,
+              "start_position" : 2395
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteAllStopped",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let runningName = testName + \"-running\"\n        let stoppedName = testName + \"-stopped\"\n        defer {\n            try? doRemove(name: runningName, force: true)\n            try? doRemove(name: stoppedName, force: true)\n        }\n\n        try doLongRun(name: runningName, autoRemove: false)\n        try waitForContainerRunning(runningName)\n\n        let (_, _, createError, createStatus) = try run(arguments: [\"create\", \"--name\", stoppedName, alpine, \"sleep\", \"infinity\"])\n        #expect(createStatus == 0, \"create failed: \\(createError)\")\n\n        let (_, _, deleteError, deleteStatus) = try run(arguments: [\"delete\", \"--all\"])\n        #expect(deleteStatus == 0, \"delete --all failed: \\(deleteError)\")\n\n        // Running container should be untouched\n        #expect(try getContainerStatus(runningName) == \"running\")\n        // Stopped container should be gone\n        #expect(throws: CLIError.self) { try self.inspectContainer(stoppedName) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 4319,
+              "start_position" : 3301
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteAllSkipsRunning",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = testName\n        defer { try? doRemove(name: name, force: true) }\n\n        try doLongRun(name: name, autoRemove: false)\n        try waitForContainerRunning(name)\n\n        let (_, _, deleteError, deleteStatus) = try run(arguments: [\"delete\", \"--all\", \"--force\"])\n        #expect(deleteStatus == 0, \"delete --all --force failed: \\(deleteError)\")\n        #expect(throws: CLIError.self) { try self.inspectContainer(name) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 4815,
+              "start_position" : 4319
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteAllForce",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (_, _, _, status) = try run(arguments: [\"delete\"])\n        #expect(status != 0, \"Expected non-zero exit when no args and no --all\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 5009,
+              "start_position" : 4815
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteNoArgs",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (_, _, error, status) = try run(arguments: [\"delete\", \"--all\", \"some-container\"])\n        #expect(status != 0, \"Expected non-zero exit for conflicting flags\")\n        #expect(error.contains(\"conflict\"))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 5294,
+              "start_position" : 5009
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteExplicitIdsConflictWithAll",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = testName\n        defer { try? doRemove(name: name, force: true) }\n\n        let (_, _, createError, createStatus) = try run(arguments: [\"create\", \"--name\", name, alpine, \"sleep\", \"infinity\"])\n        #expect(createStatus == 0, \"create failed: \\(createError)\")\n\n        let (_, output, deleteError, deleteStatus) = try run(arguments: [\"delete\", name, name])\n        #expect(deleteStatus == 0, \"delete with duplicate IDs failed: \\(deleteError)\")\n        let lines = output.split(separator: \"\\n\").filter { $0.contains(name) }\n        #expect(lines.count == 1, \"Expected container to be deleted exactly once, got \\(lines.count) lines\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 6006,
+              "start_position" : 5294
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDeleteDuplicateIds",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (_, _, error, status) = try run(arguments: [\"inspect\", \"definitely-missing-container\"])\n        #expect(status != 0, \"Expected non-zero exit for missing container\")\n        #expect(error.contains(\"container not found\"))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+            "location" : {
+              "end_position" : 6304,
+              "start_position" : 6006
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testInspectMissingContainerFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift",
+        "location" : {
+          "end_position" : 6306,
+          "start_position" : 819
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIRemove",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 16,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Containers/TestCLIRemove.swift"
+  ]
+}

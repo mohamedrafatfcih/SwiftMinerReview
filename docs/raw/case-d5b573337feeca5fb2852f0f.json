@@ -1,0 +1,80 @@
+{
+  "caseID" : "case-d5b573337feeca5fb2852f0f",
+  "commitHash" : "1da2d91fa6316690ef97f46b450262286231c261",
+  "commitMessage" : "Add Separate Response Hooks (#3762)\n\n### Issue Link :link:\r\n#3401\r\n\r\n### Goals :soccer:\r\nThis PR adds `onHTTPResponse` closure hooks to `DataRequest` /\r\n`UploadRequest` and `DataStreamRequest` to enable the cancellation of\r\nrequests before data is transferred, requests that need to check\r\nresponse info for later parsing, or peculiar requests that may trigger\r\nmultiple response callbacks, like MJPEG streams.\r\n\r\n### Implementation Details :construction:\r\nLike the other value hooks, this API accepts a single closure. The only\r\nunique bit here is that there's second, disfavored, version of the API\r\nthat allows the user to return `ResponseDisposition` value to cancel or\r\nend the request without the body.\r\n\r\n### Testing Details :mag:\r\nStreaming tests are being updated to check these events always fire\r\nbefore the other events. More tests are needed around cancellation or\r\nending behavior to ensure that's really possible.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/1da2d91fa6316690ef97f46b450262286231c261",
+  "durationSeconds" : 13.914338946342468,
+  "entityNames" : [
+    "testThatDataCanBeStreamedByByte"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "body" : {
+        "content" : "XCTAssertEqual(streamCalled, expectedSize)"
+      },
+      "conditions" : [
+        {
+          "condition_value" : {
+            "others" : {
+              "_0" : "#available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) "
+            }
+          },
+          "location_info" : {
+            "file_path" : "Tests/DataStreamTests.swift",
+            "location" : {
+              "end_position" : 4032,
+              "start_position" : 3977
+            }
+          }
+        }
+      ],
+      "description" : "if",
+      "else_stmt" : {
+        "body" : {
+          "content" : "XCTAssertEqual(streamCalled, 1)"
+        },
+        "description" : "else"
+      },
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 4159,
+          "start_position" : 3912
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let expectedSize = 10\n        var accumulatedData = Data()\n        var response: HTTPURLResponse?\n        var streamOnMain = false\n        var completeOnMain = false\n        var streamCalled = 0\n        let didReceive = expectation(description: \"stream should receive once\")\n        if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {\n            didReceive.expectedFulfillmentCount = expectedSize\n        }\n        let didComplete = expectation(description: \"stream should complete\")\n\n        // When\n        AF.streamRequest(.chunked(expectedSize)).responseStream { stream in\n            switch stream.event {\n            case let .stream(result):\n                streamOnMain = Thread.isMainThread\n                switch result {\n                case let .success(data):\n                    accumulatedData.append(data)\n                }\n                streamCalled += 1\n                didReceive.fulfill()\n            case let .complete(completion):\n                completeOnMain = Thread.isMainThread\n                response = completion.response\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didReceive, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertEqual(response?.statusCode, 200)\n        // Older OSes don't return individual bytes.\n        if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {\n            XCTAssertEqual(streamCalled, expectedSize)\n        } else {\n            XCTAssertEqual(streamCalled, 1)\n        }\n        XCTAssertEqual(accumulatedData.count, expectedSize)\n        XCTAssertTrue(streamOnMain)\n        XCTAssertTrue(completeOnMain)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 4299,
+          "start_position" : 2564
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataCanBeStreamedByByte",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 101,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/DataStreamTests.swift"
+  ]
+}

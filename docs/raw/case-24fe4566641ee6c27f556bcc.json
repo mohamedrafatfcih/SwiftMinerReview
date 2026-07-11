@@ -1,0 +1,114 @@
+{
+  "caseID" : "case-24fe4566641ee6c27f556bcc",
+  "commitHash" : "d4877f2ff15d2a18842c13c2db412a2195a83df0",
+  "commitMessage" : "feat: improved wifi details fetch in the network reader\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/d4877f2ff15d2a18842c13c2db412a2195a83df0",
+  "durationSeconds" : 3.2463239431381226,
+  "entityNames" : [
+    "getWiFiDetails",
+    "guard",
+    "res"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "optional_binding" : {
+              "_0" : {
+                "description" : "let res = process(path: \"/usr/sbin/system_profiler\", arguments: [\"SPAirPortDataType\", \"-json\"])",
+                "initializer_clause" : {
+                  "has_self_reference" : false,
+                  "value" : {
+                    "function_call" : {
+                      "_0" : {
+                        "additional_trailing_closures" : [
+
+                        ],
+                        "arguments" : [
+                          {
+                            "label" : "path",
+                            "value" : "\"/usr/sbin/system_profiler\""
+                          },
+                          {
+                            "label" : "arguments",
+                            "value" : "[\"SPAirPortDataType\", \"-json\"]"
+                          }
+                        ],
+                        "call" : "process",
+                        "has_self_reference" : false,
+                        "internal_inline_calls" : [
+
+                        ],
+                        "location_info" : {
+                          "file_path" : "Modules/Net/readers.swift",
+                          "location" : {
+                            "end_position" : 17879,
+                            "start_position" : 17793
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "is_binding_self" : false,
+                "is_in_out" : false,
+                "is_let" : true,
+                "is_var" : false,
+                "name" : "res"
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 17879,
+              "start_position" : 17783
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Net/readers.swift",
+        "location" : {
+          "end_position" : 17922,
+          "start_position" : 17764
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "if let interface = CWWiFiClient.shared().interface(withName: self.interfaceID) {\n            if let ssid = interface.ssid() {\n                self.usage.wifiDetails.ssid = ssid\n            } else if let cfg = interface.configuration(),\n                      let set = (cfg.value(forKey: \"networkProfiles\") as? NSOrderedSet),\n                      let first = set.firstObject as? CWNetworkProfile,\n                      let raw = first.ssid, !raw.isEmpty {\n                self.usage.wifiDetails.ssid = raw.replacingOccurrences(of: \"’\", with: \"'\").replacingOccurrences(of: \"‘\", with: \"'\").trimmingCharacters(in: .whitespacesAndNewlines)\n            }\n            if let bssid = interface.bssid() {\n                self.usage.wifiDetails.bssid = bssid\n            }\n            if let cc = interface.countryCode() {\n                self.usage.wifiDetails.countryCode = cc\n            }\n            \n            self.usage.wifiDetails.RSSI = interface.rssiValue()\n            self.usage.wifiDetails.noise = interface.noiseMeasurement()\n            \n            self.usage.wifiDetails.standard = interface.activePHYMode().description\n            self.usage.wifiDetails.mode = interface.interfaceMode().description\n            self.usage.wifiDetails.security = interface.security().description\n            \n            if let ch = interface.wlanChannel() {\n                self.usage.wifiDetails.channel = ch.description\n                \n                self.usage.wifiDetails.channelBand = ch.channelBand.description\n                self.usage.wifiDetails.channelWidth = ch.channelWidth.description\n                self.usage.wifiDetails.channelNumber = ch.channelNumber.description\n            }\n        }\n        \n        if self.usage.wifiDetails.ssid == nil || self.usage.wifiDetails.ssid == \"\" {\n            guard let res = process(path: \"/usr/sbin/system_profiler\", arguments: [\"SPAirPortDataType\", \"-json\"]) else {\n                return\n            }\n            do {\n                if let json = try JSONSerialization.jsonObject(with: Data(res.utf8), options: []) as? [String: Any] {\n                    if let arr = json[\"SPAirPortDataType\"] as? [[String: Any]],\n                       let airport = arr.first(where: { $0[\"spairport_airport_interfaces\"] != nil }),\n                       let interfaces = airport[\"spairport_airport_interfaces\"] as? [[String: Any]],\n                       let interface = interfaces.first(where: { $0[\"_name\"] as? String == self.interfaceID }),\n                       let obj = interface[\"spairport_current_network_information\"] as? [String: Any] {\n                        \n                        self.usage.wifiDetails.ssid = obj[\"_name\"] as? String\n                        self.usage.wifiDetails.countryCode = obj[\"spairport_network_country_code\"] as? String\n                        self.usage.wifiDetails.standard = obj[\"spairport_network_phymode\"] as? String\n                    }\n                }\n            } catch let err as NSError {\n                error(\"error to parse system_profiler SPAirPortDataType: \\(err.localizedDescription)\")\n                return\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Net/readers.swift",
+        "location" : {
+          "end_position" : 19108,
+          "start_position" : 15914
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "getWiFiDetails",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 1,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Net/readers.swift"
+  ]
+}

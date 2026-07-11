@@ -1,0 +1,996 @@
+{
+  "caseID" : "case-470af801d2d8afadba3652f2",
+  "commitHash" : "649164d9e29ae3017d9a3da76be345513f7fc426",
+  "commitMessage" : "Enhanced test fixtures for integration tests. (#1834)\n\n- Part of #1833.\n- Adds `ContainerFixture` with scoped resource lifecycle and cleanup in\nplace of implementation inheritance for test support functions. The\nfixture also handles resource prefixing and uses a more ergonomic\n`CommandResult` in place of a tuple for return values.\n- `ImageWarmup` suite pre-pulls well-known images, and\n`copyWarmupImage()` tags test-local refs, keeping the canonical image\nstore untouched.\n- Three-phase `integration-new`: warmup, followed by concurrent tests\n(managed by the swift test\n`--experimental-maximum-parallelization-width` flag), followed by\nserialized tests.\n- `coverage-new` merges unit + integration-new profraw, replacing\n`coverage` in CI as a migration progress indicator.\n- Updates GH workflow so non-coverage invokes both the `integration` and\n`integration-new` Makefile targets, while coverage runs invoke the\n`coverage-new` target.",
+  "commitURL" : "https://github.com/apple/container/commit/649164d9e29ae3017d9a3da76be345513f7fc426",
+  "durationSeconds" : 0.96073603630065918,
+  "entityNames" : [
+    "(ContainerFixture) async throws -> T",
+    "(String) async throws -> Void",
+    "@escaping @Sendable () async throws -> Void",
+    "CommandResult",
+    "ContainerFixture",
+    "Data?",
+    "FilePath",
+    "FilePath?"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sendable"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let testID = String(UUID().uuidString.prefix(8)).lowercased()\n\n        let scratchRoot =\n            ProcessInfo.processInfo.environment[\"CLITEST_SCRATCH_ROOT\"]\n            .map { FilePath($0) }\n            ?? FilePath(FileManager.default.temporaryDirectory.path)\n        let testDir = scratchRoot.appending(testID)\n        try FileManager.default.createDirectory(\n            atPath: testDir.string, withIntermediateDirectories: true, attributes: nil)\n\n        let testName =\n            Test.current.map { $0.name.hasSuffix(\"()\") ? String($0.name.dropLast(2)) : $0.name }\n            ?? testID\n        let suiteName = Test.current.map { \"\\(type(of: $0))\" } ?? \"unknown\"\n\n        var logger = Logger(label: \"com.apple.container.test\") { label in\n            if let root = ProcessInfo.processInfo.environment[\"CLITEST_LOG_ROOT\"], !root.isEmpty {\n                let path =\n                    FilePath(root)\n                    .appending(\"clitests\")\n                    .appending(suiteName)\n                    .appending(testName + \".log\")\n                if let handler = try? FileLogHandler(label: label, category: \"clitests\", path: path) {\n                    return handler\n                }\n            }\n            return StderrLogHandler()\n        }\n        logger[metadataKey: \"testID\"] = \"\\(testID)\"\n\n        let fixture = ContainerFixture(testID: testID, testDir: testDir, log: logger)\n\n        if ProcessInfo.processInfo.environment[\"CLITEST_PRESERVE_SCRATCH\"] == nil {\n            fixture.addCleanup {\n                try? FileManager.default.removeItem(atPath: testDir.string)\n            }\n        }\n\n        do {\n            let result = try await body(fixture)\n            await fixture.runCleanup()\n            return result\n        } catch {\n            await fixture.runCleanup()\n            throw error\n        }"
+          },
+          "generic_clause" : "<T>",
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 4843,
+              "start_position" : 2714
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "with",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "(ContainerFixture) async throws -> T"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 2971,
+                  "start_position" : 2927
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "body",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "T"
+            },
+            "description" : "-> T"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "cleanupTasks.withLock { $0.append(task) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 5088,
+              "start_position" : 4843
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "addCleanup",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable () async throws -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 5029,
+                  "start_position" : 4978
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let tasks = cleanupTasks.withLock { tasks -> [@Sendable () async throws -> Void] in\n            let reversed = Array(tasks.reversed())\n            tasks.removeAll()\n            return reversed\n        }\n        for task in tasks {\n            try? await task()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 5412,
+              "start_position" : 5088
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "runCleanup",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let seq = Self.commandSeq.withLock { n in\n            defer { n += 1 }\n            return n\n        }\n        log.info(\n            \"command start\",\n            metadata: [\"seq\": \"\\(seq)\", \"args\": \"\\(arguments.joined(separator: \" \"))\"])\n\n        let process = Process()\n        process.executableURL = try executableURL\n        process.arguments = arguments\n        if let dir = currentDirectory { process.currentDirectoryURL = URL(filePath: dir.string) }\n        if !env.isEmpty {\n            var e = ProcessInfo.processInfo.environment\n            for (k, v) in env { e[k] = v }\n            process.environment = e\n        }\n\n        let inputPipe = Pipe()\n        process.standardInput = inputPipe\n\n        // Write stdout/stderr to temp files to avoid blocking on full pipe buffers.\n        let tmpDir = FilePath(FileManager.default.temporaryDirectory.path)\n            .appending(UUID().uuidString)\n        try FileManager.default.createDirectory(\n            atPath: tmpDir.string, withIntermediateDirectories: true, attributes: nil)\n        defer { try? FileManager.default.removeItem(atPath: tmpDir.string) }\n\n        let stdoutPath = tmpDir.appending(\"stdout\")\n        let stderrPath = tmpDir.appending(\"stderr\")\n        FileManager.default.createFile(atPath: stdoutPath.string, contents: nil)\n        FileManager.default.createFile(atPath: stderrPath.string, contents: nil)\n\n        let stdoutHandle = try FileHandle(forWritingTo: URL(filePath: stdoutPath.string))\n        defer { try? stdoutHandle.close() }\n        let stderrHandle = try FileHandle(forWritingTo: URL(filePath: stderrPath.string))\n        defer { try? stderrHandle.close() }\n\n        process.standardOutput = stdoutHandle\n        process.standardError = stderrHandle\n\n        do {\n            try process.run()\n        } catch {\n            throw CommandError.executionFailed(\"process launch failed: \\(error)\")\n        }\n        if let data = stdin { inputPipe.fileHandleForWriting.write(data) }\n        inputPipe.fileHandleForWriting.closeFile()\n        process.waitUntilExit()\n\n        let outputData = (try? Data(contentsOf: URL(filePath: stdoutPath.string))) ?? Data()\n        let errorData = (try? Data(contentsOf: URL(filePath: stderrPath.string))) ?? Data()\n\n        log.info(\n            \"command end\",\n            metadata: [\n                \"seq\": \"\\(seq)\",\n                \"status\": \"\\(process.terminationStatus)\",\n            ])\n\n        return CommandResult(\n            outputData: outputData,\n            errorData: errorData,\n            status: process.terminationStatus)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 9201,
+              "start_position" : 6086
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "run",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String]"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 6481,
+                  "start_position" : 6450
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "arguments",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Data?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 6509,
+                  "start_position" : 6481
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stdin",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "FilePath?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 6552,
+                  "start_position" : 6509
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "currentDirectory",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String: String]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 6588,
+                  "start_position" : 6552
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "env",
+              "order" : 3
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "CommandResult"
+            },
+            "description" : "-> CommandResult"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let lastComponent = canonical.split(separator: \"/\").last.map(String.init) ?? canonical\n        let parts = lastComponent.split(separator: \":\", maxSplits: 1)\n        let name = String(parts[0])\n        let tag = parts.count > 1 ? String(parts[1]) : \"latest\"\n        let localRef = \"\\(testID)-\\(name):\\(tag)\"\n\n        try run([\"image\", \"tag\", canonical, localRef]).check()\n        addCleanup {\n            _ = try? self.run([\"image\", \"rm\", localRef])\n        }\n        return localRef"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 10072,
+              "start_position" : 9201
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "copyWarmupImage",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 9555,
+                  "start_position" : 9536
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "canonical",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let name = \"\\(testID)-\\(tag)\"\n        let args = [\"run\", \"--rm\", \"--name\", name, \"-d\"] + runArgs + [image] + containerArgs\n        try run(args).check()\n        defer {\n            _ = try? run([\"stop\", \"-s\", \"SIGKILL\", name])\n        }\n        try await body(name)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 10842,
+              "start_position" : 10072
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "withContainer",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 10379,
+                  "start_position" : 10356
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "image",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "c"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 10406,
+                  "start_position" : 10379
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "tag",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 10438,
+                  "start_position" : 10406
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "runArgs",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "infinity"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 10495,
+                  "start_position" : 10438
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "containerArgs",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "(String) async throws -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 10541,
+                  "start_position" : 10495
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "body",
+              "order" : 4
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "for _ in 0..<attempts {\n            if let result = try? run([\"inspect\", name]),\n                result.status == 0,\n                result.output.contains(\"\\\"running\\\"\")\n            {\n                return\n            }\n            sleep(1)\n        }\n        throw CommandError.executionFailed(\"container '\\(name)' did not reach running state\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 11351,
+              "start_position" : 10842
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "waitForContainerRunning",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 10962,
+                  "start_position" : 10946
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "30"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 10980,
+                  "start_position" : 10962
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "attempts",
+              "order" : 1
+            }
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 2714,
+              "start_position" : 2531
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 2592,
+                  "start_position" : 2576
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testID",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "FilePath"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 2611,
+                  "start_position" : 2592
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDir",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Logger"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 2622,
+                  "start_position" : 2611
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "log",
+              "order" : 2
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+        "location" : {
+          "end_position" : 11353,
+          "start_position" : 898
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "ContainerFixture",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "ghcr.io/containerd/busybox:1.36"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 1998,
+              "start_position" : 1829
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "warmupImages"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 2135,
+              "start_position" : 2121
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testID"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "FilePath"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 2360,
+              "start_position" : 2343
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDir"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Logger"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 2389,
+              "start_position" : 2378
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "log"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Mutex<[@Sendable () async throws -> Void]>"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "value" : "[]"
+                    }
+                  ],
+                  "call" : "init",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                    "location" : {
+                      "end_position" : 2474,
+                      "start_position" : 2465
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 2474,
+              "start_position" : 2406
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "cleanupTasks"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Mutex<Int>"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "value" : "0"
+                    }
+                  ],
+                  "call" : "init",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                    "location" : {
+                      "end_position" : 2531,
+                      "start_position" : 2523
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 2531,
+              "start_position" : 2498
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "commandSeq"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "let path: FilePath\n            if let env = ProcessInfo.processInfo.environment[\"CONTAINER_CLI_PATH\"] {\n                path = FilePath(env)\n            } else {\n                let candidate = FilePath(FileManager.default.currentDirectoryPath)\n                    .appending(\"bin\").appending(\"container\")\n                guard FileManager.default.fileExists(atPath: candidate.string) else {\n                    throw CommandError.binaryNotFound\n                }\n                path = candidate\n            }\n            return URL(filePath: path.string)"
+              },
+              "modifier" : "get"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URL"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 6086,
+              "start_position" : 5460
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "executableURL"
+        }
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 14,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Utilities/ContainerFixture.swift"
+  ]
+}

@@ -1,0 +1,193 @@
+{
+  "caseID" : "case-5b51d774b4d6f6bd214a362d",
+  "commitHash" : "c4a22389ac34e25150434fa502921f8ee0988b72",
+  "commitMessage" : "add container machine nested virt (#1742)\n\nThis also includes custom kernels for container machine. Its required\nwith nested virt as CONFIG_KVM needs to be enabled.\n\n---------\n\nSigned-off-by: michael_crosby <michael_crosby@apple.com>",
+  "commitURL" : "https://github.com/apple/container/commit/c4a22389ac34e25150434fa502921f8ee0988b72",
+  "durationSeconds" : 5.6167140007019043,
+  "entityNames" : [
+    "Bool",
+    "ContainerConfiguration",
+    "FilePath",
+    "MachineConfig.HomeMountOption",
+    "String",
+    "cid",
+    "homeMountOption",
+    "initializedFile"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "description" : "config.virtualization = virtualization",
+      "left_operand" : "config.virtualization",
+      "location_info" : {
+        "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+        "location" : {
+          "end_position" : 25616,
+          "start_position" : 25569
+        }
+      },
+      "operator_value" : "=",
+      "right_operand" : {
+        "reference" : {
+          "arguments" : [
+
+          ],
+          "name" : "virtualization"
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var config = ContainerConfiguration(\n            id: cid,\n            image: image,\n            process: ProcessConfiguration(\n                executable: \"/\\(MachineBundle.sbinDirectory)/\\(MachineBundle.initFile)\",\n                arguments: [],\n                environment: processEnvironment,\n                workingDirectory: \"/\",\n                terminal: true,\n                user: .id(uid: 0, gid: 0)\n            )\n        )\n\n        let home = FileManager.default.homeDirectoryForCurrentUser.path\n        config.mounts = [\n            .virtiofs(\n                source: sbin.string,\n                destination: \"/\\(MachineBundle.sbinDirectory)\",\n                options: [\"ro\"]),\n            .virtiofs(\n                source: initializedFile.string,\n                destination: \"/etc/.\\(MachineBundle.initializedFile)\",\n                options: [\"rw\"]),\n        ]\n        if homeMountOption != .none {\n            config.mounts.append(\n                .virtiofs(\n                    source: home,\n                    destination: home,\n                    options: [homeMountOption.rawValue]\n                )\n            )\n        }\n\n        config.platform = platform\n        config.labels = [\n            ResourceLabelKeys.plugin: \"machine\"\n        ]\n        let domain = Self.defaultDNSDomain\n        config.dns = ContainerConfiguration.DNSConfiguration(\n            nameservers: [],\n            domain: domain,\n            searchDomains: [domain],\n        )\n        guard let defaultNetwork = try await NetworkClient().builtin else {\n            throw ContainerizationError(.invalidState, message: \"default network is not present\")\n        }\n        config.networks = [\n            AttachmentConfiguration(\n                network: defaultNetwork.id,\n                options: AttachmentOptions(hostname: dnsHostname)\n            )\n        ]\n\n        config.capAdd = [\"ALL\"]\n        config.ssh = true\n        config.virtualization = virtualization\n\n        config.rosetta = platform.architecture == \"amd64\" && Arch.hostArchitecture() == .arm64\n\n        // Default to nil if image is not found, which defaults to send SIGTERM on stop\n        let imageConfig = try? await ClientImage(description: image).config(for: platform).config\n        config.stopSignal = imageConfig?.stopSignal\n\n        return config"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+        "location" : {
+          "end_position" : 25980,
+          "start_position" : 23391
+        }
+      },
+      "modifiers" : [
+        "fileprivate"
+      ],
+      "name" : "toContainerConfig",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location" : {
+              "end_position" : 23452,
+              "start_position" : 23431
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "cid",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "FilePath"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location" : {
+              "end_position" : 23476,
+              "start_position" : 23452
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "sbin",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "FilePath"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location" : {
+              "end_position" : 23511,
+              "start_position" : 23476
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "initializedFile",
+          "order" : 2
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "MachineConfig.HomeMountOption"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location" : {
+              "end_position" : 23567,
+              "start_position" : 23511
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "homeMountOption",
+          "order" : 3
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location" : {
+              "end_position" : 23597,
+              "start_position" : 23567
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "virtualization",
+          "order" : 4
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "ContainerConfiguration"
+        },
+        "description" : "-> ContainerConfiguration"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 50,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/MachineAPIService/Server/MachinesService.swift"
+  ]
+}

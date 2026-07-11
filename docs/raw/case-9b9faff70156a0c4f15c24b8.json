@@ -1,0 +1,939 @@
+{
+  "caseID" : "case-9b9faff70156a0c4f15c24b8",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "Bool",
+    "ContainerStats",
+    "ContainerStopOptions",
+    "ExitStatus",
+    "FileHandle",
+    "Int64",
+    "ProcessConfiguration",
+    "SandboxClient"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "SandboxClient"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.bootstrap.rawValue)\n\n        for (i, h) in stdio.enumerated() {\n            let key: SandboxKeys = try {\n                switch i {\n                case 0: .stdin\n                case 1: .stdout\n                case 2: .stderr\n                default:\n                    throw ContainerizationError(.invalidArgument, message: \"invalid fd \\(i)\")\n                }\n            }()\n\n            if let h {\n                request.set(key: key.rawValue, value: h)\n            }\n        }\n\n        do {\n            let dynamicEnv = try JSONEncoder().encode(dynamicEnv)\n            request.set(key: SandboxKeys.dynamicEnv.rawValue, value: dynamicEnv)\n\n            let infosData = try JSONEncoder().encode(networkBootstrapInfos)\n            request.set(key: SandboxKeys.networkBootstrapInfos.rawValue, value: infosData)\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to bootstrap container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 4249,
+              "start_position" : 2938
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "bootstrap",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[FileHandle?]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 2995,
+                  "start_position" : 2965
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stdio",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[NetworkBootstrapInfo]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 3050,
+                  "start_position" : 2995
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "networkBootstrapInfos",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String: String]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 3093,
+                  "start_position" : 3050
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dynamicEnv",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.state.rawValue)\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get state for container \\(self.id)\",\n                cause: error\n            )\n        }\n        return try response.sandboxSnapshot()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 4752,
+              "start_position" : 4249
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "state",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "SandboxSnapshot"
+            },
+            "description" : "-> SandboxSnapshot"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.createProcess.rawValue)\n        request.set(key: SandboxKeys.id.rawValue, value: id)\n        let data = try JSONEncoder().encode(config)\n        request.set(key: SandboxKeys.processConfig.rawValue, value: data)\n\n        for (i, h) in stdio.enumerated() {\n            let key: SandboxKeys = try {\n                switch i {\n                case 0: .stdin\n                case 1: .stdout\n                case 2: .stderr\n                default:\n                    throw ContainerizationError(.invalidArgument, message: \"invalid fd \\(i)\")\n                }\n            }()\n\n            if let h {\n                request.set(key: key.rawValue, value: h)\n            }\n        }\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to create process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 5889,
+              "start_position" : 4752
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "createProcess",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 4798,
+                  "start_position" : 4784
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ProcessConfiguration"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 4828,
+                  "start_position" : 4798
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "config",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[FileHandle?]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 4848,
+                  "start_position" : 4828
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stdio",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.start.rawValue)\n        request.set(key: SandboxKeys.id.rawValue, value: id)\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to start process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 6372,
+              "start_position" : 5889
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "startProcess",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 5932,
+                  "start_position" : 5920
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.stop.rawValue)\n\n        let data = try JSONEncoder().encode(options)\n        request.set(key: SandboxKeys.stopOptions.rawValue, value: data)\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to stop container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 6911,
+              "start_position" : 6372
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "stop",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ContainerStopOptions"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 6424,
+                  "start_position" : 6395
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "options",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.kill.rawValue)\n        request.set(key: SandboxKeys.id.rawValue, value: id)\n        request.set(key: SandboxKeys.signal.rawValue, value: signal)\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to send signal \\(signal) to process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 7489,
+              "start_position" : 6911
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "kill",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 6948,
+                  "start_position" : 6934
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 6961,
+                  "start_position" : 6948
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "signal",
+              "order" : 1
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.resize.rawValue)\n        request.set(key: SandboxKeys.id.rawValue, value: id)\n        request.set(key: SandboxKeys.width.rawValue, value: UInt64(size.width))\n        request.set(key: SandboxKeys.height.rawValue, value: UInt64(size.height))\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to resize pty for process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 8160,
+              "start_position" : 7489
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "resize",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 7528,
+                  "start_position" : 7514
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Terminal.Size"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 7547,
+                  "start_position" : 7528
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "size",
+              "order" : 1
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.wait.rawValue)\n        request.set(key: SandboxKeys.id.rawValue, value: id)\n\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to wait for process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }\n        let code = response.int64(key: SandboxKeys.exitCode.rawValue)\n        let date = response.date(key: SandboxKeys.exitedAt.rawValue)\n        return ExitStatus(exitCode: Int32(code), exitedAt: date)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 8900,
+              "start_position" : 8160
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "wait",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 8195,
+                  "start_position" : 8183
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "ExitStatus"
+            },
+            "description" : "-> ExitStatus"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.dial.rawValue)\n        request.set(key: SandboxKeys.port.rawValue, value: UInt64(port))\n\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to dial \\(port) on \\(self.id)\",\n                cause: error\n            )\n        }\n        guard let fh = response.fileHandle(key: SandboxKeys.fd.rawValue) else {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get fd for vsock port \\(port)\"\n            )\n        }\n        return fh"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 9692,
+              "start_position" : 8900
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "dial",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UInt32"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 8937,
+                  "start_position" : 8923
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "port",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "FileHandle"
+            },
+            "description" : "-> FileHandle"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.shutdown.rawValue)\n\n        do {\n            _ = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to shutdown container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 10092,
+              "start_position" : 9692
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "shutdown",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.copyIn.rawValue)\n        request.set(key: SandboxKeys.sourcePath.rawValue, value: source)\n        request.set(key: SandboxKeys.destinationPath.rawValue, value: destination)\n        request.set(key: SandboxKeys.fileMode.rawValue, value: UInt64(mode))\n        request.set(key: SandboxKeys.createParents.rawValue, value: createParents)\n\n        do {\n            try await self.client.send(request, responseTimeout: .seconds(300))\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to copy into container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 10910,
+              "start_position" : 10092
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "copyIn",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 10133,
+                  "start_position" : 10117
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "source",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 10154,
+                  "start_position" : 10133
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "destination",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UInt32"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 10168,
+                  "start_position" : 10154
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "mode",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 10194,
+                  "start_position" : 10168
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "createParents",
+              "order" : 3
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.copyOut.rawValue)\n        request.set(key: SandboxKeys.sourcePath.rawValue, value: source)\n        request.set(key: SandboxKeys.destinationPath.rawValue, value: destination)\n        request.set(key: SandboxKeys.createParents.rawValue, value: createParents)\n\n        do {\n            try await self.client.send(request, responseTimeout: .seconds(300))\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to copy from container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 11639,
+              "start_position" : 10910
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "copyOut",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 10952,
+                  "start_position" : 10936
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "source",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 10973,
+                  "start_position" : 10952
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "destination",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 10999,
+                  "start_position" : 10973
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "createParents",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: SandboxRoutes.statistics.rawValue)\n\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get statistics for container \\(self.id)\",\n                cause: error\n            )\n        }\n\n        guard let data = response.dataNoCopy(key: SandboxKeys.statistics.rawValue) else {\n            throw ContainerizationError(\n                .internalError,\n                message: \"no statistics data returned\"\n            )\n        }\n\n        return try JSONDecoder().decode(ContainerStats.self, from: data)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 12428,
+              "start_position" : 11639
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "statistics",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "ContainerStats"
+            },
+            "description" : "-> ContainerStats"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+        "location" : {
+          "end_position" : 12430,
+          "start_position" : 2892
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove Extension refactoring"
+  },
+  "refactoringIndex" : 49,
+  "refactoringType" : "Remove Extension refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift"
+  ]
+}

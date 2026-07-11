@@ -1,0 +1,1413 @@
+{
+  "caseID" : "case-b57a7c04c9cebc6d07a04086",
+  "commitHash" : "cda6b99083ad7069fd8d07a4876a7e22e8efb49e",
+  "commitMessage" : "feat: added fixed unit option to the Network and Disk modules (#3231)\n\n* Network monitor fixed unit\n\n* Add fixed units to disk widget\n\n* \"fix\" lint",
+  "commitURL" : "https://github.com/exelban/stats/commit/cda6b99083ad7069fd8d07a4876a7e22e8efb49e",
+  "durationSeconds" : 39.683984994888306,
+  "entityNames" : [
+    "BarChartView?",
+    "Bool",
+    "DataSizeBase",
+    "Disks",
+    "ModuleType",
+    "NSCoder",
+    "NSColor",
+    "NSGridView"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "DataSizeBase"
+      },
+      "getter_block" : {
+        "body" : {
+          "content" : "DataSizeBase(rawValue: Store.shared.string(key: \"\\(self.module.stringValue)_base\", defaultValue: DataSizeBase.byte.rawValue)) ?? .byte"
+        },
+        "modifier" : "get"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Modules/Disk/preview.swift",
+        "location" : {
+          "end_position" : 1557,
+          "start_position" : 1388
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "base"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "PreviewWrapper"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.readColorState = SColor.fromString(Store.shared.string(key: \"\\(self.module.stringValue)_readColor\", defaultValue: self.readColorState.key))\n        self.writeColorState = SColor.fromString(Store.shared.string(key: \"\\(self.module.stringValue)_writeColor\", defaultValue: self.writeColorState.key))\n        self.reverseOrderState = Store.shared.bool(key: \"\\(self.module.stringValue)_reverseOrder\", defaultValue: self.reverseOrderState)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 4038,
+              "start_position" : 3549
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "loadColors",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.distribution = .fill\n        view.orientation = .horizontal\n        view.translatesAutoresizingMaskIntoConstraints = false\n        view.heightAnchor.constraint(equalToConstant: 90).isActive = true\n        view.edgeInsets = NSEdgeInsets(\n            top: Constants.Settings.margin,\n            left: Constants.Settings.margin,\n            bottom: Constants.Settings.margin,\n            right: Constants.Settings.margin\n        )\n        view.spacing = Constants.Settings.margin\n        \n        let circle = PieChartView(drawValue: true)\n        circle.widthAnchor.constraint(equalToConstant: 90).isActive = true\n        circle.toolTip = localizedString(\"Disk usage\")\n        self.circle = circle\n        \n        let details: NSView = {\n            let view = NSStackView()\n            view.orientation = .vertical\n            view.distribution = .fillEqually\n            view.spacing = 2\n            \n            var nameValue = localizedString(\"Unknown\")\n            var fileSystemValue = localizedString(\"Unknown\")\n            var sizeValue = localizedString(\"Unknown\")\n            if let disk = SystemKit.shared.device.info.disk?.first {\n                if let name = disk.name {\n                    nameValue = name\n                }\n                if let fileSystem = disk.fileSystem {\n                    fileSystemValue = fileSystem.uppercased()\n                }\n                if let size = disk.size {\n                    sizeValue = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)\n                }\n                self.main = disk\n            }\n            \n            let title: NSView = {\n                let view = NSStackView()\n                view.orientation = .horizontal\n                view.spacing = 2\n                \n                let nameField = NSButton()\n                nameField.bezelStyle = .inline\n                nameField.isBordered = false\n                nameField.contentTintColor = .labelColor\n                nameField.action = #selector(self.openDisk)\n                nameField.target = self\n                nameField.toolTip = nameValue\n                nameField.title = nameValue\n                nameField.cell?.truncatesLastVisibleLine = true\n                \n                let fileSystemField = LabelField(fileSystemValue)\n                fileSystemField.textColor = .tertiaryLabelColor\n                \n                let activity: NSStackView = NSStackView()\n                activity.distribution = .fill\n                activity.spacing = 2\n                \n                let readState: NSView = NSView()\n                readState.widthAnchor.constraint(equalToConstant: 8).isActive = true\n                readState.heightAnchor.constraint(equalToConstant: 8).isActive = true\n                readState.wantsLayer = true\n                readState.layer?.backgroundColor = NSColor.lightGray.withAlphaComponent(0.75).cgColor\n                readState.layer?.cornerRadius = 4\n                readState.toolTip = localizedString(\"Read\")\n                let writeState: NSView = NSView()\n                writeState.widthAnchor.constraint(equalToConstant: 8).isActive = true\n                writeState.heightAnchor.constraint(equalToConstant: 8).isActive = true\n                writeState.wantsLayer = true\n                writeState.layer?.backgroundColor = NSColor.lightGray.withAlphaComponent(0.75).cgColor\n                writeState.layer?.cornerRadius = 4\n                writeState.toolTip = localizedString(\"Write\")\n                self.readState = readState\n                self.writeState = writeState\n                \n                activity.addArrangedSubview(readState)\n                activity.addArrangedSubview(writeState)\n                \n                view.addArrangedSubview(nameField)\n                view.addArrangedSubview(activity)\n                view.addArrangedSubview(NSView())\n                view.addArrangedSubview(fileSystemField)\n                \n                return view\n            }()\n            \n            let bar = BarChartView(size: 11, horizontal: true)\n            self.bar = bar\n            \n            let levels = NSStackView()\n            levels.orientation = .horizontal\n            levels.distribution = .fill\n            \n            self.usedField = previewRow(levels, space: false, color: NSColor.systemBlue, title: \"\\(localizedString(\"Used\")):\", value: \"\")\n            self.freeField = previewRow(levels, space: false, color: NSColor.lightGray, title: \"\\(localizedString(\"Free\")):\", value: \"\")\n            \n            let fileSystemField = LabelField(sizeValue)\n            fileSystemField.textColor = .tertiaryLabelColor\n            \n            levels.addArrangedSubview(NSView())\n            levels.addArrangedSubview(fileSystemField)\n            \n            view.addArrangedSubview(title)\n            view.addArrangedSubview(bar)\n            view.addArrangedSubview(levels)\n            \n            return view\n        }()\n        \n        view.addArrangedSubview(circle)\n        view.addArrangedSubview(details)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 9211,
+              "start_position" : 4038
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usageView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSStackView = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = Constants.Settings.margin*2\n        view.heightAnchor.constraint(equalToConstant: 140).isActive = true\n        \n        let chart = NetworkChartView(frame: .zero, num: 600)\n        self.chart = chart\n        chart.setColors(in: self.readColor, out: self.writeColor)\n        chart.setReverseOrder(self.reverseOrderState)\n        chart.setLegend(x: true, y: false)\n        view.addArrangedSubview(chart)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 9843,
+              "start_position" : 9211
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "historyView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = 2\n        \n        self.readSpeedValueField = previewRow(view, color: self.readColor, title: \"\\(localizedString(\"Read\")):\", value: \"0 KB/s\")\n        self.writeSpeedValueField = previewRow(view, color: self.writeColor, title: \"\\(localizedString(\"Write\")):\", value: \"0 KB/s\")\n        self.totalReadValueField = previewRow(view, title: \"\\(localizedString(\"Total read\")):\", value: \"0 KB\")\n        self.totalWrittenValueField = previewRow(view, title: \"\\(localizedString(\"Total written\")):\", value: \"0 KB\")\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 10562,
+              "start_position" : 9843
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "detailsView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = 2\n        \n        self.smartTotalReadValueField = previewRow(view, title: \"\\(localizedString(\"Total read\")):\", value: \"0 KB\")\n        self.smartTotalWrittenValueField = previewRow(view, title: \"\\(localizedString(\"Total written\")):\", value: \"0 KB\")\n        self.temperatureValueField = previewRow(view, title: \"\\(localizedString(\"Temperature\")):\", value: \"\\(temperature(0))\")\n        self.healthValueField = previewRow(view, title: \"\\(localizedString(\"Health\")):\", value: \"0%\")\n        self.powerCyclesValueField = previewRow(view, title: \"\\(localizedString(\"Power cycles\")):\", value: \"0\")\n        self.powerOnHoursValueField = previewRow(view, title: \"\\(localizedString(\"Power on hours\")):\", value: \"0\")\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 11482,
+              "start_position" : 10562
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "smartView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "DispatchQueue.main.async(execute: {\n            if (self.window?.isVisible ?? false) || !self.initialized {\n                if let main = self.main, let update = value.first(where: { $0.uuid == main.id }) {\n                    let free = update.free\n                    let used = update.size - free\n                    self.usedField?.stringValue = DiskSize(used).getReadableMemory()\n                    self.freeField?.stringValue = DiskSize(free).getReadableMemory()\n                    \n                    self.circle?.setValue(update.percentage)\n                    self.bar?.setValue(ColorValue(update.percentage, color: update.percentage.usageColor()))\n                    \n                    self.uri = update.path\n                    \n                    if let smart = update.smart {\n                        self.smartTotalReadValueField?.toolTip = \"\\(smart.totalRead / (512 * 1000))\"\n                        self.smartTotalWrittenValueField?.toolTip = \"\\(smart.totalWritten / (512 * 1000))\"\n                        self.smartTotalReadValueField?.stringValue = Units(bytes: smart.totalRead).getReadableMemory()\n                        self.smartTotalWrittenValueField?.stringValue = Units(bytes: smart.totalWritten).getReadableMemory()\n                        \n                        self.temperatureValueField?.stringValue = \"\\(temperature(Double(smart.temperature)))\"\n                        self.healthValueField?.stringValue = \"\\(smart.life)%\"\n                        \n                        self.powerCyclesValueField?.stringValue = \"\\(smart.powerCycles)\"\n                        self.powerOnHoursValueField?.stringValue = \"\\(smart.powerOnHours)\"\n                    }\n                }\n                \n                let drives = value.filter(where: { $0.uuid != self.main?.id })\n                \n                if drives.isEmpty {\n                    self.allDisks?.isHidden = true\n                } else if !drives.isEmpty {\n                    self.allDisks?.isHidden = false\n                }\n                \n                let mounted = value.count\n                let external = value.filter(where: { $0.removable }).count\n                self.allDisks?.setSubtitle(\"\\(mounted) \\(localizedString(\"mounted\")) · \\(external) \\(localizedString(\"removable\"))\")\n                \n                let driveUUIDs = Set(drives.map { $0.uuid })\n                for uuid in Array(self.diskRows.keys) where !driveUUIDs.contains(uuid) {\n                    if let row = self.diskRows[uuid] {\n                        row.cells.forEach { $0.removeFromSuperview() }\n                        if let gridRow = row.gridRow {\n                            let index = self.disks.index(of: gridRow)\n                            if index != NSNotFound {\n                                self.disks.removeRow(at: index)\n                            }\n                        }\n                        if let sepRow = row.separatorRow {\n                            let index = self.disks.index(of: sepRow)\n                            if index != NSNotFound {\n                                self.disks.removeRow(at: index)\n                            }\n                        }\n                        self.diskRows.removeValue(forKey: uuid)\n                    }\n                }\n                let firstRow = self.diskRows.values\n                    .compactMap { row -> (row: DiskRow, index: Int)? in\n                        guard let gr = row.gridRow else { return nil }\n                        let idx = self.disks.index(of: gr)\n                        return idx == NSNotFound ? nil : (row, idx)\n                    }\n                    .min(by: { $0.index < $1.index })?.row\n                if let firstRow = firstRow, let sepRow = firstRow.separatorRow {\n                    let index = self.disks.index(of: sepRow)\n                    if index != NSNotFound {\n                        self.disks.removeRow(at: index)\n                    }\n                    firstRow.separatorRow = nil\n                }\n                \n                drives.forEach { drive in\n                    if let row = self.diskRows[drive.uuid] {\n                        row.update(drive)\n                    } else {\n                        let row = DiskRow(drive)\n                        let isFirst = self.disks.numberOfRows == 0\n                        if !self.diskRows.isEmpty {\n                            let sep = NSView()\n                            sep.wantsLayer = true\n                            sep.layer?.backgroundColor = NSColor.separatorColor.withAlphaComponent(0.05).cgColor\n                            sep.heightAnchor.constraint(equalToConstant: 1).isActive = true\n                            let sepCells = (0..<max(1, self.disks.numberOfColumns)).map { _ -> NSView in NSView() }\n                            var cells: [NSView] = sepCells\n                            cells[0] = sep\n                            let sepRow = self.disks.addRow(with: cells)\n                            if self.disks.numberOfColumns > 1 {\n                                sepRow.mergeCells(in: NSRange(location: 0, length: self.disks.numberOfColumns))\n                            }\n                            row.separatorRow = sepRow\n                        }\n                        row.gridRow = self.disks.addRow(with: row.cells)\n                        if isFirst {\n                            self.disks.column(at: 0).xPlacement = .leading\n                            self.disks.column(at: 1).xPlacement = .center\n                            self.disks.column(at: 2).xPlacement = .trailing\n                        }\n                        self.diskRows[drive.uuid] = row\n                    }\n                }\n                \n                self.initialized = true\n            }\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 17348,
+              "start_position" : 11482
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "capacityCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Disks"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/preview.swift",
+                "location" : {
+                  "end_position" : 11537,
+                  "start_position" : 11523
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let main = self.main, let update = value.first(where: { $0.uuid == main.id }) else {\n            return\n        }\n        let read = update.activity.read\n        let write = update.activity.write\n        \n        self.chart?.addValue(upload: Double(write), download: Double(read))\n        \n        self.readState?.toolTip = \"Read: \\(Units(bytes: read).getReadableSpeed(base: self.base, unit: self.speedUnit))\"\n        self.readState?.layer?.backgroundColor = read != 0 ? self.readColor.cgColor : NSColor.lightGray.withAlphaComponent(0.75).cgColor\n        \n        self.writeState?.toolTip = \"Write: \\(Units(bytes: write).getReadableSpeed(base: self.base, unit: self.speedUnit))\"\n        self.writeState?.layer?.backgroundColor = write != 0 ? self.writeColor.cgColor : NSColor.lightGray.withAlphaComponent(0.75).cgColor\n        \n        self.readSpeedValueField?.stringValue = Units(bytes: read).getReadableSpeed(base: self.base, unit: self.speedUnit)\n        self.writeSpeedValueField?.stringValue = Units(bytes: write).getReadableSpeed(base: self.base, unit: self.speedUnit)\n        \n        let stats = update.activity\n        self.totalReadValueField?.stringValue = Units(bytes: stats.readBytes).getReadableMemory()\n        self.totalReadValueField?.toolTip = \"\\(stats.readBytes / (512 * 1000))\"\n        self.totalWrittenValueField?.stringValue = Units(bytes: stats.writeBytes).getReadableMemory()\n        self.totalWrittenValueField?.toolTip = \"\\(stats.writeBytes / (512 * 1000))\""
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 18911,
+              "start_position" : 17348
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "activityCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Disks"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/preview.swift",
+                "location" : {
+                  "end_position" : 17403,
+                  "start_position" : 17389
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if let uri = self.uri, let finder = self.finder {\n            NSWorkspace.shared.open([uri], withApplicationAt: finder, configuration: NSWorkspace.OpenConfiguration())\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 19144,
+              "start_position" : 18911
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "openDisk",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 3441,
+              "start_position" : 2328
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ModuleType"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/preview.swift",
+                "location" : {
+                  "end_position" : 2370,
+                  "start_position" : 2350
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "module",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 3549,
+              "start_position" : 3441
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Disk/preview.swift",
+                "location" : {
+                  "end_position" : 3480,
+                  "start_position" : 3466
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Disk/preview.swift",
+        "location" : {
+          "end_position" : 19146,
+          "start_position" : 219
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "Preview",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "disk_s?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 297,
+              "start_position" : 278
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "main"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "PieChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 346,
+              "start_position" : 319
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "circle"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "BarChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 387,
+              "start_position" : 363
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "bar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NetworkChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 434,
+              "start_position" : 404
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "chart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 485,
+              "start_position" : 456
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usedField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 531,
+              "start_position" : 502
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "freeField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 577,
+              "start_position" : 553
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 619,
+              "start_position" : 594
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "writeState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "PreferencesSection?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 676,
+              "start_position" : 641
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "allDisks"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSGridView"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "{\n        let grid = NSGridView(frame: .zero)\n        grid.rowSpacing = Constants.Settings.margin\n        grid.rowAlignment = .none\n        grid.yPlacement = .center\n        return grid\n    }",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+                    {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+                        {
+                          "label" : "frame",
+                          "value" : ".zero"
+                        }
+                      ],
+                      "call" : "NSGridView",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Modules/Disk/preview.swift",
+                        "location" : {
+                          "end_position" : 758,
+                          "start_position" : 734
+                        }
+                      }
+                    }
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Disk/preview.swift",
+                    "location" : {
+                      "end_position" : 906,
+                      "start_position" : 713
+                    }
+                  },
+                  "trailing_closure" : {
+                    "attributes" : [
+
+                    ],
+                    "body" : {
+                      "content" : "let grid = NSGridView(frame: .zero)\n        grid.rowSpacing = Constants.Settings.margin\n        grid.rowAlignment = .none\n        grid.yPlacement = .center\n        return grid"
+                    },
+                    "captures" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Modules/Disk/preview.swift",
+                      "location" : {
+                        "end_position" : 904,
+                        "start_position" : 713
+                      }
+                    },
+                    "parameters" : [
+
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 906,
+              "start_position" : 693
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "disks"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String: DiskRow]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[:]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 956,
+              "start_position" : 923
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "diskRows"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1003,
+              "start_position" : 978
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "initialized"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondBlue"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1061,
+              "start_position" : 1025
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.readColorState.additional as? NSColor ?? NSColor.systemRed"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1164,
+              "start_position" : 1078
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondRed"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1217,
+              "start_position" : 1181
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "writeColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.writeColorState.additional as? NSColor ?? NSColor.systemBlue"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1323,
+              "start_position" : 1234
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "writeColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1371,
+              "start_position" : 1340
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reverseOrderState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DataSizeBase"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "DataSizeBase(rawValue: Store.shared.string(key: \"\\(self.module.stringValue)_base\", defaultValue: DataSizeBase.byte.rawValue)) ?? .byte"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1557,
+              "start_position" : 1388
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "base"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "networkSpeedUnit(from: Store.shared.string(key: \"\\(self.module.stringValue)_speedUnit\", defaultValue: NetworkSpeedUnitAuto)).key"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1736,
+              "start_position" : 1574
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "speedUnit"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URL?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1773,
+              "start_position" : 1758
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "uri"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URL?"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1802,
+              "start_position" : 1790
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "finder"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1856,
+              "start_position" : 1824
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readSpeedValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1906,
+              "start_position" : 1873
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "writeSpeedValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 1960,
+              "start_position" : 1928
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "totalReadValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 2012,
+              "start_position" : 1977
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "totalWrittenValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 2071,
+              "start_position" : 2034
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "smartTotalReadValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 2128,
+              "start_position" : 2088
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "smartTotalWrittenValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 2179,
+              "start_position" : 2145
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "temperatureValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 2225,
+              "start_position" : 2196
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "healthValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 2276,
+              "start_position" : 2242
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "powerCyclesValueField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ValueField?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/preview.swift",
+            "location" : {
+              "end_position" : 2328,
+              "start_position" : 2293
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "powerOnHoursValueField"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 47,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Disk/preview.swift"
+  ]
+}

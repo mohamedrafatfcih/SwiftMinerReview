@@ -1,0 +1,119 @@
+{
+  "caseID" : "case-1a8e03976f2afe44c905af4d",
+  "commitHash" : "613e6315d3fbfca1722a8fb1bd197a8f31b8844c",
+  "commitMessage" : "feat: improved LineChart rendering by showing gaps when data is unavailable instead of drawing a misleading continuous line\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/613e6315d3fbfca1722a8fb1bd197a8f31b8844c",
+  "durationSeconds" : 3.568835973739624,
+  "entityNames" : [
+    "NSRect",
+    "diffOver",
+    "dirtyRect",
+    "draw",
+    "x"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "infix_expr" : {
+            "_0" : {
+              "description" : "over.point.x - p.x",
+              "left_operand" : "over.point.x",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 15432,
+                  "start_position" : 15414
+                }
+              },
+              "operator_value" : "-",
+              "right_operand" : {
+                "reference" : {
+                  "arguments" : [
+
+                  ],
+                  "name" : "x"
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 15432,
+          "start_position" : 15403
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "diffOver"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "super.draw(dirtyRect)\n        \n        var originalPoints: [DoubleValue?] = []\n        var shadowPoints: [DoubleValue?] = []\n        var transparent: Bool = true\n        var flipY: Bool = false\n        var minMax: Bool = false\n        var color: NSColor = .controlAccentColor\n        var suffix: String = \"%\"\n        var toolTipFunc: ((DoubleValue) -> String)?\n        var isTooltipEnabled: Bool = true\n        var xLegend: Bool = false\n        var yLegend: Bool = false\n        var scale: Scale = .none\n        var fixedScale: Double = 1\n        var zeroValue: Double = 0.01\n        self.read {\n            originalPoints = self.points\n            shadowPoints = self.shadowPoints\n            transparent = self.transparent\n            flipY = self.flipY\n            minMax = self.minMax\n            color = self.color\n            suffix = self.suffix\n            toolTipFunc = self.toolTipFunc\n            isTooltipEnabled = self.isTooltipEnabled\n            xLegend = self.xLegend\n            yLegend = self.yLegend\n            scale = self.scale\n            fixedScale = self.fixedScale\n            zeroValue = self.zeroValue\n        }\n        \n        let points = stop ? shadowPoints : originalPoints\n        guard let context = NSGraphicsContext.current?.cgContext, !points.isEmpty else { return }\n        context.setShouldAntialias(true)\n        let maxValue = points.compactMap { $0 }.max() ?? 0\n        \n        let lineColor: NSColor = color\n        var gradientColor: NSColor = color.withAlphaComponent(0.5)\n        if !transparent {\n            gradientColor = color.withAlphaComponent(0.8)\n        }\n        let gradient = NSGradient(colors: [\n            gradientColor.withAlphaComponent(0.5),\n            gradientColor.withAlphaComponent(1.0)\n        ])\n        \n        let offset: CGFloat = 1 / (NSScreen.main?.backingScaleFactor ?? 1)\n        let xLegendHeight: CGFloat = xLegend ? 14 : 0\n        let yLegendWidth: CGFloat = yLegend ? 30 : 0\n        let height: CGFloat = self.frame.height - offset - xLegendHeight\n        let chartWidth: CGFloat = self.frame.width - yLegendWidth\n        let xRatio: CGFloat = chartWidth / CGFloat(points.count-1)\n        let zero: CGFloat = flipY ? self.frame.height : xLegendHeight\n        \n        var lines: [[CGPoint]] = []\n        var line: [CGPoint] = []\n        var list: [(value: DoubleValue, point: CGPoint)] = []\n        \n        for (i, v) in points.enumerated() {\n            guard let v else {\n                if !line.isEmpty {\n                    lines.append(line)\n                    line = []\n                }\n                continue\n            }\n            \n            var y = scaleValue(scale: scale, value: v.value, maxValue: maxValue, zeroValue: zeroValue, maxHeight: height, limit: fixedScale)\n            if flipY {\n                y = height - y\n            }\n            \n            let point = CGPoint(\n                x: yLegendWidth + CGFloat(i) * xRatio,\n                y: y + xLegendHeight\n            )\n            line.append(point)\n            list.append((value: v, point: point))\n        }\n        if lines.isEmpty && !line.isEmpty {\n            lines.append(line)\n        }\n        \n        var path = NSBezierPath()\n        for linePoints in lines {\n            if linePoints.count == 1 {\n                path = NSBezierPath(ovalIn: CGRect(x: linePoints[0].x-offset, y: linePoints[0].y-offset, width: 1, height: 1))\n                lineColor.set()\n                path.stroke()\n                gradientColor.set()\n                path.fill()\n                continue\n            }\n\n            path = NSBezierPath()\n            path.move(to: linePoints[0])\n            for i in 1..<linePoints.count {\n                path.line(to: linePoints[i])\n            }\n            lineColor.set()\n            path.lineWidth = offset\n            path.stroke()\n\n            path = path.copy() as! NSBezierPath\n            path.line(to: CGPoint(x: linePoints[linePoints.count-1].x, y: zero))\n            path.line(to: CGPoint(x: linePoints[0].x, y: zero))\n            path.close()\n            if let gradient {\n                gradient.draw(in: path, angle: 90)\n            } else {\n                gradientColor.set()\n                path.fill()\n            }\n        }\n        \n        if minMax {\n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 9, weight: .light),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: NSMutableParagraphStyle()\n            ]\n            \n            var str: String = \"\"\n            let flatList = originalPoints.map{ $0?.value ?? 0 }\n            if let value = flatList.max() {\n                str = toolTipFunc != nil ? toolTipFunc!(DoubleValue(value)) : \"\\(Int(value.rounded(toPlaces: 2) * 100))\\(suffix)\"\n            }\n            let textWidth = str.widthOfString(usingFont: stringAttributes[NSAttributedString.Key.font] as! NSFont)\n            let y = flipY ? xLegendHeight + 1 : height + xLegendHeight - 9\n            let rect = CGRect(x: 1, y: y, width: textWidth, height: 8)\n            NSAttributedString.init(string: str, attributes: stringAttributes).draw(with: rect)\n        }\n        \n        if xLegend, list.count >= 2 {\n            let legendFont = NSFont.systemFont(ofSize: 9, weight: .light)\n            let legendAttributes: [NSAttributedString.Key: Any] = [\n                .font: legendFont,\n                .foregroundColor: (isDarkMode ? NSColor.white : NSColor.textColor).withAlphaComponent(0.5)\n            ]\n            \n            let sampleWidth = \"00:00:00\".widthOfString(usingFont: legendFont)\n            let spacing: CGFloat = 8\n            let maxLabels = max(2, Int(self.frame.width / (sampleWidth + spacing)))\n            let count = min(maxLabels, 5)\n            let step = max(1, (list.count - 1) / (count - 1))\n            var indices: [Int] = []\n            for i in stride(from: 0, to: list.count - 1, by: step) {\n                indices.append(i)\n            }\n            if indices.last != list.count - 1 {\n                indices.append(list.count - 1)\n            }\n            \n            var lastMaxX: CGFloat = -.greatestFiniteMagnitude\n            for idx in indices {\n                let item = list[idx]\n                let str = self.legendDateFormatter.string(from: item.value.ts)\n                let textWidth = str.widthOfString(usingFont: legendFont)\n                var x = item.point.x - textWidth / 2\n                x = max(0, min(x, self.frame.width - textWidth))\n                guard x >= lastMaxX else { continue }\n                let attrStr = NSAttributedString(string: str, attributes: legendAttributes)\n                attrStr.draw(with: CGRect(x: x, y: 0, width: textWidth, height: 12))\n                lastMaxX = x + textWidth + spacing\n            }\n        }\n        \n        if yLegend {\n            let legendFont = NSFont.systemFont(ofSize: 9, weight: .light)\n            let legendAttributes: [NSAttributedString.Key: Any] = [\n                .font: legendFont,\n                .foregroundColor: (isDarkMode ? NSColor.white : NSColor.textColor).withAlphaComponent(0.5)\n            ]\n            \n            let textHeight = legendFont.ascender - legendFont.descender\n            let steps = [0, 25, 50, 75, 100]\n            let spacing = (height - textHeight) / CGFloat(steps.count - 1)\n            for (i, step) in steps.enumerated() {\n                let textY = xLegendHeight + CGFloat(i) * spacing\n                let lineY = xLegendHeight + height * CGFloat(step) / 100\n                \n                if xLegend {\n                    let gridColor = (isDarkMode ? NSColor.white : NSColor.black).withAlphaComponent(0.06)\n                    gridColor.setStroke()\n                    let line = NSBezierPath()\n                    line.move(to: CGPoint(x: yLegendWidth, y: lineY))\n                    line.line(to: CGPoint(x: self.frame.width, y: lineY))\n                    line.lineWidth = 1 / (NSScreen.main?.backingScaleFactor ?? 1)\n                    line.stroke()\n                }\n                \n                let label = \"\\(step)\\(suffix)\"\n                let attrStr = NSAttributedString(string: label, attributes: legendAttributes)\n                attrStr.draw(at: CGPoint(x: 0, y: textY))\n            }\n        }\n        \n        if isTooltipEnabled, let p = self.cursor, !list.isEmpty {\n            guard p.y <= height + xLegendHeight else { return }\n            \n            let overPoints = list.filter { $0.point.x >= p.x }\n            let underPoints = list.filter { $0.point.x <= p.x }\n            \n            if let over = overPoints.min(by: { $0.point.x < $1.point.x }), let under = underPoints.max(by: { $0.point.x < $1.point.x }) {\n                let diffOver = over.point.x - p.x\n                let diffUnder = p.x - under.point.x\n                let nearest = (diffOver < diffUnder) ? over : under\n                let vLine = NSBezierPath()\n                let hLine = NSBezierPath()\n                \n                vLine.setLineDash([4, 4], count: 2, phase: 0)\n                hLine.setLineDash([6, 6], count: 2, phase: 0)\n                \n                vLine.move(to: CGPoint(x: p.x, y: xLegendHeight))\n                vLine.line(to: CGPoint(x: p.x, y: height + xLegendHeight))\n                vLine.close()\n                \n                hLine.move(to: CGPoint(x: 0, y: p.y))\n                hLine.line(to: CGPoint(x: self.frame.size.width, y: p.y))\n                hLine.close()\n                \n                NSColor.tertiaryLabelColor.set()\n                \n                vLine.lineWidth = offset\n                hLine.lineWidth = offset\n                \n                vLine.stroke()\n                hLine.stroke()\n                \n                let dotSize: CGFloat = 4\n                let path = NSBezierPath(ovalIn: CGRect(\n                    x: nearest.point.x-(dotSize/2),\n                    y: nearest.point.y-(dotSize/2),\n                    width: dotSize,\n                    height: dotSize\n                ))\n                NSColor.red.set()\n                path.stroke()\n                \n                let date = self.dateFormatter.string(from: nearest.value.ts)\n                let roundedValue = Int(nearest.value.value.rounded(toPlaces: 2) * 100)\n                let strValue = \"\\(roundedValue)\\(suffix)\"\n                let value = toolTipFunc != nil ? toolTipFunc!(nearest.value) : strValue\n                let tooltipWidth: CGFloat = 78\n                let tooltipX = nearest.point.x + 4 + tooltipWidth > self.frame.size.width\n                    ? nearest.point.x - tooltipWidth - 4\n                    : nearest.point.x + 4\n                drawToolTip(self.frame, CGPoint(x: tooltipX, y: nearest.point.y+4), CGSize(width: tooltipWidth, height: height), value: value, subtitle: date)\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 17511,
+          "start_position" : 6484
+        }
+      },
+      "modifiers" : [
+        "public",
+        "override"
+      ],
+      "name" : "draw",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSRect"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 6539,
+              "start_position" : 6520
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "dirtyRect",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 17,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Charts.swift"
+  ]
+}

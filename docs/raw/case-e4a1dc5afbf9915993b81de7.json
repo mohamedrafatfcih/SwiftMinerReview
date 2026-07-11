@@ -1,0 +1,149 @@
+{
+  "caseID" : "case-e4a1dc5afbf9915993b81de7",
+  "commitHash" : "be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
+  "commitMessage" : "Migrate some container tests, remove concurrent demo tests. (#1840)\n\n- Part of #1833.\n- Tweaks `ContainerFixture.withContainer()` to support the legacy\n`longRun()` pattern without boilerplate.",
+  "commitURL" : "https://github.com/apple/container/commit/be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
+  "durationSeconds" : 1.9615820646286011,
+  "entityNames" : [
+    "CLITest",
+    "String",
+    "TestCLIExportCommand",
+    "getTestName",
+    "testExportCommand"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialSuites"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "Test.current!.name.trimmingCharacters(in: [\"(\", \")\"]).lowercased()"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExport.swift",
+            "location" : {
+              "end_position" : 1035,
+              "start_position" : 911
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getTestName",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n        try doLongRun(name: name, autoRemove: false)\n        defer {\n            try? doStop(name: name)\n            try? doRemove(name: name)\n        }\n\n        let mustBeInImage = \"must-be-in-image\"\n        _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo \\(mustBeInImage) > /foo\"])\n\n        _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /parent/child\"])\n        let hardlinkMustRemain = \"hardlink-must-remain\"\n        _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo \\(hardlinkMustRemain) > /parent/child/bar\"])\n        _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"ln /parent/child/bar /bar\"])\n\n        let symlinkMustRemain = \"symlink-must-remain\"\n        _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo \\(symlinkMustRemain) > /parent/child/baz\"])\n        _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"ln /parent/child/baz /baz\"])\n\n        try doStop(name: name)\n\n        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)\n        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)\n        defer {\n            try? FileManager.default.removeItem(at: tempDir)\n        }\n        let tempFile = tempDir.appendingPathComponent(UUID().uuidString)\n\n        try doExport(name: name, filepath: tempFile.path())\n\n        let attrs = try FileManager.default.attributesOfItem(atPath: tempFile.path())\n        let fileSize = attrs[.size] as! UInt64\n        #expect(fileSize > 0)\n\n        // TODO: verify foo bar baz are in tar file.\n        let reader = try ArchiveReader(file: tempFile)\n        let (foo, fooData) = try reader.extractFile(path: \"/foo\")\n        #expect(foo.fileType == .regular)\n        #expect(String(data: fooData, encoding: .utf8)?.starts(with: mustBeInImage) ?? false)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExport.swift",
+            "location" : {
+              "end_position" : 2899,
+              "start_position" : 1035
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testExportCommand",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExport.swift",
+        "location" : {
+          "end_position" : 2901,
+          "start_position" : 850
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIExportCommand",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 4,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Containers/TestCLIExport.swift"
+  ]
+}

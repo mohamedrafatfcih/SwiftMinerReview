@@ -1,0 +1,1348 @@
+{
+  "caseID" : "case-e7add6c01fd161b694068b75",
+  "commitHash" : "d81e8ee41abeb9e2c04c099b6558a2f46bb81e2e",
+  "commitMessage" : "OfflineRetrier (#3948)\n\nIssue Link :link:\nNo specific issue was raised for this feature; this PR introduces a\nnetwork-aware request retrier that automatically reattempts failed\nrequests when the network becomes available.\n\nGoals :soccer:\nImplement an automatic retry mechanism that waits for network\navailability.\n\nImprove request handling by reducing manual retry efforts for\nnetwork-related failures.\n\nImplementation Details :construction:\nIntroduced NetworkAwareRetrier, a custom RequestRetrier that integrates\nwith Alamofire sessions.\n\nUtilized NWPathMonitor to detect network status changes and store\npending retries.\n\nEnsured thread safety using a concurrent queue with barrier flags for\nstate management.\n\nMaintained a queue of pending retry completions, executing them once the\nnetwork is restored.\n\nUsage :rocket:\n1️⃣ Adding NetworkAwareRetrier to an Alamofire Session\nTo enable automatic request retries for all requests within a session:\n\n```\nlet retrier = NetworkAwareRetrier()\nlet session = Session(interceptor: retrier)\n\nsession.request(\"https://example.com/api/\").response { response in\n    print(\"Request completed\")\n}\n```\n\n2️⃣ Using NetworkAwareRetrier for a Specific Request\nIf you want to apply the retrier only to a specific request without\naffecting the entire session, you can use\n\nrequest(_:method:interceptor:):\n\n```\nlet retrier = NetworkAwareRetrier()\nlet session = Session()\n\nsession.request(\"https://example.com/api/\", interceptor: retrier).response { response in\n    print(\"Request completed\")\n}\n```\n\nThis ensures that only the specific request will retry when network\nconnectivity is restored, while other requests in the session remain\nunaffected.\n\nTesting Details :mag:\nUnit Tests: Verified that failed requests are queued and retried once\nthe network becomes available.\n\nManual Testing: Simulated network loss and recovery scenarios to confirm\nexpected retry behavior.\n\nConcurrency Testing: Ensured thread-safe access to shared properties.\n\n---------\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: Gourav Kumar <gourav.kumar@saavn.com>\nCo-authored-by: 김영빈 (Rei) <89764127+kybeen@users.noreply.github.com>\nCo-authored-by: Jon Shier <jon@jonshier.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/d81e8ee41abeb9e2c04c099b6558a2f46bb81e2e",
+  "durationSeconds" : 4.3486409187316895,
+  "entityNames" : [
+    "() -> PathMonitor",
+    "(_ error: any Error) -> Bool",
+    "@Sendable (_ error: any Error) -> Bool",
+    "@autoclosure @escaping () -> NWPathMonitor",
+    "@autoclosure @escaping () -> PathMonitor",
+    "@escaping @Sendable (RetryResult) -> Void",
+    "@escaping @Sendable (_ error: any Error) -> Bool",
+    "DispatchTimeInterval"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.14"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "12"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "12"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "5"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "visionOS",
+              "value" : "1"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "RequestInterceptor"
+        },
+        {
+          "name" : "Sendable"
+        }
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "state.write { state in\n            state.cleanupMonitor()\n        }"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Source/Features/OfflineRetrier.swift",
+          "location" : {
+            "end_position" : 6544,
+            "start_position" : 6448
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "state.write { state in\n            guard state.isOfflineError(error) else { completion(.doNotRetry); return }\n\n            state.pendingCompletions.append(completion)\n\n            guard state.currentMonitor == nil else { return }\n\n            state.startListening { [unowned self] result in\n                let retryResult: RetryResult = switch result {\n                case .pathAvailable:\n                    .retry\n                case .timeout:\n                    // Do not retry, keep original error.\n                    .doNotRetry\n                }\n\n                performResult(retryResult)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 7395,
+              "start_position" : 6544
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "retry",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 6587,
+                  "start_position" : 6568
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Session"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 6631,
+                  "start_position" : 6587
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any Error"
+              },
+              "is_variadic" : false,
+              "label" : "dueTo",
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 6677,
+                  "start_position" : 6631
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (RetryResult) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 6753,
+                  "start_position" : 6677
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 3
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "state.write { state in\n            let completions = state.pendingCompletions\n            state.cleanupMonitor()\n            for completion in completions {\n                Self.monitorQueue.async {\n                    completion(result)\n                }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 7746,
+              "start_position" : 7395
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "performResult",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "RetryResult"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 7449,
+                  "start_position" : 7428
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 3867,
+              "start_position" : 2814
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "autoclosure" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@autoclosure @escaping () -> NWPathMonitor"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "NWPathMonitor",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Features/OfflineRetrier.swift",
+                        "location" : {
+                          "end_position" : 3539,
+                          "start_position" : 3524
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 3540,
+                  "start_position" : 3470
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "monitor",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchTimeInterval"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultWait"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 3620,
+                  "start_position" : 3540
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "maximumWait",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (_ error: any Error) -> Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultIsOfflineError"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 3740,
+                  "start_position" : 3620
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "isOfflineError",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 4945,
+              "start_position" : 3867
+            }
+          },
+          "modifiers" : [
+            "public",
+            "convenience"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NWInterface.InterfaceType"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 4566,
+                  "start_position" : 4517
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "requiredInterfaceType",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchTimeInterval"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultWait"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 4658,
+                  "start_position" : 4566
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "maximumWait",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (_ error: any Error) -> Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultIsOfflineError"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 4790,
+                  "start_position" : 4658
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "isOfflineError",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "11"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "14"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "14"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "7"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "visionOS",
+                  "value" : "1"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 6105,
+              "start_position" : 4945
+            }
+          },
+          "modifiers" : [
+            "public",
+            "convenience"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[NWInterface.InterfaceType]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 5720,
+                  "start_position" : 5666
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "prohibitedInterfaceTypes",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchTimeInterval"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultWait"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 5812,
+                  "start_position" : 5720
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "maximumWait",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (_ error: any Error) -> Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultIsOfflineError"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 5944,
+                  "start_position" : 5812
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "isOfflineError",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 6448,
+              "start_position" : 6105
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "autoclosure" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@autoclosure @escaping () -> PathMonitor"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 6166,
+                  "start_position" : 6116
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "monitor",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchTimeInterval"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 6210,
+                  "start_position" : 6166
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "maximumWait",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (_ error: any Error) -> Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "defaultIsOfflineError"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 6323,
+                  "start_position" : 6210
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "isOfflineError",
+              "order" : 2
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Features/OfflineRetrier.swift",
+        "location" : {
+          "end_position" : 7748,
+          "start_position" : 1234
+        }
+      },
+      "modifiers" : [
+        "public",
+        "final"
+      ],
+      "name" : "OfflineRetrier",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 2773,
+              "start_position" : 2411
+            }
+          },
+          "modifiers" : [
+            "fileprivate"
+          ],
+          "name" : "State",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchTimeInterval"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 2489,
+                  "start_position" : 2456
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "maximumWait"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "(_ error: any Error) -> Bool"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 2546,
+                  "start_position" : 2502
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "isOfflineError"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "() -> PathMonitor"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 2592,
+                  "start_position" : 2559
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "monitorCreator"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "DispatchWorkItem?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 2640,
+                  "start_position" : 2606
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "timeoutWorkItem"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "PathMonitor?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 2681,
+                  "start_position" : 2653
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "currentMonitor"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[@Sendable (_ retryResult: RetryResult) -> Void]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/OfflineRetrier.swift",
+                "location" : {
+                  "end_position" : 2767,
+                  "start_position" : 2694
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "pendingCompletions"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DispatchTimeInterval"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "value" : "5"
+                    }
+                  ],
+                  "call" : "seconds",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Features/OfflineRetrier.swift",
+                    "location" : {
+                      "end_position" : 1665,
+                      "start_position" : 1654
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 1665,
+              "start_position" : 1618
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "defaultWait"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Set<URLError.Code>"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "notConnectedToInternet"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 1848,
+              "start_position" : 1759
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "defaultURLErrorOfflineCodes"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@Sendable (_ error: any Error) -> Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "closure" : {
+                "_0" : {
+                  "attributes" : [
+
+                  ],
+                  "body" : {
+                    "content" : "if let error = error.asAFError?.underlyingError {\n            defaultIsOfflineError(error)\n        } else if let error = error as? URLError {\n            defaultURLErrorOfflineCodes.contains(error.code)\n        } else {\n            false\n        }"
+                  },
+                  "captures" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Features/OfflineRetrier.swift",
+                    "location" : {
+                      "end_position" : 2306,
+                      "start_position" : 2034
+                    }
+                  },
+                  "parameters" : [
+
+                  ]
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 2306,
+              "start_position" : 1970
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "defaultIsOfflineError"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "label",
+                      "value" : "\"org.alamofire.offlineRetrier.monitorQueue\""
+                    }
+                  ],
+                  "call" : "DispatchQueue",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Features/OfflineRetrier.swift",
+                    "location" : {
+                      "end_position" : 2411,
+                      "start_position" : 2346
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 2411,
+              "start_position" : 2331
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "monitorQueue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Protected<State>"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/OfflineRetrier.swift",
+            "location" : {
+              "end_position" : 2814,
+              "start_position" : 2791
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "state"
+        }
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 4,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Features/OfflineRetrier.swift"
+  ]
+}

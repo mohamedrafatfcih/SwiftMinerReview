@@ -1,0 +1,134 @@
+{
+  "caseID" : "case-e817b6c2501093ab77fdbc25",
+  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds" : 52.782080054283142,
+  "entityNames" : [
+    "session",
+    "testThatDataStreamRequestCanPublishString"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "value" : "Session()"
+                }
+              ],
+              "call" : "stored",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Tests/CombineTests.swift",
+                "location" : {
+                  "end_position" : 23168,
+                  "start_position" : 23151
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Tests/CombineTests.swift",
+        "location" : {
+          "end_position" : 23168,
+          "start_position" : 23141
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "session"
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let session = stored(Session())\n        let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var result: Result<String, AFError>?\n\n        // When\n        store {\n            session.streamRequest(.default)\n                .publishString()\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/CombineTests.swift",
+        "location" : {
+          "end_position" : 24039,
+          "start_position" : 22996
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataStreamRequestCanPublishString",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 205,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CombineTests.swift"
+  ]
+}

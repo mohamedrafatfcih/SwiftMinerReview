@@ -1,0 +1,90 @@
+{
+  "caseID" : "case-b8f4bea7662ee350c6798ba1",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "XPCMessage",
+    "dial",
+    "message"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        switch self.state {\n        case .running, .booted:\n            let port = message.uint64(key: SandboxKeys.port.rawValue)\n            guard port > 0 else {\n                throw ContainerizationError(\n                    .invalidArgument,\n                    message: \"no vsock port supplied for dial\"\n                )\n            }\n\n            let ctr = try getContainer()\n            let fh = try await ctr.container.dialVsock(port: UInt32(port))\n\n            let reply = message.reply()\n            reply.set(key: SandboxKeys.fd.rawValue, value: fh)\n            return reply\n        default:\n            throw ContainerizationError(\n                .invalidState,\n                message: \"cannot dial: container is not running\"\n            )\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+        "location" : {
+          "end_position" : 31143,
+          "start_position" : 29829
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "dial",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCMessage"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location" : {
+              "end_position" : 30195,
+              "start_position" : 30174
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "message",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "XPCMessage"
+        },
+        "description" : "-> XPCMessage"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 91,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerSandboxService/Server/SandboxService.swift"
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "caseID" : "case-7e1d3caaebb29fd47ce27673",
+  "commitHash" : "9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "commitMessage" : "More Atomic Locking (#3984)\n\n### Issue Link :link:\nAttempts to fix #3978 \n\n### Goals :soccer:\nThis PR is a speculative attempt to fix the continuation resumption\ncrash seen in #3978. However, I was unable to reproduce that issues,\neven with more complicated test cases and over 50 million test\niterations. So this PR makes a few parts of `Request`'s state management\nmore atomic, especially around response serializer handling. It also\nremoves `@dynamicMemberLookup` from `Protected`, which should encourage\nmore atomic usage.\n\n### Implementation Details :construction:\nThis PR attempts to unify what were separate lock access in the same\nflow into single accesses that accomplish the same thing. Behaviorally\nshould be the same but may prevent any intermediate accesses to state\nthat might cause this issue.\n\n### Testing Details :mag:\nNo new test scenarios, as no reproduction could be found.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "durationSeconds" : 10.915109992027283,
+  "entityNames" : [
+    "(@Sendable (_ resumeData: Data?) -> Void)?",
+    "Self",
+    "cancel",
+    "completionHandler"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+
+      ],
+      "call" : "write",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/DownloadRequest.swift",
+        "location" : {
+          "end_position" : 13676,
+          "start_position" : 13593
+        }
+      },
+      "trailing_closure" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "$0.resumeData = resumeData"
+        },
+        "captures" : [
+
+        ],
+        "location_info" : {
+          "file_path" : "Source/Core/DownloadRequest.swift",
+          "location" : {
+            "end_position" : 13676,
+            "start_position" : 13646
+          }
+        },
+        "parameters" : [
+
+        ]
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "mutableState.write { mutableState in\n            guard mutableState.state.canTransitionTo(.cancelled) else { return }\n\n            mutableState.state = .cancelled\n\n            underlyingQueue.async { self.didCancel() }\n\n            guard let task = mutableState.tasks.last as? URLSessionDownloadTask, task.state != .completed else {\n                underlyingQueue.async { self.finish() }\n                return\n            }\n\n            if let completionHandler {\n                // Resume to ensure metrics are gathered.\n                task.resume()\n                task.cancel { resumeData in\n                    self.mutableDownloadState.write { $0.resumeData = resumeData }\n                    self.underlyingQueue.async { self.didCancelTask(task) }\n                    completionHandler(resumeData)\n                }\n            } else {\n                // Resume to ensure metrics are gathered.\n                task.resume()\n                task.cancel()\n                self.underlyingQueue.async { self.didCancelTask(task) }\n            }\n        }\n\n        return self"
+      },
+      "location_info" : {
+        "file_path" : "Source/Core/DownloadRequest.swift",
+        "location" : {
+          "end_position" : 14082,
+          "start_position" : 12538
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "cancel",
+      "parameters" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(@Sendable (_ resumeData: Data?) -> Void)?"
+          },
+          "is_variadic" : false,
+          "label" : "optionallyProducingResumeData",
+          "location_info" : {
+            "file_path" : "Source/Core/DownloadRequest.swift",
+            "location" : {
+              "end_position" : 12976,
+              "start_position" : 12885
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "completionHandler",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Self"
+        },
+        "description" : "-> Self"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 8,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Core/DownloadRequest.swift"
+  ]
+}

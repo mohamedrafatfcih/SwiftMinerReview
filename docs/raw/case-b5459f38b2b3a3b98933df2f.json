@@ -1,0 +1,64 @@
+{
+  "caseID" : "case-b5459f38b2b3a3b98933df2f",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "testThatDataCanBeStreamedAndDecodedAtTheSameTime"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "annotation" : {
+        "unsupported" : {
+          "_0" : "MainActor"
+        }
+      },
+      "arguments" : [
+
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "var initialResponse: HTTPURLResponse?\n        let onHTTPResponse = expectation(description: \"onHTTPResponse should be called\")\n        var firstAccumulatedData = Data()\n        var firstResponse: HTTPURLResponse?\n        var firstStreamOnMain = false\n        var firstCompleteOnMain = false\n        let firstReceive = expectation(description: \"first stream should receive\")\n        let firstCompletion = expectation(description: \"first stream should complete\")\n        var decodedResponse: TestResponse?\n        var decodingError: AFError?\n        var secondResponse: HTTPURLResponse?\n        var secondStreamOnMain = false\n        var secondCompleteOnMain = false\n        let secondReceive = expectation(description: \"second stream should receive\")\n        let secondCompletion = expectation(description: \"second stream should complete\")\n\n        // When\n        AF.streamRequest(.stream(1))\n            .onHTTPResponse { response in\n                initialResponse = response\n                onHTTPResponse.fulfill()\n            }\n            .responseStream { stream in\n                switch stream.event {\n                case let .stream(result):\n                    firstStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(data):\n                        firstAccumulatedData.append(data)\n                    }\n                    firstReceive.fulfill()\n                case let .complete(completion):\n                    firstCompleteOnMain = Thread.isMainThread\n                    firstResponse = completion.response\n                    firstCompletion.fulfill()\n                }\n            }\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case let .stream(result):\n                    secondStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(value):\n                        decodedResponse = value\n                    case let .failure(error):\n                        decodingError = error\n                    }\n                    secondReceive.fulfill()\n                case let .complete(completion):\n                    secondCompleteOnMain = Thread.isMainThread\n                    secondResponse = completion.response\n                    secondCompletion.fulfill()\n                }\n            }\n\n        wait(for: [onHTTPResponse, firstReceive, firstCompletion], timeout: timeout, enforceOrder: true)\n        wait(for: [secondReceive, secondCompletion], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertEqual(initialResponse, firstResponse)\n        XCTAssertEqual(initialResponse, secondResponse)\n        XCTAssertTrue(firstStreamOnMain)\n        XCTAssertTrue(firstCompleteOnMain)\n        XCTAssertEqual(firstResponse?.statusCode, 200)\n        XCTAssertTrue(!firstAccumulatedData.isEmpty)\n        XCTAssertTrue(secondStreamOnMain)\n        XCTAssertTrue(secondCompleteOnMain)\n        XCTAssertEqual(secondResponse?.statusCode, 200)\n        XCTAssertNotNil(decodedResponse)\n        XCTAssertNil(decodingError)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 17094,
+          "start_position" : 13840
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataCanBeStreamedAndDecodedAtTheSameTime",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add attribute refactoring"
+  },
+  "refactoringIndex" : 613,
+  "refactoringType" : "Add attribute refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/DataStreamTests.swift"
+  ]
+}

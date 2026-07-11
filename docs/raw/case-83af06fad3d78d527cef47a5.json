@@ -1,0 +1,64 @@
+{
+  "caseID" : "case-83af06fad3d78d527cef47a5",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "testThatDataStreamsCanBeDecodedOnAnArbitraryQueue"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "annotation" : {
+        "unsupported" : {
+          "_0" : "MainActor"
+        }
+      },
+      "arguments" : [
+
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "var response: TestResponse?\n        var httpResponse: HTTPURLResponse?\n        var decodingError: AFError?\n        let streamQueue = DispatchQueue(label: \"com.alamofire.tests.ArbitraryQueue\")\n        let didReceive = expectation(description: \"stream did receive\")\n        let didComplete = expectation(description: \"stream complete\")\n\n        // When\n        AF.streamRequest(.stream(1))\n            .responseStreamDecodable(of: TestResponse.self, on: streamQueue) { stream in\n                dispatchPrecondition(condition: .onQueue(streamQueue))\n                switch stream.event {\n                case let .stream(result):\n                    switch result {\n                    case let .success(value):\n                        response = value\n                    case let .failure(error):\n                        decodingError = error\n                    }\n                    didReceive.fulfill()\n                case let .complete(completion):\n                    httpResponse = completion.response\n                    didComplete.fulfill()\n                }\n            }\n\n        wait(for: [didReceive, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNotNil(response)\n        XCTAssertEqual(httpResponse?.statusCode, 200)\n        XCTAssertNil(decodingError)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 32373,
+          "start_position" : 30955
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataStreamsCanBeDecodedOnAnArbitraryQueue",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add attribute refactoring"
+  },
+  "refactoringIndex" : 625,
+  "refactoringType" : "Add attribute refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/DataStreamTests.swift"
+  ]
+}

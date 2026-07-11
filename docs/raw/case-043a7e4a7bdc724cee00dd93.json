@@ -1,0 +1,82 @@
+{
+  "caseID" : "case-043a7e4a7bdc724cee00dd93",
+  "commitHash" : "5432cc2399f07baac200d91d78a91fcce91968c4",
+  "commitMessage" : "fix: added detect super cores on the base M5 chip (#3250)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/5432cc2399f07baac200d91d78a91fcce91968c4",
+  "durationSeconds" : 2.7020779848098755,
+  "entityNames" : [
+    "(Int32?, Int32?, Int32?, [core_s])?",
+    "Platform?",
+    "getCPUCores",
+    "platform"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "depth" : 0,
+      "description" : "while service != 0 {\n            service = IOIteratorNext(iterator)\n            \n            var entry: io_iterator_t = io_iterator_t()\n            if IORegistryEntryGetChildIterator(service, kIOServicePlane, &entry) != kIOReturnSuccess {\n                continue\n            }\n            var child: io_registry_entry_t = 1\n            while child != 0 {\n                child = IOIteratorNext(entry)\n                guard child != 0 else {\n                    continue\n                }\n                \n                guard let name = getIOName(child),\n                      let props = getIOProperties(child) else { continue }\n                \n                if name.matches(\"^cpu\\\\d\") {\n                    var type: coreType = .unknown\n                    if let rawType = props.object(forKey: \"cluster-type\") as? Data,\n                       let typ = String(data: rawType, encoding: .utf8)?.trimmed {\n                        if isM5GenOrNewer {\n                            switch typ {\n                            case \"E\":\n                                type = .efficiency\n                            case \"M\":\n                                type = .performance\n                            case \"P\":\n                                type = .super\n                            default:\n                                type = .unknown\n                            }\n                        } else {\n                            switch typ {\n                            case \"E\":\n                                type = .efficiency\n                            case \"P\":\n                                type = .performance\n                            default:\n                                type = .unknown\n                            }\n                        }\n                    }\n                    \n                    let rawCPUId = props.object(forKey: \"cpu-id\") as? Data\n                    let id = rawCPUId?.withUnsafeBytes { pointer in\n                        return pointer.load(as: Int32.self)\n                    }\n                    \n                    list.append(core_s(id: id ?? -1, type: type))\n                } else if name.trimmed == \"cpus\" {\n                    if isM5GenOrNewer {\n                        eCores = (props.object(forKey: \"e-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                        pCores = (props.object(forKey: \"m-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                        sCores = (props.object(forKey: \"p-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                    } else {\n                        eCores = (props.object(forKey: \"e-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                        pCores = (props.object(forKey: \"p-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                    }\n                }\n                \n                IOObjectRelease(child)\n            }\n            IOObjectRelease(entry)\n            IOObjectRelease(service)\n        }",
+      "index" : 9
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var iterator: io_iterator_t = io_iterator_t()\n        let result = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching(\"AppleARMPE\"), &iterator)\n        if result != kIOReturnSuccess {\n            print(\"Error find AppleARMPE: \" + (String(cString: mach_error_string(result), encoding: String.Encoding.ascii) ?? \"unknown error\"))\n            return nil\n        }\n        \n        var service: io_registry_entry_t = 1\n        var list: [core_s] = []\n        var pCores: Int32? = nil\n        var eCores: Int32? = nil\n        var sCores: Int32? = nil\n        let isM5GenOrNewer = platform?.isNewerThanOrEqual(.m5) ?? false\n        \n        while service != 0 {\n            service = IOIteratorNext(iterator)\n            \n            var entry: io_iterator_t = io_iterator_t()\n            if IORegistryEntryGetChildIterator(service, kIOServicePlane, &entry) != kIOReturnSuccess {\n                continue\n            }\n            var child: io_registry_entry_t = 1\n            while child != 0 {\n                child = IOIteratorNext(entry)\n                guard child != 0 else {\n                    continue\n                }\n                \n                guard let name = getIOName(child),\n                      let props = getIOProperties(child) else { continue }\n                \n                if name.matches(\"^cpu\\\\d\") {\n                    var type: coreType = .unknown\n                    if let rawType = props.object(forKey: \"cluster-type\") as? Data,\n                       let typ = String(data: rawType, encoding: .utf8)?.trimmed {\n                        if isM5GenOrNewer {\n                            switch typ {\n                            case \"E\":\n                                type = .efficiency\n                            case \"M\":\n                                type = .performance\n                            case \"P\":\n                                type = .super\n                            default:\n                                type = .unknown\n                            }\n                        } else {\n                            switch typ {\n                            case \"E\":\n                                type = .efficiency\n                            case \"P\":\n                                type = .performance\n                            default:\n                                type = .unknown\n                            }\n                        }\n                    }\n                    \n                    let rawCPUId = props.object(forKey: \"cpu-id\") as? Data\n                    let id = rawCPUId?.withUnsafeBytes { pointer in\n                        return pointer.load(as: Int32.self)\n                    }\n                    \n                    list.append(core_s(id: id ?? -1, type: type))\n                } else if name.trimmed == \"cpus\" {\n                    if isM5GenOrNewer {\n                        eCores = (props.object(forKey: \"e-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                        pCores = (props.object(forKey: \"m-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                        sCores = (props.object(forKey: \"p-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                    } else {\n                        eCores = (props.object(forKey: \"e-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                        pCores = (props.object(forKey: \"p-core-count\") as? Data)?.withUnsafeBytes { pointer in\n                            return pointer.load(as: Int32.self)\n                        }\n                    }\n                }\n                \n                IOObjectRelease(child)\n            }\n            IOObjectRelease(entry)\n            IOObjectRelease(service)\n        }\n        IOObjectRelease(iterator)\n        \n        return (eCores, pCores, sCores, list)"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemKit.swift",
+        "location" : {
+          "end_position" : 15636,
+          "start_position" : 11350
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "getCPUCores",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Platform?"
+          },
+          "is_variadic" : false,
+          "label" : "for",
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemKit.swift",
+            "location" : {
+              "end_position" : 11400,
+              "start_position" : 11377
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "platform",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : true,
+          "name" : "(Int32?, Int32?, Int32?, [core_s])?"
+        },
+        "description" : "-> (Int32?, Int32?, Int32?, [core_s])?"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 5,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/SystemKit.swift"
+  ]
+}

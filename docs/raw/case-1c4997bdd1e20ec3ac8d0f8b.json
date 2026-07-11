@@ -1,0 +1,54 @@
+{
+  "caseID" : "case-1c4997bdd1e20ec3ac8d0f8b",
+  "commitHash" : "cd3d98f41f072f7ee4e29294fcce971bd2984e56",
+  "commitMessage" : "Update CI for GHA Limitations (#3973)\n\n### Goals :soccer:\nThis PR updates CI for all Xcode versions and GHA's limited sim\navailability.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/cd3d98f41f072f7ee4e29294fcce971bd2984e56",
+  "durationSeconds" : 12.768025040626526,
+  "entityNames" : [
+    "testThatInterceptorThrowsExcessiveRefreshErrorWhenExcessiveRefreshOccurs"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let credential = TestCredential()\n        let authenticator = TestAuthenticator()\n        let interceptor = AuthenticationInterceptor(authenticator: authenticator,\n                                                    credential: credential,\n                                                    refreshWindow: .init(interval: 30, maximumAttempts: 2))\n\n        let session = Session()\n\n        let expect = expectation(description: \"request should complete\")\n        var response: AFDataResponse<Data?>?\n\n        // When\n        let request = session.request(.status(401), interceptor: interceptor).validate().response {\n            response = $0\n            expect.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(response?.request?.headers[\"Authorization\"], \"a2\")\n\n        XCTAssertEqual(response?.result.isFailure, true)\n        XCTAssertEqual(response?.result.failure?.asAFError?.isRequestRetryError, true)\n        XCTAssertEqual(response?.result.failure?.asAFError?.underlyingError as? AuthenticationError, .excessiveRefresh)\n\n        if case let .requestRetryFailed(_, originalError) = response?.result.failure {\n            XCTAssertEqual(originalError.asAFError?.isResponseValidationError, true)\n            XCTAssertEqual(originalError.asAFError?.responseCode, 401)\n        }\n\n        XCTAssertEqual(authenticator.applyCount, 3)\n        XCTAssertEqual(authenticator.refreshCount, 2)\n        XCTAssertEqual(authenticator.didRequestFailDueToAuthErrorCount, 3)\n        XCTAssertEqual(authenticator.isRequestAuthenticatedWithCredentialCount, 3)\n\n        XCTAssertEqual(request.retryCount, 2)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/AuthenticationInterceptorTests.swift",
+        "location" : {
+          "end_position" : 27527,
+          "start_position" : 25743
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatInterceptorThrowsExcessiveRefreshErrorWhenExcessiveRefreshOccurs",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 14,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/AuthenticationInterceptorTests.swift"
+  ]
+}

@@ -1,0 +1,1285 @@
+{
+  "caseID" : "case-6940febf94cb7219832d7c9c",
+  "commitHash" : "69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "commitMessage" : "Migrates container run integration tests. (#1857)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "durationSeconds" : 7.4378420114517212,
+  "entityNames" : [
+    "TestCLIRunCommand",
+    "alpine",
+    "testForwardTCP",
+    "testForwardTCPPortRange",
+    "testForwardTCPv6",
+    "testPrivilegedPortError",
+    "testRunCommand",
+    "testRunCommandCPUs"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            _ = try f.doExec(c, cmd: [\"date\"])\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 1503,
+              "start_position" : 991
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommand",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--cwd\", \"/tmp\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let output = try f.doExec(c, cmd: [\"pwd\"]).trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"/tmp\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 2103,
+              "start_position" : 1503
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandCWD",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--env\", \"FOO=bar\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let inspect = try f.inspectContainer(c)\n            #expect(inspect.configuration.initProcess.environment.contains(\"FOO=bar\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 2704,
+              "start_position" : 2103
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandEnv",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            let envFile = f.testDir.appending(\"test.env\")\n            let content = \"# comment\\nFOO=bar\\nBAR=baz wow\\nURL=https://foo.bar?baz=wow\\n\"\n            try content.write(toFile: envFile.string, atomically: true, encoding: .utf8)\n\n            try f.doLongRun(name: c, image: image, args: [\"--env-file\", envFile.string], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let inspect = try f.inspectContainer(c)\n            for expected in [\"FOO=bar\", \"BAR=baz wow\", \"URL=https://foo.bar?baz=wow\"] {\n                #expect(inspect.configuration.initProcess.environment.contains(expected))\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 3664,
+              "start_position" : 2704
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandEnvFile",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--uid\", \"10\", \"--gid\", \"100\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let output = try f.doExec(c, cmd: [\"id\"]).trimmingCharacters(in: .whitespacesAndNewlines)\n            try #expect(output.contains(Regex(\"uid=10.*?gid=100.*\")))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 4319,
+              "start_position" : 3664
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandUserIDGroupID",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--user\", \"nobody\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let output = try f.doExec(c, cmd: [\"whoami\"]).trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"nobody\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 4928,
+              "start_position" : 4319
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandUser",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--cpus\", \"2\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let output = try f.doExec(c, cmd: [\"cat\", \"/sys/fs/cgroup/cpu.max\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            let fields = output.components(separatedBy: .whitespaces)\n            #expect(fields.count == 2)\n            let numerator = try #require(Int(fields[0]))\n            let denominator = try #require(Int(fields[1]))\n            #expect(denominator > 0)\n            #expect(2 * denominator == numerator)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 5844,
+              "start_position" : 4928
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandCPUs",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--memory\", \"1024M\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let inspect = try f.inspectContainer(c)\n            let expectedBytes = UInt64(1024) * 1024 * 1024\n            #expect(inspect.configuration.resources.memoryInBytes == expectedBytes)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 6505,
+              "start_position" : 5844
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandMemory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--ulimit\", \"nofile=1024:2048\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let inspect = try f.inspectContainer(c)\n            let nofile = inspect.configuration.initProcess.rlimits.first { $0.limit == \"RLIMIT_NOFILE\" }\n            try #require(nofile != nil)\n            #expect(nofile?.soft == 1024)\n            #expect(nofile?.hard == 2048)\n\n            let output = try f.doExec(c, cmd: [\"sh\", \"-c\", \"ulimit -n\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"1024\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 7447,
+              "start_position" : 6505
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandUlimitNofile",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--ulimit\", \"nproc=256\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let inspect = try f.inspectContainer(c)\n            let nproc = inspect.configuration.initProcess.rlimits.first { $0.limit == \"RLIMIT_NPROC\" }\n            try #require(nproc != nil)\n            #expect(nproc?.soft == 256)\n            #expect(nproc?.hard == 256)\n\n            let output = try f.doExec(c, cmd: [\"sh\", \"-c\", \"ulimit -u\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"256\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 8373,
+              "start_position" : 7447
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandUlimitNproc",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(\n                name: c, image: image,\n                args: [\"--ulimit\", \"nofile=1024:2048\", \"--ulimit\", \"nproc=512\", \"--ulimit\", \"stack=8388608\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let rlimits = try f.inspectContainer(c).configuration.initProcess.rlimits\n            #expect(rlimits.count == 3)\n            let nofile = rlimits.first { $0.limit == \"RLIMIT_NOFILE\" }\n            let nproc = rlimits.first { $0.limit == \"RLIMIT_NPROC\" }\n            let stack = rlimits.first { $0.limit == \"RLIMIT_STACK\" }\n            #expect(nofile?.soft == 1024 && nofile?.hard == 2048)\n            #expect(nproc?.soft == 512 && nproc?.hard == 512)\n            #expect(stack?.soft == 8_388_608 && stack?.hard == 8_388_608)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 9500,
+              "start_position" : 8373
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandMultipleUlimits",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            let testData = \"hello world\"\n            let hostFile = f.testDir.appending(\"testfile.txt\")\n            try testData.write(toFile: hostFile.string, atomically: true, encoding: .utf8)\n\n            try f.doLongRun(\n                name: c, image: image,\n                args: [\"--mount\", \"type=virtiofs,source=\\(f.testDir.string),target=/tmp/testmount,readonly\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let output = try f.doExec(c, cmd: [\"cat\", \"/tmp/testmount/testfile.txt\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == testData)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 10502,
+              "start_position" : 9500
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandMount",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            // sockaddr_un.sun_path is 104 bytes on macOS — use /tmp to keep\n            // the host socket path short regardless of project directory depth.\n            let socketDir = \"/tmp/\\(f.testID)-sock\"\n            try FileManager.default.createDirectory(\n                atPath: socketDir, withIntermediateDirectories: true, attributes: nil)\n            f.addCleanup { try? FileManager.default.removeItem(atPath: socketDir) }\n            let socketPath = socketDir + \"/ssh-auth.sock\"\n            let guestSocketPath = \"/run/ssh-auth.sock\"\n\n            let socketType = try UnixType(path: socketPath, perms: 0o766, unlinkExisting: true)\n            let socket = try Socket(type: socketType, closeOnDeinit: true)\n            try socket.listen()\n            f.addCleanup { try? socket.close() }\n\n            try f.doLongRun(\n                name: c, image: image,\n                args: [\"-v\", \"\\(socketPath):\\(guestSocketPath)\", \"-e\", \"SSH_AUTH_SOCK=\\(guestSocketPath)\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            _ = try f.doExec(c, cmd: [\"apk\", \"add\", \"netcat-openbsd\"])\n            let perms = try f.doExec(\n                c, cmd: [\"sh\", \"-c\", \"stat -c \\\"%a\\\" \\\"${SSH_AUTH_SOCK}\\\"\"],\n                user: \"guest\"\n            ).trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(perms == \"766\")\n            _ = try f.doExec(c, cmd: [\"sh\", \"-c\", \"nc -zU \\\"${SSH_AUTH_SOCK}\\\"\"], user: \"guest\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 12304,
+              "start_position" : 10502
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandUnixSocketMount",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--tmpfs\", \"/tmp/testtmpfs\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let output = try f.doExec(c, cmd: [\"df\", \"/tmp/testtmpfs\"])\n            let lines = output.split(separator: \"\\n\")\n            #expect(lines.count == 2)\n            let words = lines[1].split(separator: \" \")\n            #expect(words[0].lowercased() == \"tmpfs\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 13051,
+              "start_position" : 12304
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandTmpfs",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--shm-size\", \"128m\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let output = try f.doExec(c, cmd: [\"mount\"])\n            let shmLine = output.split(separator: \"\\n\").first { $0.contains(\"/dev/shm\") }\n            try #require(shmLine != nil)\n            #expect(shmLine!.contains(\"size=\\(128 * 1024)k\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 13770,
+              "start_position" : 13051
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandShmSize",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            let testData = \"one small step\"\n            let volumeFile = f.testDir.appending(\"data.txt\")\n            try testData.write(toFile: volumeFile.string, atomically: true, encoding: .utf8)\n\n            try f.doLongRun(\n                name: c, image: image,\n                args: [\"--volume\", \"\\(f.testDir.string):/tmp/testvolume\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let output = try f.doExec(c, cmd: [\"cat\", \"/tmp/testvolume/data.txt\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == testData)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 14687,
+              "start_position" : 13770
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandVolume",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            let cidfile = f.testDir.appending(\"container.cid\")\n\n            try f.doLongRun(name: c, image: image, args: [\"--cidfile\", cidfile.string], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let actualID = try String(contentsOfFile: cidfile.string, encoding: .utf8)\n            #expect(actualID == c)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 15349,
+              "start_position" : 14687
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandCidfile",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--no-dns\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let result = try f.run([\"exec\", c, \"cat\", \"/etc/resolv.conf\"])\n            #expect(result.status != 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 15952,
+              "start_position" : 15349
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandNoDNS",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let output = try f.doExec(c, cmd: [\"cat\", \"/etc/resolv.conf\"])\n            let actualLines = output.components(separatedBy: .newlines)\n                .filter { !$0.isEmpty }\n                .map { $0.components(separatedBy: .whitespaces).joined(separator: \" \") }\n\n            let inspect = try f.inspectContainer(c)\n            let ip = inspect.networks[0].ipv4Address.address\n            let nameserver = IPv4Address((ip.value & Prefix(length: 24)!.prefixMask32) + 1).description\n            let config = try f.getSystemConfig()\n            let expectedLines: [String] = [\n                \"nameserver \\(nameserver)\",\n                config.dns.domain.map { \"domain \\($0)\" },\n            ].compactMap { $0 }\n\n            #expect(expectedLines == actualLines)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 17173,
+              "start_position" : 15952
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandDefaultResolvConf",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(\n                name: c, image: image,\n                args: [\n                    \"--dns\", \"8.8.8.8\", \"--dns-domain\", \"example.com\",\n                    \"--dns-search\", \"test.com\", \"--dns-option\", \"debug\",\n                ],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let output = try f.doExec(c, cmd: [\"cat\", \"/etc/resolv.conf\"])\n            let actualLines = output.components(separatedBy: .newlines)\n                .filter { !$0.isEmpty }\n                .map { $0.components(separatedBy: .whitespaces).joined(separator: \" \") }\n\n            #expect(\n                actualLines == [\n                    \"nameserver 8.8.8.8\",\n                    \"domain example.com\",\n                    \"search test.com\",\n                    \"options debug\",\n                ])\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 18355,
+              "start_position" : 17173
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandNonDefaultResolvConf",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let inspect = try f.inspectContainer(c)\n            let ip = inspect.networks[0].ipv4Address.address.description\n\n            let output = try f.doExec(c, cmd: [\"cat\", \"/etc/hosts\"])\n            let lines = output.split(separator: \"\\n\")\n            let expected = [(\"127.0.0.1\", \"localhost\"), (ip, c)]\n            for (i, line) in lines.enumerated() {\n                guard i < expected.count else { break }\n                let words = line.split(separator: \" \").map(String.init)\n                #expect(words.count >= 2)\n                #expect(words[0] == expected[i].0)\n                #expect(words[1] == expected[i].1)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 19449,
+              "start_position" : 18355
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunDefaultHostsEntries",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try #require(geteuid() != 0)\n        try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            f.addCleanup { try? f.doRemove(c, force: true) }\n            let result = try f.run([\"run\", \"--name\", c, \"--publish\", \"127.0.0.1:80:80\", image])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"Permission denied while binding to host port 80\"))\n            #expect(result.error.contains(\"root privileges\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 20049,
+              "start_position" : 19449
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testPrivilegedPortError",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--os\", \"linux\", \"--arch\", \"amd64\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let output = try f.doExec(c, cmd: [\"uname\", \"-sm\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()\n            #expect(output == \"linux x86_64\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 20743,
+              "start_position" : 20049
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandOSArch",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--platform\", \"linux/amd64\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let output = try f.doExec(c, cmd: [\"uname\", \"-sm\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()\n            #expect(output == \"linux x86_64\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 21407,
+              "start_position" : 20743
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandPlatform",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--init\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let inspect = try f.inspectContainer(c)\n            #expect(inspect.configuration.useInit == true)\n\n            let cmdline = try f.doExec(c, cmd: [\"cat\", \"/proc/1/cmdline\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(!cmdline.hasPrefix(\"sleep\"), \"PID 1 should be init process, not 'sleep'\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 22236,
+              "start_position" : 21407
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandInit",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--init\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            _ = try f.doExec(c, cmd: [\"sh\", \"-c\", \"sh -c 'sh -c \\\"exit 0\\\" &' && sleep 1\"])\n            let ps = try f.doExec(c, cmd: [\"sh\", \"-c\", \"ps aux | grep -c '\\\\[sh\\\\]' || true\"])\n            let zombieCount = Int(ps.trimmingCharacters(in: .whitespacesAndNewlines)) ?? -1\n            #expect(zombieCount == 0, \"expected no zombie processes with --init\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 23063,
+              "start_position" : 22236
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandInitReapsZombies",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let inspect = try f.inspectContainer(c)\n            #expect(inspect.configuration.useInit == false)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 23624,
+              "start_position" : 23063
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandWithoutInitDefault",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--read-only\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let result = try f.run([\"exec\", c, \"touch\", \"/testfile\"])\n            #expect(result.status != 0, \"touch on read-only rootfs should fail\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 24270,
+              "start_position" : 23624
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandReadOnly",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(alpine)\n            let c = \"\\(f.testID)-c\"\n            let pipePath = f.testDir.appending(\"envfile.pipe\")\n            guard mkfifo(pipePath.string, 0o600) == 0 else {\n                Issue.record(\"failed to create named pipe\")\n                return\n            }\n\n            let content = \"FOO=bar\\nBAR=baz\\n\"\n            // Write to the FIFO in a detached task so the open doesn't block forever.\n            let writeTask = Task.detached {\n                let handle = try FileHandle(forWritingTo: URL(filePath: pipePath.string))\n                try handle.write(contentsOf: Data(content.utf8))\n                try handle.close()\n            }\n            defer { writeTask.cancel() }\n\n            try f.doLongRun(name: c, image: image, args: [\"--env-file\", pipePath.string], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await writeTask.value\n\n            try await f.waitForContainerRunning(c)\n            let inspect = try f.inspectContainer(c)\n            #expect(inspect.configuration.initProcess.environment.contains(\"FOO=bar\"))\n            #expect(inspect.configuration.initProcess.environment.contains(\"BAR=baz\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 25712,
+              "start_position" : 24270
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandEnvFileFromNamedPipe",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let c = \"\\(f.testID)-c\"\n            let proxyPort = UInt16.random(in: 50000..<55000)\n            let serverPort = UInt16.random(in: 55000..<60000)\n            try f.doLongRun(\n                name: c, image: \"docker.io/library/python:alpine\",\n                args: [\"--publish\", \"127.0.0.1:\\(proxyPort):\\(serverPort)/tcp\"],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(serverPort)\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n\n            let client = HTTPClient(eventLoopGroupProvider: .singleton)\n            defer { _ = client.shutdown() }\n            var success = false\n            for attempt in 1...10 {\n                do {\n                    var req = HTTPClientRequest(url: \"http://127.0.0.1:\\(proxyPort)\")\n                    req.method = .GET\n                    let resp = try await client.execute(req, timeout: .seconds(3))\n                    if resp.status == .ok {\n                        f.log.info(\"testForwardTCP: attempt \\(attempt) succeeded\")\n                        success = true\n                        break\n                    }\n                } catch {\n                    f.log.info(\"testForwardTCP: attempt \\(attempt) failed: \\(error)\")\n                    try await Task.sleep(for: .seconds(3))\n                }\n            }\n            #expect(success, \"TCP forward to port \\(proxyPort) did not succeed after retries\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 27371,
+              "start_position" : 25712
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testForwardTCP",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let range = UInt16(10)\n            let proxyPortStart = UInt16.random(in: 50000..<55000)\n            let serverPortStart = UInt16.random(in: 55000..<60000)\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(\n                name: c, image: \"docker.io/library/python:alpine\",\n                args: [\"--publish\", \"127.0.0.1:\\(proxyPortStart)-\\(proxyPortStart + range):\\(serverPortStart)-\\(serverPortStart + range)/tcp\"],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(serverPortStart)\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n\n            let client = HTTPClient(eventLoopGroupProvider: .singleton)\n            defer { _ = client.shutdown() }\n            var success = false\n            for attempt in 1...10 {\n                do {\n                    var req = HTTPClientRequest(url: \"http://127.0.0.1:\\(proxyPortStart)\")\n                    req.method = .GET\n                    let resp = try await client.execute(req, timeout: .seconds(3))\n                    if resp.status == .ok {\n                        f.log.info(\"testForwardTCPPortRange: attempt \\(attempt) succeeded\")\n                        success = true\n                        break\n                    }\n                } catch {\n                    f.log.info(\"testForwardTCPPortRange: attempt \\(attempt) failed: \\(error)\")\n                    try await Task.sleep(for: .seconds(3))\n                }\n            }\n            #expect(success, \"TCP port range forward did not succeed after retries\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 29129,
+              "start_position" : 27371
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testForwardTCPPortRange",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "26"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            },
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let c = \"\\(f.testID)-c\"\n            let proxyPort = UInt16.random(in: 50000..<55000)\n            let serverPort = UInt16.random(in: 55000..<60000)\n            try f.doLongRun(\n                name: c, image: \"docker.io/library/node:alpine\",\n                args: [\"--publish\", \"[::1]:\\(proxyPort):\\(serverPort)/tcp\"],\n                containerArgs: [\"npx\", \"http-server\", \"-a\", \"::\", \"-p\", \"\\(serverPort)\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n\n            let client = HTTPClient(eventLoopGroupProvider: .singleton)\n            defer { _ = client.shutdown() }\n            var success = false\n            for attempt in 1...10 {\n                do {\n                    var req = HTTPClientRequest(url: \"http://[::1]:\\(proxyPort)\")\n                    req.method = .GET\n                    let resp = try await client.execute(req, timeout: .seconds(3))\n                    if resp.status == .ok {\n                        f.log.info(\"testForwardTCPv6: attempt \\(attempt) succeeded\")\n                        success = true\n                        break\n                    }\n                } catch {\n                    f.log.info(\"testForwardTCPv6: attempt \\(attempt) failed: \\(error)\")\n                    try await Task.sleep(for: .seconds(3))\n                }\n            }\n            #expect(success, \"TCPv6 forward to port \\(proxyPort) did not succeed after retries\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 30765,
+              "start_position" : 29129
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testForwardTCPv6",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+        "location" : {
+          "end_position" : 30767,
+          "start_position" : 898
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIRunCommand",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "warmupImages"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunCommand.swift",
+            "location" : {
+              "end_position" : 991,
+              "start_position" : 950
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "alpine"
+        }
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 53,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Run/TestCLIRunCommand.swift"
+  ]
+}

@@ -1,0 +1,1177 @@
+{
+  "caseID" : "case-aabb2c573c6b34730216396f",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "CombineTestCase",
+    "DataStreamRequestCombineTests",
+    "testThatDataStreamRequestCanBePublished",
+    "testThatDataStreamRequestCanBePublishedWithMultipleHandlers",
+    "testThatDataStreamRequestCanPublishData",
+    "testThatDataStreamRequestCanPublishResult",
+    "testThatDataStreamRequestCanPublishResultWithResponseFailure",
+    "testThatDataStreamRequestCanPublishString"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "annotation" : {
+        "unsupported" : {
+          "_0" : "MainActor"
+        }
+      },
+      "arguments" : [
+
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        },
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CombineTestCase"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self)\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 20158,
+              "start_position" : 19131
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanBePublished",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        let session = Session(startRequestsImmediately: false)\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            session.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self)\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 21266,
+              "start_position" : 20158
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatNonAutomaticDataStreamRequestCanBePublished",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var result: Result<Data, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishData()\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 22258,
+              "start_position" : 21266
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanPublishData",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var result: Result<String, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishString()\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 23256,
+              "start_position" : 22258
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanPublishString",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let handlerResponseReceived = expectation(description: \"handler response should be received\")\n        let publishedResponseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var handlerResult: Result<TestResponse, AFError>?\n        var publishedResult: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .responseStreamDecodable(of: TestResponse.self) { stream in\n                    switch stream.event {\n                    case let .stream(value):\n                        handlerResult = value\n                    case .complete:\n                        handlerResponseReceived.fulfill()\n                    }\n                }\n                .publishDecodable(type: TestResponse.self)\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          switch stream.event {\n                          case let .stream(value):\n                              publishedResult = value\n                          case .complete:\n                              publishedResponseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(handlerResult?.success)\n        XCTAssertNotNil(publishedResult?.success)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 24900,
+              "start_position" : 23256
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanBePublishedWithMultipleHandlers",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self)\n                .result()\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { received in\n                          result = received\n                          responseReceived.fulfill()\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 25784,
+              "start_position" : 24900
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanPublishResult",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(Endpoint.delay(1).modifying(\\.timeout, to: 0.1))\n                .publishDecodable(type: TestResponse.self)\n                .result()\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { received in\n                          result = received\n                          responseReceived.fulfill()\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNil(result?.success)\n        XCTAssertEqual((result?.failure?.underlyingError as? URLError)?.code, .timedOut)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 26812,
+              "start_position" : 25784
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanPublishResultWithResponseFailure",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var response: TestResponse?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self)\n                .value()\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { received in\n                          response = received\n                          responseReceived.fulfill()\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 27674,
+              "start_position" : 26812
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanPublishValue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let completionReceived = expectation(description: \"stream should complete\")\n        var error: AFError?\n\n        // When\n        store {\n            AF.streamRequest(Endpoint.delay(1).modifying(\\.timeout, to: 0.1))\n                .publishDecodable(type: TestResponse.self)\n                .value()\n                .sink(receiveCompletion: { completion in\n                    switch completion {\n                    case let .failure(err):\n                        error = err\n                    case .finished:\n                        error = nil\n                    }\n                    completionReceived.fulfill()\n                }, receiveValue: { _ in })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(error)\n        XCTAssertEqual((error?.underlyingError as? URLError)?.code, .timedOut)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 28676,
+              "start_position" : 27674
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanPublishValueWithFailure",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        let request = AF.streamRequest(.default)\n        let publisher = request.publishDecodable(type: TestResponse.self)\n\n        let stateAfterPublisher = request.state\n\n        store {\n            publisher.sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                           receiveValue: { stream in\n                               switch stream.event {\n                               case let .stream(value):\n                                   result = value\n                               case .complete:\n                                   responseReceived.fulfill()\n                               }\n                           })\n        }\n\n        let stateAfterSubscription = request.state\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertTrue(result?.isSuccess == true)\n        XCTAssertEqual(stateAfterPublisher, .initialized)\n        XCTAssertEqual(stateAfterSubscription, .resumed)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 30022,
+              "start_position" : 28676
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatPublishedDataStreamRequestIsNotResumedUnlessSubscribed",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        let queue = DispatchQueue(label: \"org.alamofire.tests.combineEventQueue\")\n        var receivedOnMain = false\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self)\n                .subscribe(on: queue)\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          receivedOnMain = Thread.isMainThread\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)\n        XCTAssertTrue(receivedOnMain)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 31344,
+              "start_position" : 30022
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestCanSubscribedFromNonMainQueueButPublishedOnMainQueue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        let queue = DispatchQueue(label: \"org.alamofire.tests.combineEventQueue\")\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self, queue: queue)\n                .sink(receiveCompletion: { _ in\n                          dispatchPrecondition(condition: .onQueue(queue))\n                          completionReceived.fulfill()\n                      },\n                      receiveValue: { stream in\n                          dispatchPrecondition(condition: .onQueue(queue))\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 32697,
+              "start_position" : 31344
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestPublishedOnSeparateQueueIsReceivedOnThatQueue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        let queue = DispatchQueue(label: \"org.alamofire.tests.combineEventQueue\")\n        var receivedOnMain = false\n        var result: Result<TestResponse, AFError>?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self, queue: queue)\n                .receive(on: DispatchQueue.main)\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { stream in\n                          receivedOnMain = Thread.isMainThread\n                          switch stream.event {\n                          case let .stream(value):\n                              result = value\n                          case .complete:\n                              responseReceived.fulfill()\n                          }\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(result?.success)\n        XCTAssertTrue(receivedOnMain)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 34042,
+              "start_position" : 32697
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDataStreamRequestPublishedOnSeparateQueueCanBeReceivedOntoMainQueue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if #available(macOS 11, iOS 14, watchOS 7, tvOS 14, *) {\n            throw XCTSkip(\"Skip on 2020 OS versions, as Combine cancellation no longer emits a value.\")\n        }\n\n        // Given\n        let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var error: AFError?\n\n        // When\n        let request = AF.streamRequest(.default)\n        var token: AnyCancellable? = request\n            .publishDecodable(type: TestResponse.self)\n            .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                  receiveValue: { error = $0.completion?.error; responseReceived.fulfill() })\n        token = nil\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(error)\n        XCTAssertTrue(error?.isExplicitlyCancelledError == true,\n                      \"error is not explicitly cancelled but \\(error?.localizedDescription ?? \"None\")\")\n        XCTAssertTrue(request.isCancelled)\n        XCTAssertNil(token)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 35277,
+              "start_position" : 34042
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatPublishedDataStreamRequestCanBeCancelledAutomatically",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"response should be received\")\n        let completionReceived = expectation(description: \"stream should complete\")\n        var error: AFError?\n\n        // When\n        let request = AF.streamRequest(.default)\n        store {\n            request\n                .publishDecodable(type: TestResponse.self)\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { error = $0.completion?.error; responseReceived.fulfill() })\n        }\n        request.cancel()\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(error)\n        XCTAssertTrue(error?.isExplicitlyCancelledError == true,\n                      \"error is not explicitly cancelled but \\(error?.localizedDescription ?? \"None\")\")\n        XCTAssertTrue(request.isCancelled)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 36310,
+              "start_position" : 35277
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatPublishedDataStreamRequestCanBeCancelledManually",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"combined response should be received\")\n        let completionReceived = expectation(description: \"combined stream should complete\")\n        var firstCompletion: DataStreamRequest.Completion?\n        var secondCompletion: DataStreamRequest.Completion?\n\n        // When\n        let first = AF.streamRequest(.default)\n            .publishDecodable(type: TestResponse.self)\n        let second = AF.streamRequest(.default)\n            .publishDecodable(type: TestResponse.self)\n\n        store {\n            Publishers.CombineLatest(first.compactMap(\\.completion), second.compactMap(\\.completion))\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { first, second in\n                          firstCompletion = first\n                          secondCompletion = second\n                          responseReceived.fulfill()\n                      })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(firstCompletion)\n        XCTAssertNotNil(secondCompletion)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 37577,
+              "start_position" : 36310
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatMultipleDataStreamPublishersCanBeCombined",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.15"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "6"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let responseReceived = expectation(description: \"combined response should be received\")\n        let completionReceived = expectation(description: \"combined stream should complete\")\n        var firstCompletion: DataStreamRequest.Completion?\n        var secondCompletion: DataStreamRequest.Completion?\n\n        // When\n        store {\n            AF.streamRequest(.default)\n                .publishDecodable(type: TestResponse.self)\n                .compactMap(\\.completion)\n                .flatMap { completion -> DataStreamPublisher<TestResponse> in\n                    firstCompletion = completion\n                    return AF.streamRequest(.default)\n                        .publishDecodable(type: TestResponse.self)\n                }\n                .compactMap(\\.completion)\n                .sink(receiveCompletion: { _ in completionReceived.fulfill() },\n                      receiveValue: { secondCompletion = $0; responseReceived.fulfill() })\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(firstCompletion)\n        XCTAssertNotNil(secondCompletion)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CombineTests.swift",
+            "location" : {
+              "end_position" : 38846,
+              "start_position" : 37577
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatMultipleDataStreamRequestPublishersCanBeChained",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CombineTests.swift",
+        "location" : {
+          "end_position" : 38848,
+          "start_position" : 18973
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "DataStreamRequestCombineTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add attribute refactoring"
+  },
+  "refactoringIndex" : 587,
+  "refactoringType" : "Add attribute refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CombineTests.swift"
+  ]
+}

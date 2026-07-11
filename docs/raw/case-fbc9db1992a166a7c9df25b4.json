@@ -1,0 +1,1126 @@
+{
+  "caseID" : "case-fbc9db1992a166a7c9df25b4",
+  "commitHash" : "14a75c4c168d4159a41c83439af9df77eaad2e01",
+  "commitMessage" : "feat: moved Settings, Update, Setup, and Support windows to lazy-loaded initialization, reducing startup memory usage according to Stats.\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/14a75c4c168d4159a41c83439af9df77eaad2e01",
+  "durationSeconds" : 6.9158070087432861,
+  "entityNames" : [
+    "ApplicationSettings",
+    "Bool",
+    "CGSize",
+    "MainView",
+    "NSControl",
+    "NSControl?",
+    "NSEvent",
+    "NSToolbar"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Bool"
+      },
+      "getter_block" : {
+        "body" : {
+          "content" : "Store.shared.bool(key: \"pause\", defaultValue: false)"
+        },
+        "modifier" : "get"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Stats/Views/Settings.swift",
+        "location" : {
+          "end_position" : 1220,
+          "start_position" : 1147
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "pauseState"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "NSWindow"
+        },
+        {
+          "name" : "NSWindowDelegate"
+        },
+        {
+          "name" : "NSToolbarDelegate"
+        }
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "NotificationCenter.default.removeObserver(self, name: .toggleSettings, object: nil)\n        NotificationCenter.default.removeObserver(self, name: .openModuleSettings, object: nil)\n        NotificationCenter.default.removeObserver(self, name: .toggleModule, object: nil)"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Stats/Views/Settings.swift",
+          "location" : {
+            "end_position" : 4310,
+            "start_position" : 4008
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if event.type == NSEvent.EventType.keyDown && event.modifierFlags.contains(.command) {\n            if event.keyCode == 12 || event.keyCode == 13 {\n                self.setIsVisible(false)\n                return true\n            } else if event.keyCode == 46 {\n                self.miniaturize(event)\n                return true\n            }\n        }\n        return super.performKeyEquivalent(with: event)"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 4806,
+              "start_position" : 4310
+            }
+          },
+          "modifiers" : [
+            "override"
+          ],
+          "name" : "performKeyEquivalent",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 4374,
+                  "start_position" : 4355
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "NotificationCenter.default.post(name: .clickInSettings, object: nil, userInfo: nil)"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 4952,
+              "start_position" : 4806
+            }
+          },
+          "modifiers" : [
+            "override"
+          ],
+          "name" : "mouseUp",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 4851,
+                  "start_position" : 4838
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "with",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "switch itemIdentifier {\n        case .previewButton:\n            let button = SettingsPreviewButton { [weak self] in\n                guard let moduleName = self?.activeModuleName else { return }\n                NotificationCenter.default.post(name: .togglePreview, object: nil, userInfo: [\"module\": moduleName])\n            }\n            self.settingsPreviewButton = button\n            \n            let toolbarItem = NSToolbarItem(itemIdentifier: itemIdentifier)\n            toolbarItem.view = button\n            toolbarItem.isBordered = false\n            \n            return toolbarItem\n        case .toggleButton:\n            let switchButton = NSSwitch()\n            switchButton.state = .on\n            switchButton.action = #selector(self.toggleEnable)\n            switchButton.target = self\n            switchButton.controlSize = .small\n            self.toggleButton = switchButton\n            \n            let toolbarItem = NSToolbarItem(itemIdentifier: itemIdentifier)\n            toolbarItem.toolTip = localizedString(\"Toggle the module\")\n            toolbarItem.view = switchButton\n            toolbarItem.isBordered = false\n            \n            return toolbarItem\n        default:\n            return nil\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 6361,
+              "start_position" : 4952
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "toolbar",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSToolbar"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 4997,
+                  "start_position" : 4975
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "toolbar",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSToolbarItem.Identifier"
+              },
+              "is_variadic" : false,
+              "label" : "itemForItemIdentifier",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 5061,
+                  "start_position" : 4997
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "itemIdentifier",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "willBeInsertedIntoToolbar",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 5097,
+                  "start_position" : 5061
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "flag",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "NSToolbarItem?"
+            },
+            "description" : "-> NSToolbarItem?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "return [.flexibleSpace, .previewButton, .toggleButton]"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 6528,
+              "start_position" : 6361
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "toolbarAllowedItemIdentifiers",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSToolbar"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 6426,
+                  "start_position" : 6406
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "toolbar",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[NSToolbarItem.Identifier]"
+            },
+            "description" : "-> [NSToolbarItem.Identifier]"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "return [.flexibleSpace, .previewButton, .toggleButton]"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 6690,
+              "start_position" : 6528
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "toolbarDefaultItemIdentifiers",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSToolbar"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 6588,
+                  "start_position" : 6568
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "toolbar",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[NSToolbarItem.Identifier]"
+            },
+            "description" : "-> [NSToolbarItem.Identifier]"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if !self.isVisible {\n            self.setIsVisible(true)\n            self.makeKeyAndOrderFront(nil)\n        }\n        if !self.isKeyWindow {\n            self.orderFrontRegardless()\n        }\n        \n        if var name = notification.userInfo?[\"module\"] as? String {\n            if name == \"Combined modules\" { name = \"Dashboard\" }\n            self.sidebarView.openMenu(name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 7173,
+              "start_position" : 6690
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleSettingsHandler",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Notification"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 6769,
+                  "start_position" : 6741
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "notification",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if let title = notification.userInfo?[\"module\"] as? String {\n            var view: NSView = NSView()\n            if let detectedModule = modules.first(where: { $0.config.name == title }) {\n                if let v = detectedModule.window {\n                    view = v\n                }\n                self.activeModuleName = detectedModule.config.name\n                toggleNSControlState(self.toggleButton, state: detectedModule.enabled ? .on : .off)\n                self.toggleButton?.isHidden = false\n                self.settingsPreviewButton?.isHidden = !detectedModule.config.hasPreview\n                NotificationCenter.default.post(name: .openWindow, object: nil, userInfo: [\"module\": detectedModule.config.name, \"state\": true])\n            } else if title == \"Dashboard\" {\n                view = self.dashboard\n                self.toggleButton?.isHidden = true\n                self.settingsPreviewButton?.isHidden = true\n                NotificationCenter.default.post(name: .openWindow, object: nil, userInfo: [\"state\": false])\n            } else if title == \"Settings\" {\n                self.settings.viewWillAppear()\n                view = self.settings\n                self.toggleButton?.isHidden = true\n                self.settingsPreviewButton?.isHidden = true\n                NotificationCenter.default.post(name: .openWindow, object: nil, userInfo: [\"state\": false])\n            }\n            \n            self.title = localizedString(title)\n            \n            self.mainView.setView(view)\n            self.sidebarView.openMenu(title)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 8832,
+              "start_position" : 7173
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "menuCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Notification"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 7243,
+                  "start_position" : 7215
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "notification",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "guard let moduleName = self.activeModuleName else { return }\n        NotificationCenter.default.post(name: .toggleModule, object: nil, userInfo: [\"module\": moduleName, \"state\": controlState(sender)])"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 9110,
+              "start_position" : 8832
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleEnable",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSControl"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 8893,
+                  "start_position" : 8874
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if let name = notification.userInfo?[\"module\"] as? String, name == self.activeModuleName {\n            if let state = notification.userInfo?[\"state\"] as? Bool {\n                toggleNSControlState(self.toggleButton, state: state ? .on : .off)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 9473,
+              "start_position" : 9110
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "externalModuleToggle",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Notification"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Stats/Views/Settings.swift",
+                "location" : {
+                  "end_position" : 9188,
+                  "start_position" : 9160
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "notification",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.sidebarView.setModules(modules)\n        if !self.pauseState && modules.filter({ $0.enabled != false && $0.available != false && !$0.menuBar.widgets.filter({ $0.isActive }).isEmpty }).isEmpty {\n            self.setIsVisible(true)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 9769,
+              "start_position" : 9473
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "setModules",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.setFrameOrigin(NSPoint(\n            x: (NSScreen.main!.frame.width - SettingsWindow.size.width)/2,\n            y: ((NSScreen.main!.frame.height - SettingsWindow.size.height)/1.75)\n        ))"
+          },
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 10020,
+              "start_position" : 9769
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "positionCenter",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 4008,
+              "start_position" : 1220
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Stats/Views/Settings.swift",
+        "location" : {
+          "end_position" : 10022,
+          "start_position" : 415
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "SettingsWindow",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CGSize"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "width",
+                      "value" : "720"
+                    },
+                    {
+                      "label" : "height",
+                      "value" : "480"
+                    }
+                  ],
+                  "call" : "CGSize",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Stats/Views/Settings.swift",
+                    "location" : {
+                      "end_position" : 556,
+                      "start_position" : 525
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 556,
+              "start_position" : 510
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "size"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "eu.exelban.Stats.Settings.WindowFrame"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 639,
+              "start_position" : 580
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "frameAutosaveName"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "MainView"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "frame",
+                      "value" : "NSRect(x: 0, y: 0, width: 540, height: 480)"
+                    }
+                  ],
+                  "call" : "MainView",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Stats/Views/Settings.swift",
+                    "location" : {
+                      "end_position" : 742,
+                      "start_position" : 682
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 742,
+              "start_position" : 661
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "mainView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SidebarView"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "frame",
+                      "value" : "NSRect(x: 0, y: 0, width: 180, height: 480)"
+                    }
+                  ],
+                  "call" : "SidebarView",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Stats/Views/Settings.swift",
+                    "location" : {
+                      "end_position" : 849,
+                      "start_position" : 786
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 849,
+              "start_position" : 759
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sidebarView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSView"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "Dashboard",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Stats/Views/Settings.swift",
+                    "location" : {
+                      "end_position" : 902,
+                      "start_position" : 891
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 902,
+              "start_position" : 871
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "dashboard"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ApplicationSettings"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "ApplicationSettings",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Stats/Views/Settings.swift",
+                    "location" : {
+                      "end_position" : 972,
+                      "start_position" : 951
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 972,
+              "start_position" : 919
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "settings"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSControl?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 1024,
+              "start_position" : 994
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleButton"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "String?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 1072,
+              "start_position" : 1041
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "activeModuleName"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 1125,
+              "start_position" : 1089
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "settingsPreviewButton"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.bool(key: \"pause\", defaultValue: false)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Stats/Views/Settings.swift",
+            "location" : {
+              "end_position" : 1220,
+              "start_position" : 1147
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pauseState"
+        }
+      ]
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 42,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Stats/Views/Settings.swift"
+  ]
+}

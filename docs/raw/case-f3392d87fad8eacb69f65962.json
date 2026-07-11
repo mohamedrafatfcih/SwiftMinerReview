@@ -1,0 +1,1323 @@
+{
+  "caseID" : "case-f3392d87fad8eacb69f65962",
+  "commitHash" : "c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "commitMessage" : "Reorganize Swift package targets for network plugin. (#1615)\n\n- Part of #1404.\n- Updates containerization to 0.33.2.\n- Reorganizes network plugin targets into:\n  - `ContainerNetworkClient` - network plugin client and default types\n- `ContainerNetworkServer` - separate protocols for `Network` which\nmanages the underlying virtual network, `NetworkService`, which takes a\nnetwork and implements the API, and an actor `NetworkHarness` that\nmarshals between the API and the XPC protocol. The service-harness\nseparation will help us ensure XPC protocol compatibility in both\ndirections as we evolve the plugin APIs.\n- Removes `disableAllocator()` which is no longer used since #1545\nswitched over to using XPC connections between runtime and network\nplugin instances to track whether a network has attached containers.",
+  "commitURL" : "https://github.com/apple/container/commit/c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "durationSeconds" : 8.8029299974441528,
+  "entityNames" : [
+    "(XPCMessage?) throws -> Void",
+    "CIDRv4",
+    "CIDRv6",
+    "ContainerNetworkServer.Network",
+    "IPv4Address",
+    "Logger",
+    "Mutex<State>",
+    "Network"
+  ],
+  "rawRefactoring" : {
+    "category" : "complex",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "26"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "ContainerNetworkServer.Network"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "try stateMutex.withLock { state in\n            try handler(state.network.map { try Self.serialize_network_ref(ref: $0) })\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 2487,
+              "start_position" : 2243
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "withAdditionalData",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "(XPCMessage?) throws -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 2331,
+                  "start_position" : 2292
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "try stateMutex.withLock { state in\n            guard case .created(let configuration) = state.networkState else {\n                throw ContainerizationError(.invalidArgument, message: \"cannot start network that is in \\(state.networkState.state) state\")\n            }\n\n            let networkInfo = try startNetwork(configuration: configuration, log: log)\n\n            let networkStatus = NetworkPluginStatus(\n                ipv4Subnet: networkInfo.ipv4Subnet,\n                ipv4Gateway: networkInfo.ipv4Gateway,\n                ipv6Subnet: networkInfo.ipv6Subnet,\n            )\n            state.networkState = NetworkState.running(configuration, networkStatus)\n            state.network = networkInfo.network\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 3265,
+              "start_position" : 2487
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "start",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var status: vmnet_return_t = .VMNET_SUCCESS\n        guard let refObject = vmnet_network_copy_serialization(ref, &status) else {\n            throw ContainerizationError(.invalidArgument, message: \"cannot serialize vmnet_network_ref to XPC object, status \\(status)\")\n        }\n        return XPCMessage(object: refObject)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 3693,
+              "start_position" : 3265
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "serialize_network_ref",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "vmnet_network_ref"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 3335,
+                  "start_position" : 3313
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ref",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "log.info(\n            \"starting vmnet network\",\n            metadata: [\n                \"id\": \"\\(configuration.id)\",\n                \"mode\": \"\\(configuration.mode)\",\n            ]\n        )\n\n        // set up the vmnet configuration\n        var status: vmnet_return_t = .VMNET_SUCCESS\n        let mode: vmnet.operating_modes_t = configuration.mode == .hostOnly ? .VMNET_HOST_MODE : .VMNET_SHARED_MODE\n        guard let vmnetConfiguration = vmnet_network_configuration_create(mode, &status), status == .VMNET_SUCCESS else {\n            throw ContainerizationError(.unsupported, message: \"failed to create vmnet config with status \\(status)\")\n        }\n\n        vmnet_network_configuration_disable_dhcp(vmnetConfiguration)\n\n        let ipv4Subnet = configuration.ipv4Subnet\n        let ipv6Subnet = configuration.ipv6Subnet\n\n        // set the IPv4 subnet\n        if let ipv4Subnet {\n            let gateway = IPv4Address(ipv4Subnet.lower.value + 1)\n            var gatewayAddr = in_addr()\n            inet_pton(AF_INET, gateway.description, &gatewayAddr)\n            let mask = IPv4Address(ipv4Subnet.prefix.prefixMask32)\n            var maskAddr = in_addr()\n            inet_pton(AF_INET, mask.description, &maskAddr)\n            log.info(\n                \"configuring vmnet IPv4 subnet\",\n                metadata: [\"cidr\": \"\\(ipv4Subnet)\"]\n            )\n            let status = vmnet_network_configuration_set_ipv4_subnet(vmnetConfiguration, &gatewayAddr, &maskAddr)\n            guard status == .VMNET_SUCCESS else {\n                throw ContainerizationError(.internalError, message: \"failed to set subnet \\(ipv4Subnet) for IPv4 network \\(configuration.id)\")\n            }\n        }\n\n        // set the IPv6 network prefix\n        if let ipv6Subnet {\n            let gateway = IPv6Address(ipv6Subnet.lower.value + 1)\n            var gatewayAddr = in6_addr()\n            inet_pton(AF_INET6, gateway.description, &gatewayAddr)\n            log.info(\n                \"configuring vmnet IPv6 prefix\",\n                metadata: [\"cidr\": \"\\(ipv6Subnet)\"]\n            )\n            let status = vmnet_network_configuration_set_ipv6_prefix(vmnetConfiguration, &gatewayAddr, ipv6Subnet.prefix.length)\n            guard status == .VMNET_SUCCESS else {\n                throw ContainerizationError(.internalError, message: \"failed to set prefix \\(ipv6Subnet) for IPv6 network \\(configuration.id)\")\n            }\n        }\n\n        // reserve the network\n        guard let network = vmnet_network_create(vmnetConfiguration, &status), status == .VMNET_SUCCESS else {\n            throw ContainerizationError(.unsupported, message: \"failed to create vmnet network with status \\(status)\")\n        }\n\n        // retrieve the subnet since the caller may not have provided one\n        var subnetAddr = in_addr()\n        var maskAddr = in_addr()\n        vmnet_network_get_ipv4_subnet(network, &subnetAddr, &maskAddr)\n        let subnetValue = UInt32(bigEndian: subnetAddr.s_addr)\n        let maskValue = UInt32(bigEndian: maskAddr.s_addr)\n        let lower = IPv4Address(subnetValue & maskValue)\n        let upper = IPv4Address(lower.value + ~maskValue)\n        let runningSubnet = try CIDRv4(lower: lower, upper: upper)\n        let runningGateway = IPv4Address(runningSubnet.lower.value + 1)\n\n        var prefixAddr = in6_addr()\n        var prefixLength = UInt8(0)\n        vmnet_network_get_ipv6_prefix(network, &prefixAddr, &prefixLength)\n        guard let prefix = Prefix(length: prefixLength) else {\n            throw ContainerizationError(.internalError, message: \"invalid IPv6 prefix length \\(prefixLength) for network \\(configuration.id)\")\n        }\n        let prefixIpv6Bytes = withUnsafeBytes(of: prefixAddr.__u6_addr.__u6_addr8) {\n            Array($0)\n        }\n        let prefixIpv6Addr = try IPv6Address(prefixIpv6Bytes)\n        let runningV6Subnet = try CIDRv6(prefixIpv6Addr, prefix: prefix)\n\n        log.info(\n            \"started vmnet network\",\n            metadata: [\n                \"id\": \"\\(configuration.id)\",\n                \"mode\": \"\\(configuration.mode)\",\n                \"cidr\": \"\\(runningSubnet)\",\n                \"cidrv6\": \"\\(runningV6Subnet)\",\n            ]\n        )\n\n        return NetworkInfo(\n            network: network,\n            ipv4Subnet: runningSubnet,\n            ipv4Gateway: runningGateway,\n            ipv6Subnet: runningV6Subnet,\n        )"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 8183,
+              "start_position" : 3693
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "startNetwork",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NetworkConfiguration"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 3762,
+                  "start_position" : 3725
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "configuration",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Logger"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 3773,
+                  "start_position" : 3762
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "log",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NetworkInfo"
+            },
+            "description" : "-> NetworkInfo"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 2151,
+              "start_position" : 1510
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NetworkConfiguration"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1686,
+                  "start_position" : 1641
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "configuration",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Logger"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1706,
+                  "start_position" : 1686
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "log",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+        "location" : {
+          "end_position" : 8185,
+          "start_position" : 1000
+        }
+      },
+      "modifiers" : [
+        "public",
+        "final"
+      ],
+      "name" : "ReservedVmnetNetwork",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1262,
+              "start_position" : 1150
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "State",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NetworkState"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1216,
+                  "start_position" : 1190
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "networkState"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "vmnet_network_ref?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1256,
+                  "start_position" : 1229
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "network"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1440,
+              "start_position" : 1262
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "NetworkInfo",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "vmnet_network_ref"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1335,
+                  "start_position" : 1309
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "network"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CIDRv4"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1366,
+                  "start_position" : 1348
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ipv4Subnet"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "IPv4Address"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1403,
+                  "start_position" : 1379
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ipv4Gateway"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CIDRv6"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1434,
+                  "start_position" : 1416
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ipv6Subnet"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Mutex<State>"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1482,
+              "start_position" : 1458
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stateMutex"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Logger"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1510,
+              "start_position" : 1499
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "log"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NetworkState"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "stateMutex.withLock { $0.networkState }"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 2243,
+              "start_position" : 2168
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "state"
+        }
+      ]
+    },
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "26"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Network"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "try stateMutex.withLock { state in\n            try handler(state.network.map { try Self.serialize_network_ref(ref: $0) })\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 2501,
+              "start_position" : 2257
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "withAdditionalData",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "(XPCMessage?) throws -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 2345,
+                  "start_position" : 2306
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "try stateMutex.withLock { state in\n            guard case .created(let configuration) = state.networkState else {\n                throw ContainerizationError(.invalidArgument, message: \"cannot start network that is in \\(state.networkState.state) state\")\n            }\n\n            let networkInfo = try startNetwork(configuration: configuration, log: log)\n\n            let networkStatus = NetworkPluginStatus(\n                ipv4Subnet: networkInfo.ipv4Subnet,\n                ipv4Gateway: networkInfo.ipv4Gateway,\n                ipv6Subnet: networkInfo.ipv6Subnet,\n            )\n            state.networkState = NetworkState.running(configuration, networkStatus)\n            state.network = networkInfo.network\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 3279,
+              "start_position" : 2501
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "start",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var status: vmnet_return_t = .VMNET_SUCCESS\n        guard let refObject = vmnet_network_copy_serialization(ref, &status) else {\n            throw ContainerizationError(.invalidArgument, message: \"cannot serialize vmnet_network_ref to XPC object, status \\(status)\")\n        }\n        return XPCMessage(object: refObject)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 3707,
+              "start_position" : 3279
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "serialize_network_ref",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "vmnet_network_ref"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 3349,
+                  "start_position" : 3327
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ref",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "log.info(\n            \"starting vmnet network\",\n            metadata: [\n                \"id\": \"\\(configuration.id)\",\n                \"mode\": \"\\(configuration.mode)\",\n            ]\n        )\n\n        // set up the vmnet configuration\n        var status: vmnet_return_t = .VMNET_SUCCESS\n        let mode: vmnet.operating_modes_t = configuration.mode == .hostOnly ? .VMNET_HOST_MODE : .VMNET_SHARED_MODE\n        guard let vmnetConfiguration = vmnet_network_configuration_create(mode, &status), status == .VMNET_SUCCESS else {\n            throw ContainerizationError(.unsupported, message: \"failed to create vmnet config with status \\(status)\")\n        }\n\n        vmnet_network_configuration_disable_dhcp(vmnetConfiguration)\n\n        let ipv4Subnet = configuration.ipv4Subnet\n        let ipv6Subnet = configuration.ipv6Subnet\n\n        // set the IPv4 subnet\n        if let ipv4Subnet {\n            let gateway = IPv4Address(ipv4Subnet.lower.value + 1)\n            var gatewayAddr = in_addr()\n            inet_pton(AF_INET, gateway.description, &gatewayAddr)\n            let mask = IPv4Address(ipv4Subnet.prefix.prefixMask32)\n            var maskAddr = in_addr()\n            inet_pton(AF_INET, mask.description, &maskAddr)\n            log.info(\n                \"configuring vmnet IPv4 subnet\",\n                metadata: [\"cidr\": \"\\(ipv4Subnet)\"]\n            )\n            let status = vmnet_network_configuration_set_ipv4_subnet(vmnetConfiguration, &gatewayAddr, &maskAddr)\n            guard status == .VMNET_SUCCESS else {\n                throw ContainerizationError(.internalError, message: \"failed to set subnet \\(ipv4Subnet) for IPv4 network \\(configuration.id)\")\n            }\n        }\n\n        // set the IPv6 network prefix\n        if let ipv6Subnet {\n            let gateway = IPv6Address(ipv6Subnet.lower.value + 1)\n            var gatewayAddr = in6_addr()\n            inet_pton(AF_INET6, gateway.description, &gatewayAddr)\n            log.info(\n                \"configuring vmnet IPv6 prefix\",\n                metadata: [\"cidr\": \"\\(ipv6Subnet)\"]\n            )\n            let status = vmnet_network_configuration_set_ipv6_prefix(vmnetConfiguration, &gatewayAddr, ipv6Subnet.prefix.length)\n            guard status == .VMNET_SUCCESS else {\n                throw ContainerizationError(.internalError, message: \"failed to set prefix \\(ipv6Subnet) for IPv6 network \\(configuration.id)\")\n            }\n        }\n\n        // reserve the network\n        guard let network = vmnet_network_create(vmnetConfiguration, &status), status == .VMNET_SUCCESS else {\n            throw ContainerizationError(.unsupported, message: \"failed to create vmnet network with status \\(status)\")\n        }\n\n        // retrieve the subnet since the caller may not have provided one\n        var subnetAddr = in_addr()\n        var maskAddr = in_addr()\n        vmnet_network_get_ipv4_subnet(network, &subnetAddr, &maskAddr)\n        let subnetValue = UInt32(bigEndian: subnetAddr.s_addr)\n        let maskValue = UInt32(bigEndian: maskAddr.s_addr)\n        let lower = IPv4Address(subnetValue & maskValue)\n        let upper = IPv4Address(lower.value + ~maskValue)\n        let runningSubnet = try CIDRv4(lower: lower, upper: upper)\n        let runningGateway = IPv4Address(runningSubnet.lower.value + 1)\n\n        var prefixAddr = in6_addr()\n        var prefixLength = UInt8(0)\n        vmnet_network_get_ipv6_prefix(network, &prefixAddr, &prefixLength)\n        guard let prefix = Prefix(length: prefixLength) else {\n            throw ContainerizationError(.internalError, message: \"invalid IPv6 prefix length \\(prefixLength) for network \\(configuration.id)\")\n        }\n        let prefixIpv6Bytes = withUnsafeBytes(of: prefixAddr.__u6_addr.__u6_addr8) {\n            Array($0)\n        }\n        let prefixIpv6Addr = try IPv6Address(prefixIpv6Bytes)\n        let runningV6Subnet = try CIDRv6(prefixIpv6Addr, prefix: prefix)\n\n        log.info(\n            \"started vmnet network\",\n            metadata: [\n                \"id\": \"\\(configuration.id)\",\n                \"mode\": \"\\(configuration.mode)\",\n                \"cidr\": \"\\(runningSubnet)\",\n                \"cidrv6\": \"\\(runningV6Subnet)\",\n            ]\n        )\n\n        return NetworkInfo(\n            network: network,\n            ipv4Subnet: runningSubnet,\n            ipv4Gateway: runningGateway,\n            ipv6Subnet: runningV6Subnet,\n        )"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 8197,
+              "start_position" : 3707
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "startNetwork",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NetworkConfiguration"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 3776,
+                  "start_position" : 3739
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "configuration",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Logger"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 3787,
+                  "start_position" : 3776
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "log",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NetworkInfo"
+            },
+            "description" : "-> NetworkInfo"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 2165,
+              "start_position" : 1524
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NetworkConfiguration"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1700,
+                  "start_position" : 1655
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "configuration",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Logger"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1720,
+                  "start_position" : 1700
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "log",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+        "location" : {
+          "end_position" : 8199,
+          "start_position" : 1037
+        }
+      },
+      "modifiers" : [
+        "public",
+        "final"
+      ],
+      "name" : "ReservedVmnetNetwork",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1276,
+              "start_position" : 1164
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "State",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NetworkState"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1230,
+                  "start_position" : 1204
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "networkState"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "vmnet_network_ref?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1270,
+                  "start_position" : 1243
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "network"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1454,
+              "start_position" : 1276
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "NetworkInfo",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "vmnet_network_ref"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1349,
+                  "start_position" : 1323
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "network"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CIDRv4"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1380,
+                  "start_position" : 1362
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ipv4Subnet"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "IPv4Address"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1417,
+                  "start_position" : 1393
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ipv4Gateway"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CIDRv6"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+                "location" : {
+                  "end_position" : 1448,
+                  "start_position" : 1430
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ipv6Subnet"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Mutex<State>"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1496,
+              "start_position" : 1472
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stateMutex"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Logger"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 1524,
+              "start_position" : 1513
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "log"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NetworkState"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "stateMutex.withLock { $0.networkState }"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+            "location" : {
+              "end_position" : 2257,
+              "start_position" : 2182
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "state"
+        }
+      ]
+    },
+    "type" : "Move Class Refactoring"
+  },
+  "refactoringIndex" : 1,
+  "refactoringType" : "Move Class Refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerNetworkService/Server/ReservedVmnetNetwork.swift",
+    "Sources/Services/NetworkVmnet/Server/ReservedVmnetNetwork.swift"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "caseID" : "case-96257f366c662f0f35d999e7",
+  "commitHash" : "b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
+  "commitMessage" : "Prevent Duplicate Serializer Completion Calls (#3999)\n\n### Issue Link :link:\nFixes #3978\n\n### Goals :soccer:\nThis PR fixes the possible duplicate completion handler calls that cause\n#3978.\n\nDue to multiple paths into `processNextResponseSerializer()` there was a\nlogical race where the same response serializer could be completed\nmultiple times when cancelled, leading to a concurrency runtime crash\ndue to resuming a continuation more than once.\n\n### Implementation Details :construction:\nAdditional state was added to track whether a `Request` had currently\nenqueued a serializer which is checked upon entering\n`processNextResponseSerializer()`, allowing it to return early if a\nserializer is in flight. This ensures that no matter how many times\n`processNextResponseSerializer()` is called, only one attempt will\nenqueue a particular serializer and, potentially, its completion.\n\n### Testing Details :mag:\nAdditional test added which could locally reproduce the issue.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
+  "durationSeconds" : 31.487722039222717,
+  "entityNames" : [
+    "testThatCustomBoundaryCanBeSetWhenUploadingMultipartFormData"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let uploadData = Data(\"upload_data\".utf8)\n\n        let formData = MultipartFormData(fileManager: .default, boundary: \"custom-test-boundary\")\n        formData.append(uploadData, withName: \"upload_data\")\n\n        let expectation = expectation(description: \"multipart form data upload should succeed\")\n        var response: DataResponse<Data?, AFError>?\n\n        // When\n        AF.upload(multipartFormData: formData, with: Endpoint.method(.post)).response { resp in\n            response = resp\n            expectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNotNil(response?.data)\n        XCTAssertNil(response?.error)\n\n        if let request = response?.request, let contentType = request.value(forHTTPHeaderField: \"Content-Type\") {\n            XCTAssertEqual(contentType, formData.contentType)\n            XCTAssertTrue(contentType.contains(\"boundary=custom-test-boundary\"))\n        } else {\n            XCTFail(\"Content-Type header value should not be nil\")\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Tests/UploadTests.swift",
+        "location" : {
+          "end_position" : 14390,
+          "start_position" : 13145
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatCustomBoundaryCanBeSetWhenUploadingMultipartFormData",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "description" : "throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "old_specifier" : "throws",
+    "type" : "Remove Throws Specifier"
+  },
+  "refactoringIndex" : 93,
+  "refactoringType" : "Remove Throws Specifier",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/UploadTests.swift"
+  ]
+}

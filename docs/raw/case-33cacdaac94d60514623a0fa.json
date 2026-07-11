@@ -1,0 +1,563 @@
+{
+  "caseID" : "case-33cacdaac94d60514623a0fa",
+  "commitHash" : "de780c1478e8c8b1bf1f163bc4e474e99b8bfe23",
+  "commitMessage" : "cli: Add support for --stop-signal (#1462)\n\n- Closes #1581.\n- This adds stop signal support to the cli. The priority is:\n  1. If an explicit stop signal is passed on the cli use this.\n  2. If not, check if there is a stop signal in the image config.\n  3. Finally, use the default (TERM).",
+  "commitURL" : "https://github.com/apple/container/commit/de780c1478e8c8b1bf1f163bc4e474e99b8bfe23",
+  "durationSeconds" : 9.9550520181655884,
+  "entityNames" : [
+    "AsyncLoggableCommand",
+    "ContainerClient",
+    "ContainerStop",
+    "ContainerStopOptions",
+    "Flags.Logging",
+    "Int32",
+    "String",
+    "[String]"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Option"
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "name",
+              "value" : ".shortAndLong"
+            },
+            {
+              "label" : "help",
+              "value" : "Signal to send to the containers"
+            }
+          ]
+        }
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "String"
+      },
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "other" : {
+            "_0" : "SIGTERM"
+          }
+        }
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+        "location" : {
+          "end_position" : 1457,
+          "start_position" : 1431
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "signal"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "AsyncLoggableCommand"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if containerIds.count == 0 && !all {\n                throw ContainerizationError(.invalidArgument, message: \"no containers specified and --all not supplied\")\n            }\n            if containerIds.count > 0 && all {\n                throw ContainerizationError(\n                    .invalidArgument, message: \"explicitly supplied container IDs conflict with the --all flag\")\n            }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 2181,
+              "start_position" : 1727
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "validate",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let client = ContainerClient()\n\n            let containers: [String]\n            if self.all {\n                containers = try await client.list().map { $0.id }\n            } else {\n                containers = containerIds\n            }\n\n            let opts = ContainerStopOptions(\n                timeoutInSeconds: self.time,\n                signal: try Signal(self.signal).rawValue\n            )\n            try await Self.stopContainers(\n                client: client,\n                containers: containers,\n                stopOptions: opts\n            )"
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 2818,
+              "start_position" : 2181
+            }
+          },
+          "modifiers" : [
+            "public",
+            "mutating"
+          ],
+          "name" : "run",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var errors: [any Error] = []\n            await withTaskGroup(of: (any Error)?.self) { group in\n                for container in containers {\n                    group.addTask {\n                        do {\n                            try await client.stop(id: container, opts: stopOptions)\n                            print(container)\n                            return nil\n                        } catch {\n                            return error\n                        }\n                    }\n                }\n\n                for await error in group {\n                    if let error {\n                        errors.append(error)\n                    }\n                }\n            }\n\n            if !errors.isEmpty {\n                throw AggregateError(errors)\n            }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 3759,
+              "start_position" : 2818
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "stopContainers",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ContainerClient"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+                "location" : {
+                  "end_position" : 2880,
+                  "start_position" : 2855
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "client",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+                "location" : {
+                  "end_position" : 2902,
+                  "start_position" : 2880
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "containers",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ContainerStopOptions"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+                "location" : {
+                  "end_position" : 2935,
+                  "start_position" : 2902
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stopOptions",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 1082,
+              "start_position" : 1057
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+        "location" : {
+          "end_position" : 3765,
+          "start_position" : 1001
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "ContainerStop",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "commandName",
+                      "value" : "\"stop\""
+                    },
+                    {
+                      "label" : "abstract",
+                      "value" : "\"Stop one or more running containers\""
+                    }
+                  ],
+                  "call" : "CommandConfiguration",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+                    "location" : {
+                      "end_position" : 1241,
+                      "start_position" : 1126
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 1241,
+              "start_position" : 1110
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "configuration"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Flag"
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "name",
+                  "value" : ".shortAndLong"
+                },
+                {
+                  "label" : "help",
+                  "value" : "Stop all running containers"
+                }
+              ]
+            }
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 1338,
+              "start_position" : 1327
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "all"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Option"
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "name",
+                  "value" : ".shortAndLong"
+                },
+                {
+                  "label" : "help",
+                  "value" : "Signal to send to the containers"
+                }
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "SIGTERM"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 1457,
+              "start_position" : 1431
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "signal"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Option"
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "name",
+                  "value" : ".shortAndLong"
+                },
+                {
+                  "label" : "help",
+                  "value" : "Seconds to wait before killing the containers"
+                }
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int32"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "5"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 1578,
+              "start_position" : 1563
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "time"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "OptionGroup"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Flags.Logging"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 1645,
+              "start_position" : 1620
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "logOptions"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Argument"
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "help",
+                  "value" : "Container IDs"
+                }
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStop.swift",
+            "location" : {
+              "end_position" : 1727,
+              "start_position" : 1700
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "containerIds"
+        }
+      ]
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 2,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/ContainerCommands/Container/ContainerStop.swift"
+  ]
+}

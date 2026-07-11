@@ -1,0 +1,601 @@
+{
+  "caseID" : "case-71590dae62daa142159d2038",
+  "commitHash" : "3842977f4aa4c53cc9b9df65900aa1ab4498fdc1",
+  "commitMessage" : "Migrate basic system tests to new test support types. (#1841)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/3842977f4aa4c53cc9b9df65900aa1ab4498fdc1",
+  "durationSeconds" : 0.67437291145324707,
+  "entityNames" : [
+    "CLITest",
+    "Codable",
+    "String",
+    "TestCLIVersion",
+    "VersionInfo",
+    "VersionInfo?",
+    "VersionOutput",
+    "appName"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialSuites"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "#if DEBUG\n        return \"debug\"\n        #else\n        return \"release\"\n        #endif"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 1472,
+              "start_position" : 1321
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "expectedBuildType",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (data, out, err, status) = try run(arguments: [\"system\", \"version\"])  // default is table\n        #expect(status == 0, \"system version should succeed, stderr: \\(err)\")\n        #expect(!out.isEmpty)\n\n        // Validate table structure\n        let lines = out.trimmingCharacters(in: .whitespacesAndNewlines)\n            .components(separatedBy: .newlines)\n        #expect(lines.count >= 2)  // header + at least CLI row\n        #expect(lines[0].contains(\"COMPONENT\") && lines[0].contains(\"VERSION\") && lines[0].contains(\"BUILD\") && lines[0].contains(\"COMMIT\"))\n        #expect(lines[1].hasPrefix(\"container\"))\n\n        // Build should reflect the binary we are running (debug/release)\n        let expected = expectedBuildType()\n        #expect(lines.joined(separator: \"\\n\").contains(\" \\(expected) \"))\n        _ = data"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 2410,
+              "start_position" : 1472
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "defaultDisplaysTable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (data, out, err, status) = try run(arguments: [\"system\", \"version\", \"--format\", \"json\"])\n        #expect(status == 0, \"system version --format json should succeed, stderr: \\(err)\")\n        #expect(!out.isEmpty)\n\n        let decoded = try JSONDecoder().decode([VersionOutput].self, from: data)\n        #expect(decoded[0].appName == \"container\")\n        #expect(!decoded[0].version.isEmpty)\n        #expect(!decoded[0].commit.isEmpty)\n\n        let expected = expectedBuildType()\n        #expect(decoded[0].buildType == expected)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 2993,
+              "start_position" : 2410
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "jsonFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (data, out, err, status) = try run(arguments: [\"system\", \"version\", \"--format\", \"yaml\"])\n        #expect(status == 0, \"system version --format yaml should succeed, stderr: \\(err)\")\n        #expect(!out.isEmpty)\n\n        let decoded = try YAMLDecoder().decode([VersionOutput].self, from: data)\n        #expect(decoded[0].appName == \"container\")\n        #expect(!decoded[0].version.isEmpty)\n        #expect(!decoded[0].commit.isEmpty)\n\n        let expected = expectedBuildType()\n        #expect(decoded[0].buildType == expected)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 3576,
+              "start_position" : 2993
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "yamlFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (_, out, err, status) = try run(arguments: [\"system\", \"version\", \"--format\", \"table\"])\n        #expect(status == 0, \"system version --format table should succeed, stderr: \\(err)\")\n        #expect(!out.isEmpty)\n\n        let lines = out.trimmingCharacters(in: .whitespacesAndNewlines)\n            .components(separatedBy: .newlines)\n        #expect(lines.count >= 2)\n        #expect(lines[0].contains(\"COMPONENT\") && lines[0].contains(\"VERSION\") && lines[0].contains(\"BUILD\") && lines[0].contains(\"COMMIT\"))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 4147,
+              "start_position" : 3576
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "explicitTableFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (data, _, err, status) = try run(arguments: [\"system\", \"version\", \"--format\", \"json\"])\n        #expect(status == 0, \"version --format json should succeed, stderr: \\(err)\")\n        let decoded = try JSONDecoder().decode([VersionOutput].self, from: data)\n\n        let expected = expectedBuildType()\n        #expect(decoded[0].buildType == expected, \"Expected build type \\(expected) but got \\(decoded[0].buildType)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 4705,
+              "start_position" : 4147
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "buildTypeMatchesBinary",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+        "location" : {
+          "end_position" : 4707,
+          "start_position" : 836
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "TestCLIVersion",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 1132,
+              "start_position" : 979
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "VersionInfo",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1041,
+                  "start_position" : 1026
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "version"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1071,
+                  "start_position" : 1054
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "buildType"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1098,
+                  "start_position" : 1084
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "commit"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1126,
+                  "start_position" : 1111
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "appName"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+            "location" : {
+              "end_position" : 1321,
+              "start_position" : 1132
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "VersionOutput",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1197,
+                  "start_position" : 1182
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "version"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1227,
+                  "start_position" : 1210
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "buildType"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1254,
+                  "start_position" : 1240
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "commit"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1282,
+                  "start_position" : 1267
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "appName"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "VersionInfo?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLIVersion.swift",
+                "location" : {
+                  "end_position" : 1315,
+                  "start_position" : 1295
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "server"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 6,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/System/TestCLIVersion.swift"
+  ]
+}

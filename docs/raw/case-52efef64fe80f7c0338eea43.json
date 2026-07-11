@@ -1,0 +1,519 @@
+{
+  "caseID" : "case-52efef64fe80f7c0338eea43",
+  "commitHash" : "c622d91fbd9e3d637e1d46523d0f08f2d1dcdb3b",
+  "commitMessage" : "Merge pull request #1306 from wxh06/develop\n\nSet jsDelivr to default GFWListURL instead of GitHub Raw",
+  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/c622d91fbd9e3d637e1d46523d0f08f2d1dcdb3b",
+  "durationSeconds" : 66.839110970497131,
+  "entityNames" : [
+    "Cancelable",
+    "Collection.Element.Element",
+    "Disposable",
+    "Event<SourceElement>",
+    "Int",
+    "Observer",
+    "Observer.Element",
+    "Parent"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "name" : "Sink<Observer>"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sink<Observer>"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.lock.lock(); defer { self.lock.unlock() }\n        switch event {\n        case .next(let element):\n            self.values[atIndex].enqueue(element)\n            \n            if self.values[atIndex].count == 1 {\n                self.numberOfValues += 1\n            }\n            \n            if self.numberOfValues < self.parent.count {\n                if self.numberOfDone == self.parent.count - 1 {\n                    self.forwardOn(.completed)\n                    self.dispose()\n                }\n                return\n            }\n            \n            do {\n                var arguments = [SourceElement]()\n                arguments.reserveCapacity(self.parent.count)\n                \n                // recalculate number of values\n                self.numberOfValues = 0\n                \n                for i in 0 ..< self.values.count {\n                    arguments.append(self.values[i].dequeue()!)\n                    if !self.values[i].isEmpty {\n                        self.numberOfValues += 1\n                    }\n                }\n                \n                let result = try self.parent.resultSelector(arguments)\n                self.forwardOn(.next(result))\n            }\n            catch let error {\n                self.forwardOn(.error(error))\n                self.dispose()\n            }\n            \n        case .error(let error):\n            self.forwardOn(.error(error))\n            self.dispose()\n        case .completed:\n            if self.isDone[atIndex] {\n                return\n            }\n            \n            self.isDone[atIndex] = true\n            self.numberOfDone += 1\n            \n            if self.numberOfDone == self.parent.count {\n                self.forwardOn(.completed)\n                self.dispose()\n            }\n            else {\n                self.subscriptions[atIndex].dispose()\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 4919,
+              "start_position" : 2959
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "on",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Event<SourceElement>"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+                "location" : {
+                  "end_position" : 3008,
+                  "start_position" : 2977
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+                "location" : {
+                  "end_position" : 3020,
+                  "start_position" : 3008
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "atIndex",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var j = 0\n        for i in self.parent.sources {\n            let index = j\n            let source = i.asObservable()\n\n            let disposable = source.subscribe(AnyObserver { event in\n                self.on(event, atIndex: index)\n                })\n            self.subscriptions[j].setDisposable(disposable)\n            j += 1\n        }\n\n        if self.parent.sources.isEmpty {\n            self.forwardOn(.completed)\n        }\n        \n        return Disposables.create(subscriptions)"
+          },
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 5460,
+              "start_position" : 4919
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "run",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Disposable"
+            },
+            "description" : "-> Disposable"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2959,
+              "start_position" : 2381
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Parent"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+                "location" : {
+                  "end_position" : 2412,
+                  "start_position" : 2396
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "parent",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Observer"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+                "location" : {
+                  "end_position" : 2432,
+                  "start_position" : 2412
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "observer",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Cancelable"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+                "location" : {
+                  "end_position" : 2450,
+                  "start_position" : 2432
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cancel",
+              "order" : 2
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+        "location" : {
+          "end_position" : 5462,
+          "start_position" : 1746
+        }
+      },
+      "modifiers" : [
+        "final",
+        "private"
+      ],
+      "name" : "ZipCollectionTypeSink",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "Observer.Element"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 1959,
+              "start_position" : 1918
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Result"
+        },
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "ZipCollectionType<Collection, Result>"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2020,
+              "start_position" : 1959
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Parent"
+        },
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "Collection.Element.Element"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2077,
+              "start_position" : 2020
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "SourceElement"
+        }
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Parent"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2113,
+              "start_position" : 2099
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "parent"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "RecursiveLock",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+                    "location" : {
+                      "end_position" : 2157,
+                      "start_position" : 2142
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2157,
+              "start_position" : 2135
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lock"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2210,
+              "start_position" : 2192
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "numberOfValues"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[Queue<SourceElement>]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2257,
+              "start_position" : 2227
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "values"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[Bool]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2288,
+              "start_position" : 2274
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isDone"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2321,
+              "start_position" : 2305
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "numberOfDone"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[SingleAssignmentDisposable]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift",
+            "location" : {
+              "end_position" : 2381,
+              "start_position" : 2338
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "subscriptions"
+        }
+      ]
+    },
+    "type" : "Add Confromed Type Refactoring"
+  },
+  "refactoringIndex" : 5832,
+  "refactoringType" : "Add Confromed Type Refactoring",
+  "repoID" : "shadowsocks-shadowsocksx-ng",
+  "repoName" : "shadowsocks/ShadowsocksX-NG",
+  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Pods/RxSwift/RxSwift/Observables/Zip+Collection.swift"
+  ]
+}

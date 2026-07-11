@@ -1,0 +1,4589 @@
+{
+  "caseID" : "case-b46ca407b888c4825ce0074e",
+  "commitHash" : "9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "commitMessage" : "More Atomic Locking (#3984)\n\n### Issue Link :link:\nAttempts to fix #3978 \n\n### Goals :soccer:\nThis PR is a speculative attempt to fix the continuation resumption\ncrash seen in #3978. However, I was unable to reproduce that issues,\neven with more complicated test cases and over 50 million test\niterations. So this PR makes a few parts of `Request`'s state management\nmore atomic, especially around response serializer handling. It also\nremoves `@dynamicMemberLookup` from `Protected`, which should encourage\nmore atomic usage.\n\n### Implementation Details :construction:\nThis PR attempts to unify what were separate lock access in the same\nflow into single accesses that accomplish the same thing. Behaviorally\nshould be the same but may prevent any intermediate accesses to state\nthat might cause this issue.\n\n### Testing Details :mag:\nNo new test scenarios, as no reproduction could be found.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "durationSeconds" : 10.915109992027283,
+  "entityNames" : [
+    "(State) -> Void",
+    "(any CachedResponseHandler)?",
+    "(any EventMonitor)?",
+    "(any RedirectHandler)?",
+    "(any RequestDelegate)?",
+    "(any RequestInterceptor)?",
+    "(handler: ProgressHandler, queue: DispatchQueue)?",
+    "(queue: DispatchQueue, handler: @Sendable (String) -> Void)?"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "$0.downloadProgressHandler = newValue"
+      },
+      "captures" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/Request.swift",
+        "location" : {
+          "end_position" : 8855,
+          "start_position" : 8813
+        }
+      },
+      "parameters" : [
+
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sendable"
+        }
+      ],
+      "enums" : [
+        {
+          "attributes" : [
+
+          ],
+          "cases" : [
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 1643,
+                  "start_position" : 1574
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "initialized",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 1814,
+                  "start_position" : 1643
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "resumed",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 1989,
+                  "start_position" : 1814
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "suspended",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 2283,
+                  "start_position" : 1989
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cancelled",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 2469,
+                  "start_position" : 2283
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "finished",
+              "parameters" : [
+
+              ]
+            }
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+            {
+              "attributes" : [
+
+              ],
+              "body" : {
+                "content" : "switch (self, state) {\n            case (.initialized, _):\n                true\n            case (_, .initialized), (.cancelled, _), (.finished, _):\n                false\n            case (.resumed, .cancelled), (.suspended, .cancelled), (.resumed, .suspended), (.suspended, .resumed):\n                true\n            case (.suspended, .suspended), (.resumed, .resumed):\n                false\n            case (_, .finished):\n                true\n            }"
+              },
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 3092,
+                  "start_position" : 2469
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "canTransitionTo",
+              "parameters" : [
+                {
+                  "attributes" : [
+
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "State"
+                  },
+                  "is_variadic" : false,
+                  "label" : "_",
+                  "location_info" : {
+                    "file_path" : "Source/Core/Request.swift",
+                    "location" : {
+                      "end_position" : 2597,
+                      "start_position" : 2583
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "state",
+                  "order" : 0
+                }
+              ],
+              "return_clause" : {
+                "data_type" : {
+                  "is_optional" : false,
+                  "name" : "Bool"
+                },
+                "description" : "-> Bool"
+              }
+            }
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 3098,
+              "start_position" : 1396
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "State",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.write { $0.requests.append(request) }\n\n        eventMonitor?.request(self, didCreateInitialURLRequest: request)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 14640,
+              "start_position" : 14037
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didCreateInitialURLRequest",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 14430,
+                  "start_position" : 14409
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        self.error = error\n\n        eventMonitor?.request(self, didFailToCreateURLRequestWithError: error)\n\n        callCURLHandlerIfNecessary()\n\n        retryOrFinish(error: error)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 15180,
+              "start_position" : 14640
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didFailToCreateURLRequest",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AFError"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 14921,
+                  "start_position" : 14902
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.write { $0.requests.append(adaptedRequest) }\n\n        eventMonitor?.request(self, didAdaptInitialRequest: initialRequest, to: adaptedRequest)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 15765,
+              "start_position" : 15180
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didAdaptInitialRequest",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 15496,
+                  "start_position" : 15466
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "initialRequest",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "to",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 15525,
+                  "start_position" : 15496
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adaptedRequest",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        self.error = error\n\n        eventMonitor?.request(self, didFailToAdaptURLRequest: request, withError: error)\n\n        callCURLHandlerIfNecessary()\n\n        retryOrFinish(error: error)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 16393,
+              "start_position" : 15765
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didFailToAdaptURLRequest",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 16100,
+                  "start_position" : 16077
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AFError"
+              },
+              "is_variadic" : false,
+              "label" : "withError",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 16124,
+                  "start_position" : 16100
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.read { state in\n            guard let urlRequestHandler = state.urlRequestHandler else { return }\n\n            urlRequestHandler.queue.async { urlRequestHandler.handler(request) }\n        }\n\n        eventMonitor?.request(self, didCreateURLRequest: request)\n\n        callCURLHandlerIfNecessary()"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 16963,
+              "start_position" : 16393
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didCreateURLRequest",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 16570,
+                  "start_position" : 16549
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            guard let cURLHandler = mutableState.cURLHandler else { return }\n\n            cURLHandler.queue.async { cURLHandler.handler(self.cURLDescription()) }\n\n            mutableState.cURLHandler = nil\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 17374,
+              "start_position" : 16963
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "callCURLHandlerIfNecessary",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.write { state in\n            state.tasks.append(task)\n\n            guard let urlSessionTaskHandler = state.urlSessionTaskHandler else { return }\n\n            urlSessionTaskHandler.queue.async { urlSessionTaskHandler.handler(task) }\n        }\n\n        eventMonitor?.request(self, didCreateTask: task)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 17960,
+              "start_position" : 17374
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didCreateTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 17562,
+                  "start_position" : 17540
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        eventMonitor?.requestDidResume(self)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 18148,
+              "start_position" : 17960
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didResume",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        eventMonitor?.request(self, didResumeTask: task)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 18470,
+              "start_position" : 18148
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didResumeTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 18336,
+                  "start_position" : 18314
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        eventMonitor?.requestDidSuspend(self)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 18660,
+              "start_position" : 18470
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didSuspend",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        eventMonitor?.request(self, didSuspendTask: task)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 18988,
+              "start_position" : 18660
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didSuspendTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 18853,
+                  "start_position" : 18831
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.write { mutableState in\n            mutableState.error = mutableState.error ?? AFError.explicitlyCancelled\n        }\n\n        eventMonitor?.requestDidCancel(self)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 19364,
+              "start_position" : 18988
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didCancel",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        eventMonitor?.request(self, didCancelTask: task)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 19690,
+              "start_position" : 19364
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didCancelTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 19556,
+                  "start_position" : 19534
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.write { $0.metrics.append(metrics) }\n\n        eventMonitor?.request(self, didGatherMetrics: metrics)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 20115,
+              "start_position" : 19690
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didGatherMetrics",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTaskMetrics"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 19916,
+                  "start_position" : 19884
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "metrics",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        self.error = error\n\n        // Task will still complete, so didCompleteTask(_:with:) will handle retry.\n        eventMonitor?.request(self, didFailTask: task, earlyWithError: error)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 20696,
+              "start_position" : 20115
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didFailTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 20400,
+                  "start_position" : 20376
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AFError"
+              },
+              "is_variadic" : false,
+              "label" : "earlyWithError",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 20429,
+                  "start_position" : 20400
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.write { $0.error = $0.error ?? error }\n\n        let validators = validators.read(\\.self)\n        validators.forEach { $0() }\n\n        eventMonitor?.request(self, didCompleteTask: task, with: error)\n\n        retryOrFinish(error: self.error)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 21527,
+              "start_position" : 20696
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "didCompleteTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 21169,
+                  "start_position" : 21145
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "AFError?"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 21189,
+                  "start_position" : 21169
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        mutableState.write { $0.retryCount += 1 }\n\n        reset()\n\n        eventMonitor?.requestIsRetrying(self)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 21838,
+              "start_position" : 21527
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "prepareForRetry",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        guard !isCancelled, let error, let delegate else { finish(); return }\n\n        delegate.retryResult(for: self, dueTo: error) { retryResult in\n            switch retryResult {\n            case .doNotRetry:\n                self.finish()\n            case let .doNotRetryWithError(retryError):\n                self.finish(error: retryError.asAFError(orFailWith: \"Received retryError was not already AFError\"))\n            case .retry, .retryWithDelay:\n                delegate.retryRequest(self, withDelay: retryResult.delay)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 22734,
+              "start_position" : 21838
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "retryOrFinish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "AFError?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 22103,
+                  "start_position" : 22088
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "dispatchPrecondition(condition: .onQueue(underlyingQueue))\n\n        let shouldStartResponseSerializers = mutableState.write { mutableState in\n            guard !mutableState.isFinishing else { return false }\n\n            mutableState.isFinishing = true\n\n            if let error { mutableState.error = error }\n\n            return true\n        }\n\n        guard shouldStartResponseSerializers else { return }\n\n        // Start response handlers\n        processNextResponseSerializer()\n\n        eventMonitor?.requestDidFinish(self)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 23481,
+              "start_position" : 22734
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "finish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "AFError?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 22935,
+                  "start_position" : 22914
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            mutableState.responseSerializers.append(closure)\n\n            if mutableState.state == .finished {\n                mutableState.state = .resumed\n            }\n\n            // If serializers have already been processed, execute the added serializer immediately.\n            if mutableState.responseSerializerProcessingFinished {\n                underlyingQueue.async { self.processNextResponseSerializer() }\n            }\n\n            if mutableState.state.canTransitionTo(.resumed) {\n                underlyingQueue.async { if self.delegate?.startImmediately == true { self.resume() } }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 24512,
+              "start_position" : 23481
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "appendResponseSerializer",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable () -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 23835,
+                  "start_position" : 23794
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "closure",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let executeOutside: () -> Void = mutableState.write { mutableState in\n            let responseSerializerIndex = mutableState.responseSerializerCompletions.count\n            let isAvailableSerializer = responseSerializerIndex < mutableState.responseSerializers.count\n            let responseSerializer = isAvailableSerializer ? mutableState.responseSerializers[responseSerializerIndex] : nil\n\n            if let responseSerializer {\n                return { self.serializationQueue.async { responseSerializer() } }\n            } else {\n                let completions = mutableState.responseSerializerCompletions\n                // Clear out all response serializers and response serializer completions in mutable state since the\n                // request is complete. It's important to do this prior to calling the completion closures in case\n                // the completions call back into the request triggering a re-processing of the response serializers.\n                // An example of how this can happen is by calling cancel inside a response completion closure.\n                mutableState.responseSerializers.removeAll()\n                mutableState.responseSerializerCompletions.removeAll()\n\n                if mutableState.state.canTransitionTo(.finished) {\n                    mutableState.state = .finished\n                }\n\n                mutableState.responseSerializerProcessingFinished = true\n                mutableState.isFinishing = false\n\n                return {\n                    completions.forEach { $0() }\n\n                    // Cleanup the request outside the lock\n                    self.cleanup()\n                }\n            }\n        }\n\n        executeOutside()"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 26387,
+              "start_position" : 24512
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "processNextResponseSerializer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "mutableState.write { $0.responseSerializerCompletions.append(completion) }\n        processNextResponseSerializer()"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 26851,
+              "start_position" : 26387
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "responseSerializerDidComplete",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable () -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 26719,
+                  "start_position" : 26677
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "uploadProgress.totalUnitCount = 0\n        uploadProgress.completedUnitCount = 0\n        downloadProgress.totalUnitCount = 0\n        downloadProgress.completedUnitCount = 0\n\n        mutableState.write { mutableState in\n            mutableState.error = nil\n            mutableState.isFinishing = false\n            mutableState.responseSerializerCompletions = []\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 27328,
+              "start_position" : 26851
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "reset",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "uploadProgress.totalUnitCount = totalBytesExpectedToSend\n        uploadProgress.completedUnitCount = totalBytesSent\n\n        uploadProgressHandler?.queue.async { self.uploadProgressHandler?.handler(self.uploadProgress) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 27853,
+              "start_position" : 27328
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateUploadProgress",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 27584,
+                  "start_position" : 27561
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesSent",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 27615,
+                  "start_position" : 27584
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesExpectedToSend",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "mutableState.withState(perform: perform)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 28080,
+              "start_position" : 27853
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "withState",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "(State) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 28022,
+                  "start_position" : 27998
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "perform",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "fatalError(\"Subclasses must override.\")"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 28575,
+              "start_position" : 28080
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "task",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 28475,
+                  "start_position" : 28450
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "using",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 28500,
+                  "start_position" : 28475
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "URLSessionTask"
+            },
+            "description" : "-> URLSessionTask"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            guard mutableState.state.canTransitionTo(.cancelled) else { return }\n\n            mutableState.state = .cancelled\n\n            underlyingQueue.async { self.didCancel() }\n\n            guard let task = mutableState.tasks.last, task.state != .completed else {\n                underlyingQueue.async { self.finish() }\n                return\n            }\n\n            // Resume to ensure metrics are gathered.\n            task.resume()\n            task.cancel()\n            underlyingQueue.async { self.didCancelTask(task) }\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 29481,
+              "start_position" : 28575
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "cancel",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            guard mutableState.state.canTransitionTo(.suspended) else { return }\n\n            mutableState.state = .suspended\n\n            underlyingQueue.async { self.didSuspend() }\n\n            guard let task = mutableState.tasks.last, task.state != .completed else { return }\n\n            task.suspend()\n            underlyingQueue.async { self.didSuspendTask(task) }\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 30066,
+              "start_position" : 29481
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "suspend",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            guard mutableState.state.canTransitionTo(.resumed) else { return }\n\n            mutableState.state = .resumed\n\n            underlyingQueue.async { self.didResume() }\n\n            guard let task = mutableState.tasks.last, task.state != .completed else { return }\n\n            task.resume()\n            underlyingQueue.async { self.didResumeTask(task) }\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 30642,
+              "start_position" : 30066
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "resume",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let credential = URLCredential(user: username, password: password, persistence: persistence)\n\n        return authenticate(with: credential)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 31325,
+              "start_position" : 30642
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "authenticate",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 31090,
+                  "start_position" : 31072
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "username",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 31108,
+                  "start_position" : 31090
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "password",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLCredential.Persistence"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "forSession"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 31160,
+                  "start_position" : 31108
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "persistence",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "self.credential = credential\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 31661,
+              "start_position" : 31325
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "authenticate",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLCredential"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 31586,
+                  "start_position" : 31556
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "credential",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "downloadProgressHandler = (handler: closure, queue: queue)\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 32346,
+              "start_position" : 31661
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "downloadProgress",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 32207,
+                  "start_position" : 32177
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping ProgressHandler"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 32241,
+                  "start_position" : 32207
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "closure",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "uploadProgressHandler = (handler: closure, queue: queue)\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 33023,
+              "start_position" : 32346
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "uploadProgress",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 32886,
+                  "start_position" : 32856
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping ProgressHandler"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 32920,
+                  "start_position" : 32886
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "closure",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            precondition(mutableState.redirectHandler == nil, \"Redirect handler has already been set.\")\n            mutableState.redirectHandler = handler\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 33730,
+              "start_position" : 33023
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "redirect",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any RedirectHandler"
+              },
+              "is_variadic" : false,
+              "label" : "using",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 33482,
+                  "start_position" : 33448
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            precondition(mutableState.cachedResponseHandler == nil, \"Cached response handler has already been set.\")\n            mutableState.cachedResponseHandler = handler\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 34483,
+              "start_position" : 33730
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "cacheResponse",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any CachedResponseHandler"
+              },
+              "is_variadic" : false,
+              "label" : "using",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 34216,
+                  "start_position" : 34176
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { mutableState in\n            if mutableState.requests.last != nil {\n                queue.async { handler(self.cURLDescription()) }\n            } else {\n                mutableState.cURLHandler = (queue, handler)\n            }\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 35412,
+              "start_position" : 34483
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "cURLDescription",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "is_variadic" : false,
+              "label" : "on",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 35056,
+                  "start_position" : 35031
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (String) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "calling",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 35109,
+                  "start_position" : 35056
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "cURLDescription(on: underlyingQueue, calling: handler)\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 36090,
+              "start_position" : 35412
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "cURLDescription",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (String) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "calling",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 35989,
+                  "start_position" : 35936
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { state in\n            if let request = state.requests.last {\n                queue.async { handler(request) }\n            }\n\n            state.urlRequestHandler = (queue, handler)\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 36981,
+              "start_position" : 36090
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "onURLRequestCreation",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "on",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 36668,
+                  "start_position" : 36635
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (URLRequest) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "perform",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 36725,
+                  "start_position" : 36668
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "preconcurrency" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            },
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "mutableState.write { state in\n            if let task = state.tasks.last {\n                queue.async { handler(task) }\n            }\n\n            state.urlSessionTaskHandler = (queue, handler)\n        }\n\n        return self"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 38083,
+              "start_position" : 36981
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "onURLSessionTaskCreation",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "main"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "on",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 37771,
+                  "start_position" : 37738
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (URLSessionTask) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "perform",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 37832,
+                  "start_position" : 37771
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "handler",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Self"
+            },
+            "description" : "-> Self"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let shouldImmediatelyExecute = mutableState.write { mutableState in\n            if mutableState.state == .finished {\n                return true\n            } else {\n                mutableState.finishHandlers.append(finishHandler)\n                return false\n            }\n        }\n\n        if shouldImmediatelyExecute {\n            finishHandler()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 38712,
+              "start_position" : 38083
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "onFinish",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping () -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "perform",
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 38333,
+                  "start_position" : 38290
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "finishHandler",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let finishHandlers = mutableState.write { mutableState in\n            let handlers = mutableState.finishHandlers\n            mutableState.finishHandlers.removeAll()\n            return handlers\n        }\n        finishHandlers.forEach { $0() }\n\n        delegate?.cleanup(after: self)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 39118,
+              "start_position" : 38712
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "cleanup",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 14037,
+              "start_position" : 12711
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UUID"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "UUID",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Core/Request.swift",
+                        "location" : {
+                          "end_position" : 13576,
+                          "start_position" : 13570
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 13577,
+                  "start_position" : 13559
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 13618,
+                  "start_position" : 13577
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "underlyingQueue",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 13662,
+                  "start_position" : 13618
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "serializationQueue",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any EventMonitor)?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 13706,
+                  "start_position" : 13662
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "eventMonitor",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any RequestInterceptor)?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 13755,
+                  "start_position" : 13706
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "interceptor",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any RequestDelegate"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 13794,
+                  "start_position" : 13755
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "delegate",
+              "order" : 5
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/Request.swift",
+        "location" : {
+          "end_position" : 39120,
+          "start_position" : 1217
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "Request",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 6870,
+              "start_position" : 3828
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "MutableState",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "State"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "initialized"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 4083,
+                  "start_position" : 4056
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "state"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(handler: ProgressHandler, queue: DispatchQueue)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 4258,
+                  "start_position" : 4186
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "uploadProgressHandler"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(handler: ProgressHandler, queue: DispatchQueue)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 4437,
+                  "start_position" : 4363
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "downloadProgressHandler"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any RedirectHandler)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 4563,
+                  "start_position" : 4524
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "redirectHandler"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any CachedResponseHandler)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 4700,
+                  "start_position" : 4649
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cachedResponseHandler"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(queue: DispatchQueue, handler: @Sendable (String) -> Void)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 4890,
+                  "start_position" : 4817
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cURLHandler"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(queue: DispatchQueue, handler: @Sendable (URLRequest) -> Void)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 5066,
+                  "start_position" : 4983
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequestHandler"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(queue: DispatchQueue, handler: @Sendable (URLSessionTask) -> Void)?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 5254,
+                  "start_position" : 5163
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlSessionTaskHandler"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[@Sendable () -> Void]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 5389,
+                  "start_position" : 5341
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "responseSerializers"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[@Sendable () -> Void]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 5596,
+                  "start_position" : 5538
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "responseSerializerCompletions"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 5717,
+                  "start_position" : 5673
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "responseSerializerProcessingFinished"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URLCredential?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 5820,
+                  "start_position" : 5794
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "credential"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[URLRequest]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 5939,
+                  "start_position" : 5912
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "requests"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[URLSessionTask]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 6063,
+                  "start_position" : 6035
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "tasks"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[URLSessionTaskMetrics]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 6273,
+                  "start_position" : 6236
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "metrics"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "0"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 6373,
+                  "start_position" : 6359
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retryCount"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "AFError?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 6522,
+                  "start_position" : 6507
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 6734,
+                  "start_position" : 6715
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "isFinishing"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[() -> Void]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/Request.swift",
+                "location" : {
+                  "end_position" : 6864,
+                  "start_position" : 6831
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "finishHandlers"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "@Sendable (_ progress: Progress) -> Void"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7826,
+              "start_position" : 7630
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "ProgressHandler"
+        }
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "UUID"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 3270,
+              "start_position" : 3262
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "id"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DispatchQueue"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 3373,
+              "start_position" : 3343
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "underlyingQueue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DispatchQueue"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 3539,
+              "start_position" : 3506
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "serializationQueue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(any EventMonitor)?"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 3637,
+              "start_position" : 3604
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "eventMonitor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(any RequestInterceptor)?"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 3728,
+              "start_position" : 3690
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "interceptor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(any RequestDelegate)?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 3828,
+              "start_position" : 3796
+            }
+          },
+          "modifiers" : [
+            "public",
+            "private(set)",
+            "weak"
+          ],
+          "name" : "delegate"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "value" : "MutableState()"
+                    }
+                  ],
+                  "call" : "Protected",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Core/Request.swift",
+                    "location" : {
+                      "end_position" : 7009,
+                      "start_position" : 6984
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7009,
+              "start_position" : 6969
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "mutableState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "State"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.read(\\.state)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7103,
+              "start_position" : 7060
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "state"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "state == .initialized"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7215,
+              "start_position" : 7170
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isInitialized"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "state == .resumed"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7315,
+              "start_position" : 7278
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isResumed"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "state == .suspended"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7421,
+              "start_position" : 7380
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isSuspended"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "state == .cancelled"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7527,
+              "start_position" : 7486
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isCancelled"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "state == .finished"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 7630,
+              "start_position" : 7591
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isFinished"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "totalUnitCount",
+                      "value" : "0"
+                    }
+                  ],
+                  "call" : "Progress",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Core/Request.swift",
+                    "location" : {
+                      "end_position" : 8004,
+                      "start_position" : 7977
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 8004,
+              "start_position" : 7960
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "uploadProgress"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "totalUnitCount",
+                      "value" : "0"
+                    }
+                  ],
+                  "call" : "Progress",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Core/Request.swift",
+                    "location" : {
+                      "end_position" : 8165,
+                      "start_position" : 8138
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 8165,
+              "start_position" : 8119
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "downloadProgress"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "mutableState.read(\\.uploadProgressHandler)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "mutableState.write { $0.uploadProgressHandler = newValue }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(handler: ProgressHandler, queue: DispatchQueue)?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 8509,
+              "start_position" : 8295
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "uploadProgressHandler"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "mutableState.read(\\.downloadProgressHandler)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "mutableState.write { $0.downloadProgressHandler = newValue }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(handler: ProgressHandler, queue: DispatchQueue)?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 8862,
+              "start_position" : 8642
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "downloadProgressHandler"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "mutableState.read(\\.redirectHandler)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "mutableState.write { $0.redirectHandler = newValue }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(any RedirectHandler)?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 9141,
+              "start_position" : 8972
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "redirectHandler"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "mutableState.read(\\.cachedResponseHandler)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "mutableState.write { $0.cachedResponseHandler = newValue }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(any CachedResponseHandler)?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 9457,
+              "start_position" : 9264
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "cachedResponseHandler"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "mutableState.read(\\.credential)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "mutableState.write { $0.credential = newValue }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLCredential?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 9776,
+              "start_position" : 9630
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "credential"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "value" : "[]"
+                    }
+                  ],
+                  "call" : "Protected<[@Sendable () -> Void]>",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Core/Request.swift",
+                    "location" : {
+                      "end_position" : 9941,
+                      "start_position" : 9904
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 9941,
+              "start_position" : 9891
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "validators"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLRequest]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.read(\\.requests)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 10143,
+              "start_position" : 10087
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "requests"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLRequest?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "requests.first"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 10310,
+              "start_position" : 10266
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "firstRequest"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLRequest?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "requests.last"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 10430,
+              "start_position" : 10388
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "lastRequest"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLRequest?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "lastRequest"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 10547,
+              "start_position" : 10511
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLRequest]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.read { $0.tasks.compactMap(\\.currentRequest) }"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 10827,
+              "start_position" : 10732
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "performedRequests"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "HTTPURLResponse?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "lastTask?.response as? HTTPURLResponse"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 11092,
+              "start_position" : 11023
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "response"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLSessionTask]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.read(\\.tasks)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 11249,
+              "start_position" : 11195
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "tasks"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTask?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "tasks.first"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 11374,
+              "start_position" : 11332
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "firstTask"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTask?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "tasks.last"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 11496,
+              "start_position" : 11456
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "lastTask"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTask?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "lastTask"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 11615,
+              "start_position" : 11581
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "task"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLSessionTaskMetrics]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.read(\\.metrics)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 11837,
+              "start_position" : 11769
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "allMetrics"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTaskMetrics?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "allMetrics.first"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 11985,
+              "start_position" : 11928
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "firstMetrics"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTaskMetrics?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "allMetrics.last"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 12130,
+              "start_position" : 12075
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "lastMetrics"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTaskMetrics?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "lastMetrics"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 12270,
+              "start_position" : 12223
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "metrics"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.read(\\.retryCount)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 12420,
+              "start_position" : 12369
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "retryCount"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "mutableState.read(\\.error)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "mutableState.write { $0.error = newValue }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "AFError?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 12711,
+              "start_position" : 12586
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "error"
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 57,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Core/Request.swift"
+  ]
+}

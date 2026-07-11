@@ -1,0 +1,365 @@
+{
+  "caseID" : "case-cbe8b06d6ca76c90cbc11f08",
+  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds" : 14.10075306892395,
+  "entityNames" : [
+    "CLITest",
+    "String",
+    "TestCLIRunLifecycle",
+    "getTestName",
+    "testExecInvalidExcutable",
+    "testRunFailureCleanup",
+    "testRunInvalidExcutable",
+    "testSSHForwarding"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialSuites"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "Test.current!.name.trimmingCharacters(in: [\"(\", \")\"]).lowercased()"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 1051,
+              "start_position" : 927
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getTestName",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n\n        // try to create a container we know will fail\n        let badArgs: [String] = [\n            \"--rm\",\n            \"--user\",\n            name,\n        ]\n        #expect(throws: CLIError.self, \"expect container to fail with invalid user\") {\n            try self.doLongRun(name: name, args: badArgs)\n        }\n\n        // try to create a container with the same name but no user that should succeed\n        #expect(throws: Never.self, \"expected container run to succeed\") {\n            try self.doLongRun(name: name, args: [])\n            defer {\n                try? self.doStop(name: name)\n            }\n            let _ = try self.doExec(name: name, cmd: [\"date\"])\n            try self.doStop(name: name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 1863,
+              "start_position" : 1051
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunFailureCleanup",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n\n        #expect(throws: Never.self, \"expected container run to succeed\") {\n            try self.doLongRun(name: name, args: [])\n            defer {\n                try? self.doStop(name: name)\n            }\n            try self.waitForContainerRunning(name)\n\n            let (_, output, _, status) = try self.run(arguments: [\"start\", name])\n            #expect(status == 0, \"expected start to succeed on already running container\")\n            #expect(output.trimmingCharacters(in: .whitespacesAndNewlines) == name, \"expected output to be container name\")\n\n            // Don't care about the resp, just that the container is still there and not cleaned up.\n            let _ = try inspectContainer(name)\n\n            try self.doStop(name: name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 2706,
+              "start_position" : 1863
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStartIdempotent",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n\n        #expect(throws: Never.self, \"expected container run to succeed\") {\n            try self.doLongRun(name: name, args: [])\n            defer {\n                try? self.doStop(name: name)\n            }\n            try self.waitForContainerRunning(name)\n\n            let (_, _, error, status) = try self.run(arguments: [\"start\", \"-a\", name])\n            #expect(status != 0, \"expected start with attach to fail on already running container\")\n            #expect(error.contains(\"attach is currently unsupported on already running containers\"), \"expected error message about attach not supported\")\n\n            try self.doStop(name: name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 3455,
+              "start_position" : 2706
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStartIdempotentAttachFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let port = UInt16.random(in: 50000..<60000)\n\n        let name = getTestName()\n        try self.doCreate(name: name, ports: [\"\\(port)\"])\n        defer {\n            try? self.doRemove(name: name)\n        }\n\n        let server = \"\\(name)-server\"\n        try doLongRun(\n            name: server,\n            image: \"docker.io/library/python:alpine\",\n            args: [\"--publish\", \"\\(port):\\(port)\"],\n            containerArgs: [\"python3\", \"-m\", \"http.server\", \"\\(port)\"]\n        )\n        defer {\n            try? doStop(name: server)\n        }\n\n        #expect(throws: CLIError.self) {\n            try doStart(name: name)\n        }\n\n        let status = try getContainerStatus(name)\n        #expect(status == \"stopped\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 4245,
+              "start_position" : 3455
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStartPortBindFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n        #expect(throws: CLIError.self, \"running invalid executable must throw error, not hang\") {\n            try doLongRun(\n                name: name,\n                containerArgs: [\"foobarbaz\"]\n            )\n        }\n        try? doRemove(name: name)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 4597,
+              "start_position" : 4245
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunInvalidExcutable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n        try doLongRun(name: name)\n        defer {\n            try? doStop(name: name)\n        }\n\n        #expect(throws: CLIError.self, \"executing invalid executable must throw error, not hang\") {\n            try doExec(\n                name: name,\n                cmd: [\"foobarbaz\"]\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 5002,
+              "start_position" : 4597
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testExecInvalidExcutable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n\n        // Create a temp dir and socket path for the simulated SSH agent.\n        let socketDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)\n        try FileManager.default.createDirectory(at: socketDir, withIntermediateDirectories: true)\n        defer { try? FileManager.default.removeItem(at: socketDir) }\n\n        let socketPath = socketDir.appendingPathComponent(\"ssh-auth.sock\").path\n\n        // Create a listening Unix domain socket to act as a fake SSH agent.\n        let serverFd = socket(AF_UNIX, SOCK_STREAM, 0)\n        precondition(serverFd >= 0, \"socket() failed\")\n        defer { Darwin.close(serverFd) }\n\n        var addr = sockaddr_un()\n        addr.sun_family = sa_family_t(AF_UNIX)\n        withUnsafeMutableBytes(of: &addr.sun_path) { bytes in\n            socketPath.withCString { cStr in\n                bytes.copyMemory(from: UnsafeRawBufferPointer(start: cStr, count: socketPath.utf8.count + 1))\n            }\n        }\n        let bindResult = withUnsafePointer(to: addr) { ptr in\n            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in\n                bind(serverFd, sockaddrPtr, socklen_t(MemoryLayout<sockaddr_un>.size))\n            }\n        }\n        precondition(bindResult == 0, \"bind() failed: \\(errno)\")\n        precondition(listen(serverFd, 5) == 0, \"listen() failed\")\n\n        // Accept and immediately close connections in background to keep the socket alive.\n        let acceptThread = Thread {\n            while true {\n                let clientFd = accept(serverFd, nil, nil)\n                if clientFd < 0 { break }\n                Darwin.close(clientFd)\n            }\n        }\n        acceptThread.start()\n\n        defer { try? doStop(name: name) }\n\n        try doLongRun(name: name, args: [\"--ssh\"], env: [\"SSH_AUTH_SOCK\": socketPath])\n        try waitForContainerRunning(name)\n\n        // Verify SSH_AUTH_SOCK is set to the expected guest path inside the container.\n        let sshSockValue = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo $SSH_AUTH_SOCK\"])\n        #expect(\n            sshSockValue.trimmingCharacters(in: .whitespacesAndNewlines) == \"/var/host-services/ssh-auth.sock\",\n            \"expected SSH_AUTH_SOCK to point to guest socket path\"\n        )\n\n        // Verify the forwarded socket file is present and is a socket.\n        let socketCheck = try doExec(\n            name: name,\n            cmd: [\"sh\", \"-c\", \"[ -S /var/host-services/ssh-auth.sock ] && echo exists || echo missing\"]\n        )\n        #expect(\n            socketCheck.trimmingCharacters(in: .whitespacesAndNewlines) == \"exists\",\n            \"expected forwarded SSH socket to exist in container\"\n        )\n\n        try doStop(name: name)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 7817,
+              "start_position" : 5002
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSSHForwarding",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift",
+        "location" : {
+          "end_position" : 7819,
+          "start_position" : 867
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIRunLifecycle",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 25,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Run/TestCLIRunLifecycle.swift"
+  ]
+}

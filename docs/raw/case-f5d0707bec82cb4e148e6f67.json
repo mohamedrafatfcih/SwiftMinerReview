@@ -1,0 +1,659 @@
+{
+  "caseID" : "case-f5d0707bec82cb4e148e6f67",
+  "commitHash" : "685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "commitMessage" : "feat: moved ANE utilization from read to calculation from power usage\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "durationSeconds" : 0.67345595359802246,
+  "entityNames" : [
+    "CFAbsoluteTime",
+    "CFMutableDictionary?",
+    "Date?",
+    "Double",
+    "Double?",
+    "GPUs",
+    "IOReportSubscriptionRef?",
+    "InfoReader"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Double"
+      },
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "other" : {
+            "_0" : "0"
+          }
+        }
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Modules/GPU/reader.swift",
+        "location" : {
+          "end_position" : 1427,
+          "start_position" : 1398
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "previousANEEnergy"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Reader<GPUs>"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if let list = SystemKit.shared.device.info.gpu {\n            self.displays = list\n        }\n        \n        guard let PCIdevices = fetchIOService(\"IOPCIDevice\") else {\n            return\n        }\n        let devices = PCIdevices.filter{ $0.object(forKey: \"IOName\") as? String == \"display\" }\n        \n        #if arch(arm64)\n        self.aneMaxPower = maxANEPower(for: SystemKit.shared.device.platform)\n        self.setupANE()\n        self.setupFrames()\n        #endif\n\n        devices.forEach { (dict: NSDictionary) in\n            guard let deviceID = dict[\"device-id\"] as? Data, let vendorID = dict[\"vendor-id\"] as? Data else {\n                error(\"device-id or vendor-id not found\", log: self.log)\n                return\n            }\n            let pci = \"0x\" + Data([deviceID[1], deviceID[0], vendorID[1], vendorID[0]]).map { String(format: \"%02hhX\", $0) }.joined().lowercased()\n            \n            guard let modelData = dict[\"model\"] as? Data, let modelName = String(data: modelData, encoding: .ascii) else {\n                error(\"GPU model not found\", log: self.log)\n                return\n            }\n            let model = modelName.replacingOccurrences(of: \"\\0\", with: \"\")\n            \n            var vendor: String? = nil\n            if let v = vendors.first(where: { $0.key == vendorID }) {\n                vendor = v.value\n            }\n            \n            self.devices.append(device(\n                vendor: vendor,\n                model: model,\n                pci: pci,\n                used: false\n            ))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 3355,
+              "start_position" : 1743
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "setup",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let accelerators = fetchIOService(kIOAcceleratorClassName) else {\n            return\n        }\n        var devices = self.devices\n        \n        for (index, accelerator) in accelerators.enumerated() {\n            guard let IOClass = accelerator.object(forKey: \"IOClass\") as? String else {\n                error(\"IOClass not found\", log: self.log)\n                return\n            }\n            \n            guard let stats = accelerator[\"PerformanceStatistics\"] as? [String: Any] else {\n                error(\"PerformanceStatistics not found\", log: self.log)\n                return\n            }\n            \n            var id: String = \"\"\n            var vendor: String? = nil\n            var model: String = \"\"\n            var cores: Int? = nil\n            let accMatch = (accelerator[\"IOPCIMatch\"] as? String ?? accelerator[\"IOPCIPrimaryMatch\"] as? String ?? \"\").lowercased()\n            \n            for (i, device) in devices.enumerated() {\n                if accMatch.range(of: device.pci) != nil && !device.used {\n                    model = device.model\n                    vendor = device.vendor\n                    id = \"\\(model) #\\(index)\"\n                    devices[i].used = true\n                    break\n                }\n            }\n            \n            let ioClass = IOClass.lowercased()\n            var predictModel = \"\"\n            var type: GPU_types = .unknown\n            \n            let utilization: Int? = stats[\"Device Utilization %\"] as? Int ?? stats[\"GPU Activity(%)\"] as? Int ?? nil\n            let renderUtilization: Int? = stats[\"Renderer Utilization %\"] as? Int ?? nil\n            let tilerUtilization: Int? = stats[\"Tiler Utilization %\"] as? Int ?? nil\n            var temperature: Int? = stats[\"Temperature(C)\"] as? Int ?? nil\n            let fanSpeed: Int? = stats[\"Fan Speed(%)\"] as? Int ?? nil\n            let coreClock: Int? = stats[\"Core Clock(MHz)\"] as? Int ?? nil\n            let memoryClock: Int? = stats[\"Memory Clock(MHz)\"] as? Int ?? nil\n            \n            if ioClass == \"nvaccelerator\" || ioClass.contains(\"nvidia\") { // nvidia\n                predictModel = \"Nvidia Graphics\"\n                type = .discrete\n            } else if ioClass.contains(\"amd\") { // amd\n                predictModel = \"AMD Graphics\"\n                type = .discrete\n                \n                if temperature == nil || temperature == 0 {\n                    if let tmp = SMC.shared.getValue(\"TGDD\"), tmp != 128 {\n                        temperature = Int(tmp)\n                    }\n                }\n            } else if ioClass.contains(\"intel\") { // intel\n                predictModel = \"Intel Graphics\"\n                type = .integrated\n                \n                if temperature == nil || temperature == 0 {\n                    if let tmp = SMC.shared.getValue(\"TCGC\"), tmp != 128 {\n                        temperature = Int(tmp)\n                    }\n                }\n            } else if ioClass.contains(\"agx\") { // apple\n                predictModel = stats[\"model\"] as? String ?? \"Apple Graphics\"\n                if let display = self.displays.first(where: { $0.vendor == \"sppci_vendor_Apple\" }) {\n                    if let name = display.name {\n                        predictModel = name\n                    }\n                    if let num = display.cores {\n                        cores = num\n                    }\n                }\n                type = .integrated\n            } else {\n                predictModel = \"Unknown\"\n                type = .unknown\n            }\n            \n            if model == \"\" {\n                model = predictModel\n            }\n            if let v = vendor {\n                model = model.removedRegexMatches(pattern: v, replaceWith: \"\").trimmingCharacters(in: .whitespacesAndNewlines)\n            }\n            \n            if self.gpus.list.first(where: { $0.id == id }) == nil {\n                self.gpus.list.append(GPU_Info(\n                    id: id,\n                    type: type.rawValue,\n                    IOClass: IOClass,\n                    vendor: vendor,\n                    model: model,\n                    cores: cores\n                ))\n            }\n            guard let idx = self.gpus.list.firstIndex(where: { $0.id == id }) else {\n                return\n            }\n            \n            if let agcInfo = accelerator[\"AGCInfo\"] as? [String: Int], let state = agcInfo[\"poweredOffByAGC\"] {\n                self.gpus.list[idx].state = state == 0\n            }\n            \n            if var value = utilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].utilization = Double(value)/100\n            }\n            if var value = renderUtilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].renderUtilization = Double(value)/100\n            }\n            if var value = tilerUtilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].tilerUtilization = Double(value)/100\n            }\n            if let value = temperature {\n                self.gpus.list[idx].temperature = Double(value)\n            }\n            if let value = fanSpeed {\n                self.gpus.list[idx].fanSpeed = value\n            }\n            if let value = coreClock {\n                self.gpus.list[idx].coreClock = value\n            }\n            if let value = memoryClock {\n                self.gpus.list[idx].memoryClock = value\n            }\n        }\n        \n        #if arch(arm64)\n        let anePower = self.readANEPower()\n        let aneUtil = anePower.map { min(1.0, max(0.0, $0 / self.aneMaxPower)) }\n        let fpsValue = self.readFrames()\n        for i in self.gpus.list.indices where self.gpus.list[i].IOClass.lowercased().contains(\"agx\") {\n            self.gpus.list[i].aneUtilization = aneUtil ?? 0\n            self.gpus.list[i].fps = fpsValue\n        }\n        #endif\n        \n        self.gpus.list.sort{ !$0.state && $1.state }\n        self.callback(self.gpus)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 9546,
+              "start_position" : 3355
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "read",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let groups = [\"DCP\", \"DCPEXT0\", \"DCPEXT1\", \"DCPEXT2\", \"DCPEXT3\"]\n        var merged: CFMutableDictionary? = nil\n        \n        for group in groups {\n            guard let channel = IOReportCopyChannelsInGroup(group as CFString, \"swap\" as CFString, 0, 0, 0)?.takeRetainedValue() else { continue }\n            if merged == nil {\n                merged = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, channel)\n            } else {\n                IOReportMergeChannels(merged, channel, nil)\n            }\n        }\n        \n        guard let merged, let dict = merged as? [String: Any], dict[\"IOReportChannels\"] != nil else { return }\n        \n        self.framesChannels = merged\n        var sub: Unmanaged<CFMutableDictionary>?\n        self.framesSubscription = IOReportCreateSubscription(nil, merged, &sub, 0, nil)\n        sub?.release()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 10470,
+              "start_position" : 9546
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "setupFrames",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let subscription = self.framesSubscription,\n              let channels = self.framesChannels,\n              let sample = IOReportCreateSamples(subscription, channels, nil)?.takeRetainedValue(),\n              let dict = sample as? [String: Any] else {\n            return nil\n        }\n        let items = dict[\"IOReportChannels\"] as! CFArray\n        \n        var total: Int64 = 0\n        for i in 0..<CFArrayGetCount(items) {\n            let item = unsafeBitCast(CFArrayGetValueAtIndex(items, i), to: CFDictionary.self)\n            guard let group = IOReportChannelGetGroup(item)?.takeUnretainedValue() as? String,\n                  group.hasPrefix(\"DCP\"),\n                  let sub = IOReportChannelGetSubGroup(item)?.takeUnretainedValue() as? String,\n                  sub == \"swap\" else { continue }\n            total += IOReportSimpleGetIntegerValue(item, 0)\n        }\n        \n        let now = CFAbsoluteTimeGetCurrent()\n        defer {\n            self.previousFramesCount = total\n            self.previousFramesTime = now\n        }\n        \n        guard self.previousFramesTime != 0 else { return nil }\n        let elapsed = now - self.previousFramesTime\n        guard elapsed > 0 else { return nil }\n        let delta = total - self.previousFramesCount\n        guard delta >= 0 else { return nil }\n        return Double(delta) / elapsed"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 11884,
+              "start_position" : 10470
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readFrames",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "Double?"
+            },
+            "description" : "-> Double?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let channel = IOReportCopyChannelsInGroup(\"Energy Model\" as CFString, nil, 0, 0, 0)?.takeRetainedValue() else { return }\n        \n        let size = CFDictionaryGetCount(channel)\n        guard let mutable = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, size, channel),\n              let dict = mutable as? [String: Any], dict[\"IOReportChannels\"] != nil else { return }\n        \n        self.aneChannels = mutable\n        var sub: Unmanaged<CFMutableDictionary>?\n        self.aneSubscription = IOReportCreateSubscription(nil, mutable, &sub, 0, nil)\n        sub?.release()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 12545,
+              "start_position" : 11884
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "setupANE",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let subscription = self.aneSubscription,\n              let channels = self.aneChannels,\n              let reportSample = IOReportCreateSamples(subscription, channels, nil)?.takeRetainedValue(),\n              let dict = reportSample as? [String: Any] else {\n            return nil\n        }\n        let items = dict[\"IOReportChannels\"] as! CFArray\n        \n        var currentEnergy: Double = 0\n        var found = false\n        \n        for i in 0..<CFArrayGetCount(items) {\n            let item = unsafeBitCast(CFArrayGetValueAtIndex(items, i), to: CFDictionary.self)\n            \n            guard let group = IOReportChannelGetGroup(item)?.takeUnretainedValue() as? String,\n                  group == \"Energy Model\",\n                  let channel = IOReportChannelGetChannelName(item)?.takeUnretainedValue() as? String,\n                  channel.starts(with: \"ANE\") else { continue }\n            \n            let raw = Double(IOReportSimpleGetIntegerValue(item, 0))\n            let unit = (IOReportChannelGetUnitLabel(item)?.takeUnretainedValue() as? String)?\n                .trimmingCharacters(in: .whitespaces) ?? \"\"\n            \n            let joules: Double\n            switch unit.lowercased() {\n            case \"mj\":       joules = raw / 1e3\n            case \"uj\", \"µj\": joules = raw / 1e6\n            case \"nj\":       joules = raw / 1e9\n            case \"pj\":       joules = raw / 1e12\n            default:         joules = raw / 1e9\n            }\n            \n            currentEnergy += joules\n            found = true\n        }\n        \n        guard found else { return nil }\n        \n        let now = Date()\n        defer {\n            self.previousANEEnergy = currentEnergy\n            self.previousANERead = now\n        }\n        \n        guard let previousRead = self.previousANERead else { return 0 }\n        let elapsed = now.timeIntervalSince(previousRead)\n        guard elapsed > 0 else { return 0 }\n        return (currentEnergy - self.previousANEEnergy) / elapsed"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 14609,
+              "start_position" : 12545
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readANEPower",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "Double?"
+            },
+            "description" : "-> Double?"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Modules/GPU/reader.swift",
+        "location" : {
+          "end_position" : 14611,
+          "start_position" : 1103
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "InfoReader",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "GPUs"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "GPUs",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/GPU/reader.swift",
+                    "location" : {
+                      "end_position" : 1182,
+                      "start_position" : 1176
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1182,
+              "start_position" : 1163
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "gpus"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[gpu_s]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1221,
+              "start_position" : 1199
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "displays"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[device]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1260,
+              "start_position" : 1238
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "devices"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "CFMutableDictionary?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1317,
+              "start_position" : 1278
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "aneChannels"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "IOReportSubscriptionRef?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1381,
+              "start_position" : 1334
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "aneSubscription"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Double"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1427,
+              "start_position" : 1398
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "previousANEEnergy"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Date?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1472,
+              "start_position" : 1444
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "previousANERead"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Double"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "8.0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1514,
+              "start_position" : 1489
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "aneMaxPower"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "CFMutableDictionary?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1574,
+              "start_position" : 1532
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "framesChannels"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "IOReportSubscriptionRef?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1641,
+              "start_position" : 1591
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "framesSubscription"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int64"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1688,
+              "start_position" : 1658
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "previousFramesCount"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CFAbsoluteTime"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/reader.swift",
+            "location" : {
+              "end_position" : 1743,
+              "start_position" : 1705
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "previousFramesTime"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 11,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/GPU/reader.swift"
+  ]
+}

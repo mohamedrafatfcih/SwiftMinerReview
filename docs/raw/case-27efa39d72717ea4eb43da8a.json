@@ -1,0 +1,231 @@
+{
+  "caseID" : "case-27efa39d72717ea4eb43da8a",
+  "commitHash" : "038b168d02cb159ad4ae01ce95990f3639e793e9",
+  "commitMessage" : "Add overlap offset for grid position cycling (#1762)\n\n* Add CLAUDE.md with codebase documentation for AI assistants\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Add cycling overlap offset for grid position cycling\n\nWhen cycling through grid positions (sixths, eighths, ninths, twelfths,\nsixteenths, or quarters with quadrant cycling mode), windows that land\non a position already occupied by another window now receive a small\noffset so the user can see there is a window underneath.\n\nThe feature is off by default and enabled via hidden preference:\n  defaults write com.knollsoft.Rectangle cyclingOverlapOffset -bool true\n\nConfigurable options:\n- cyclingOverlapOffsetSize (default 11pt) controls the offset distance\n- cyclingOverlapMaxCascade (default 1) controls max cascade layers\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Add settings checkbox and make overlap offset universal\n\n- Add \"Offset cycling position on overlap\" checkbox to the Grid\n  Positions section of the extra settings popover\n- Apply overlap detection to all window actions, not just cycling\n- Match on origin point instead of exact frame, so mixed sizes at\n  the same grid position (e.g. quarter + eighth) trigger the offset\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Add hover count badge for overlapping window stacks\n\nShow a live count badge when the mouse hovers over a grid position\nwith multiple stacked windows. Uses timer-based polling (200ms) of\nNSEvent.mouseLocation for reliable hover detection that survives\nsleep/wake cycles. The count is queried live via Accessibility APIs\non each hover, so it always reflects the current window state.\n\nAlso updates default offset to 11pt and changes overlap detection\nto origin-point matching for mixed-size windows at the same grid\nposition.\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Address multi-model review findings\n\n- Re-add positionCycles guard to skip AX enumeration on non-grid\n  actions (maximize, restore, center, etc.)\n- Guard overlapOffset <= 0 to prevent silent no-op or corner-shoving\n- Cap maxCascade at 5 to prevent spin loops with extreme values\n- Cap stackedRegions at 20 entries to prevent unbounded growth\n- Call OverlapCountBadge.clearAll() when feature is toggled off\n- Add three new defaults to Defaults.array for config export/import\n- Remove imageHugsTitle from checkbox (no-op on standard checkboxes)\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Add unit tests for overlap offset feature\n\n23 tests covering:\n- positionCycles property: grid actions return true, non-grid false\n- OverlapCountBadge: record, deduplicate, remove, clearAll, max cap\n- screenFlipped: self-inverse property, null handling, negative coords\n- Defaults.array: all 3 overlap prefs included for config export\n- Offset guards: maxCascade clamping, screen boundary clamping on\n  primary and secondary monitor coordinate spaces\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Remove hover count badge for separate PR\n\nThe overlap count badge (OverlapCountBadge.swift) has architectural\nissues with stale window state tracking that cause incorrect badge\npositioning and counts. The core overlap offset feature is solid and\nwell-tested independently. The badge will be reworked and submitted\nas a separate PR.\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Remove CLAUDE.md per maintainer preference\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n* Broaden positionCycles to cover all grid snap actions\n\nInvert the logic: instead of listing which actions cycle, exclude\nthe non-positional actions (maximize, restore, center, move, resize,\ndisplay changes). This ensures halves, thirds, fourths, quarters,\nand all grid sizes get overlap detection.\n\nCo-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 (1M context) <noreply@anthropic.com>",
+  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/038b168d02cb159ad4ae01ce95990f3639e793e9",
+  "durationSeconds" : 10.056820034980774,
+  "entityNames" : [
+    "PositionCyclesTests",
+    "XCTestCase",
+    "testEighthsReturnTrue",
+    "testGridPositionsReturnTrue",
+    "testNinthsReturnTrue",
+    "testNonPositionalActionsReturnFalse",
+    "testSixteenthsReturnTrue",
+    "testSixthsReturnTrue"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "XCTestCase"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XCTAssertTrue(WindowAction.topLeftSixth.positionCycles)\n        XCTAssertTrue(WindowAction.topCenterSixth.positionCycles)\n        XCTAssertTrue(WindowAction.topRightSixth.positionCycles)\n        XCTAssertTrue(WindowAction.bottomLeftSixth.positionCycles)\n        XCTAssertTrue(WindowAction.bottomCenterSixth.positionCycles)\n        XCTAssertTrue(WindowAction.bottomRightSixth.positionCycles)"
+          },
+          "location_info" : {
+            "file_path" : "RectangleTests/RectangleTests.swift",
+            "location" : {
+              "end_position" : 781,
+              "start_position" : 341
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSixthsReturnTrue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XCTAssertTrue(WindowAction.topLeftEighth.positionCycles)\n        XCTAssertTrue(WindowAction.topCenterLeftEighth.positionCycles)\n        XCTAssertTrue(WindowAction.bottomRightEighth.positionCycles)"
+          },
+          "location_info" : {
+            "file_path" : "RectangleTests/RectangleTests.swift",
+            "location" : {
+              "end_position" : 1028,
+              "start_position" : 781
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testEighthsReturnTrue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XCTAssertTrue(WindowAction.topLeftNinth.positionCycles)\n        XCTAssertTrue(WindowAction.middleCenterNinth.positionCycles)\n        XCTAssertTrue(WindowAction.bottomRightNinth.positionCycles)"
+          },
+          "location_info" : {
+            "file_path" : "RectangleTests/RectangleTests.swift",
+            "location" : {
+              "end_position" : 1270,
+              "start_position" : 1028
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNinthsReturnTrue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XCTAssertTrue(WindowAction.topLeftTwelfth.positionCycles)\n        XCTAssertTrue(WindowAction.middleCenterLeftTwelfth.positionCycles)\n        XCTAssertTrue(WindowAction.bottomRightTwelfth.positionCycles)"
+          },
+          "location_info" : {
+            "file_path" : "RectangleTests/RectangleTests.swift",
+            "location" : {
+              "end_position" : 1524,
+              "start_position" : 1270
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testTwelfthsReturnTrue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XCTAssertTrue(WindowAction.topLeftSixteenth.positionCycles)\n        XCTAssertTrue(WindowAction.upperMiddleCenterLeftSixteenth.positionCycles)\n        XCTAssertTrue(WindowAction.lowerMiddleRightSixteenth.positionCycles)\n        XCTAssertTrue(WindowAction.bottomRightSixteenth.positionCycles)"
+          },
+          "location_info" : {
+            "file_path" : "RectangleTests/RectangleTests.swift",
+            "location" : {
+              "end_position" : 1868,
+              "start_position" : 1524
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSixteenthsReturnTrue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XCTAssertTrue(WindowAction.leftHalf.positionCycles)\n        XCTAssertTrue(WindowAction.rightHalf.positionCycles)\n        XCTAssertTrue(WindowAction.topLeft.positionCycles)\n        XCTAssertTrue(WindowAction.bottomRight.positionCycles)\n        XCTAssertTrue(WindowAction.firstThird.positionCycles)\n        XCTAssertTrue(WindowAction.lastThird.positionCycles)\n        XCTAssertTrue(WindowAction.firstFourth.positionCycles)\n        XCTAssertTrue(WindowAction.topHalf.positionCycles)\n        XCTAssertTrue(WindowAction.bottomHalf.positionCycles)"
+          },
+          "location_info" : {
+            "file_path" : "RectangleTests/RectangleTests.swift",
+            "location" : {
+              "end_position" : 2466,
+              "start_position" : 1868
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testGridPositionsReturnTrue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "XCTAssertFalse(WindowAction.maximize.positionCycles)\n        XCTAssertFalse(WindowAction.maximizeHeight.positionCycles)\n        XCTAssertFalse(WindowAction.almostMaximize.positionCycles)\n        XCTAssertFalse(WindowAction.center.positionCycles)\n        XCTAssertFalse(WindowAction.centerProminently.positionCycles)\n        XCTAssertFalse(WindowAction.restore.positionCycles)\n        XCTAssertFalse(WindowAction.moveLeft.positionCycles)\n        XCTAssertFalse(WindowAction.moveRight.positionCycles)\n        XCTAssertFalse(WindowAction.nextDisplay.positionCycles)\n        XCTAssertFalse(WindowAction.previousDisplay.positionCycles)\n        XCTAssertFalse(WindowAction.larger.positionCycles)\n        XCTAssertFalse(WindowAction.smaller.positionCycles)\n        XCTAssertFalse(WindowAction.tileAll.positionCycles)\n        XCTAssertFalse(WindowAction.cascadeAll.positionCycles)\n        XCTAssertFalse(WindowAction.specified.positionCycles)"
+          },
+          "location_info" : {
+            "file_path" : "RectangleTests/RectangleTests.swift",
+            "location" : {
+              "end_position" : 3465,
+              "start_position" : 2466
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNonPositionalActionsReturnFalse",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "RectangleTests/RectangleTests.swift",
+        "location" : {
+          "end_position" : 3467,
+          "start_position" : 300
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "PositionCyclesTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 18,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "rxhanson-rectangle",
+  "repoName" : "rxhanson/Rectangle",
+  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "RectangleTests/RectangleTests.swift"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "caseID" : "case-9e94ceea4d3fe6b54fb88758",
+  "commitHash" : "85f92c04c7964aba085d108a5d0dc01ea3897bfd",
+  "commitMessage" : "security: pin MASShortcut, confirm URL tasks, harden config auto-load (#1765)\n\nAddresses three issues identified in a source-level security audit\n(see SECURITY_AUDIT.md for the full report):\n\n1. [High] MASShortcut SPM dependency was pinned to `branch = master`,\n   meaning every build pulled the latest tip with no review gate. Pin\n   to the current HEAD revision SHA so future upstream changes require\n   an explicit bump.\n\n2. [Medium] `rectangle://execute-task=ignore-app/unignore-app` URL\n   actions silently mutated the disabled-apps defaults when triggered\n   from outside Rectangle (e.g. a web page). Require an NSAlert\n   confirmation, surfacing the bundle-id, unless Rectangle itself is\n   frontmost.\n\n3. [Medium] `Config.loadFromSupportDir()` silently auto-loaded any\n   RectangleConfig.json dropped in Application Support on launch. Add\n   a confirmation prompt, reject symlinks and world-writable files,\n   and apply a 1 MiB size cap to the loader (defense against OOM via\n   giant config).\n\nAlso includes SECURITY_AUDIT.md documenting the full review, including\nconfirmation that the app contains no telemetry, analytics, or crash\nreporting and that the only outbound network channel is the\nEdDSA-signed Sparkle update feed.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
+  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/85f92c04c7964aba085d108a5d0dc01ea3897bfd",
+  "durationSeconds" : 1.7711130380630493,
+  "entityNames" : [
+    "loadFromSupportDir",
+    "path"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "reference" : {
+            "arguments" : [
+
+            ],
+            "name" : "path"
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Rectangle/PrefsWindow/Config.swift",
+        "location" : {
+          "end_position" : 4816,
+          "start_position" : 4795
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "path"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "if let rectangleSupportURL = getSupportDir()?\n            .appendingPathComponent(\"Rectangle\", isDirectory: true) {\n            \n            let configURL = rectangleSupportURL.appendingPathComponent(\"RectangleConfig.json\")\n                        \n            let exists = try? configURL.checkResourceIsReachable()\n            if exists == true {\n                // Defense-in-depth: any process running as this user can drop\n                // a RectangleConfig.json in Application Support and have it\n                // silently applied on next launch, overwriting shortcuts and\n                // defaults. Require the user to confirm before loading.\n                //\n                // We also refuse symlinks (could redirect reads elsewhere) and\n                // any file with world-write permission (suggests tampering).\n                let path = configURL.path\n                let fm = FileManager.default\n                var isSafe = true\n                \n                if let attrs = try? fm.attributesOfItem(atPath: path) {\n                    if (attrs[.type] as? FileAttributeType) == .typeSymbolicLink {\n                        isSafe = false\n                    }\n                    if let perms = attrs[.posixPermissions] as? NSNumber,\n                       (perms.intValue & 0o002) != 0 {\n                        isSafe = false\n                    }\n                }\n                \n                guard isSafe else {\n                    AlertUtil.oneButtonAlert(\n                        question: \"Refused to load RectangleConfig.json\",\n                        text: \"The configuration file at \\(path) is a symlink or world-writable. Rectangle has refused to load it. Remove the file or fix its permissions and try again.\"\n                    )\n                    try? fm.removeItem(at: configURL)\n                    return\n                }\n                \n                let response = AlertUtil.twoButtonAlert(\n                    question: \"Apply Rectangle configuration?\",\n                    text: \"A configuration file was found at \\(path). Applying it will overwrite your current Rectangle shortcuts and preferences. Apply now?\",\n                    confirmText: \"Apply\",\n                    cancelText: \"Discard\"\n                )\n                guard response == .alertFirstButtonReturn else {\n                    try? fm.removeItem(at: configURL)\n                    return\n                }\n                \n                load(fileUrl: configURL)\n                do {\n                    let newFilename = \"RectangleConfig\\(timestamp()).json\"\n                    \n                    try fm.moveItem(atPath: configURL.path, toPath: rectangleSupportURL.appendingPathComponent(newFilename).path)\n                } catch {\n                    do {\n                        try fm.removeItem(at: configURL)\n                    } catch {\n                        AlertUtil.oneButtonAlert(question: \"Error after loading from Support Dir\", text: \"Unable to rename/remove RectangleConfig.json from \\(rectangleSupportURL) after loading.\")\n                    }\n                }\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Rectangle/PrefsWindow/Config.swift",
+        "location" : {
+          "end_position" : 7089,
+          "start_position" : 3890
+        }
+      },
+      "modifiers" : [
+        "static"
+      ],
+      "name" : "loadFromSupportDir",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 13,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "rxhanson-rectangle",
+  "repoName" : "rxhanson/Rectangle",
+  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Rectangle/PrefsWindow/Config.swift"
+  ]
+}

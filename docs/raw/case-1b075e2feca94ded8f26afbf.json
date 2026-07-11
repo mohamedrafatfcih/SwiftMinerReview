@@ -1,0 +1,2609 @@
+{
+  "caseID" : "case-1b075e2feca94ded8f26afbf",
+  "commitHash" : "2416fc21222475c1315819a6ca35478c2f4bbf4d",
+  "commitMessage" : "Add `Auto Mode By External  PAC`.\n",
+  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/2416fc21222475c1315819a6ca35478c2f4bbf4d",
+  "durationSeconds" : 4.5240540504455566,
+  "entityNames" : [
+    "AppDelegate",
+    "Bool",
+    "CGFloat",
+    "ImportWindowController!",
+    "NSAppleEventDescriptor",
+    "NSApplicationDelegate",
+    "NSMenu!",
+    "NSMenuItem"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "IBOutlet"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "NSMenuItem!"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+        "location" : {
+          "end_position" : 1116,
+          "start_position" : 1080
+        }
+      },
+      "modifiers" : [
+        "weak"
+      ],
+      "name" : "externalPACModeMenuItem"
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "ns_application_main" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "NSObject"
+        },
+        {
+          "name" : "NSApplicationDelegate"
+        },
+        {
+          "name" : "NSUserNotificationCenterDelegate"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let dirPath = NSHomeDirectory() + \"/Library/LaunchAgents\"\n        let fileMgr = FileManager.default\n        if fileMgr.fileExists(atPath: dirPath) {\n            do {\n                let attrs = try fileMgr.attributesOfItem(atPath: dirPath)\n                if attrs[FileAttributeKey.ownerAccountName] as! String != NSUserName() {\n                    //try fileMgr.setAttributes([FileAttributeKey.ownerAccountName: NSUserName()], ofItemAtPath: dirPath)\n                    let bashFilePath = Bundle.main.path(forResource: \"fix_dir_owner.sh\", ofType: nil)!\n                    let script = \"do shell script \\\"bash \\\\\\\"\\(bashFilePath)\\\\\\\" \\(NSUserName()) \\\" with administrator privileges\"\n                    if let appleScript = NSAppleScript(source: script) {\n                        var err: NSDictionary? = nil\n                        appleScript.executeAndReturnError(&err)\n                    }\n                }\n            }\n            catch {\n                NSLog(\"Error when ensure the owner of $HOME/Library/LaunchAgents, \\(error.localizedDescription)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 2981,
+              "start_position" : 1834
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "ensureLaunchAgentsDirOwner",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "_ = LaunchAtLoginController()// Ensure set when launch\n        \n        NSUserNotificationCenter.default.delegate = self\n        \n        self.ensureLaunchAgentsDirOwner()\n        \n        // Prepare ss-local\n        InstallSSLocal()\n        InstallPrivoxy()\n        InstallSimpleObfs()\n        InstallKcptun()\n        InstallV2rayPlugin()\n        \n        // Prepare defaults\n        let defaults = UserDefaults.standard\n        defaults.register(defaults: [\n            \"ShadowsocksOn\": true,\n            \"ShadowsocksRunningMode\": \"auto\",\n            \"LocalSocks5.ListenPort\": NSNumber(value: 1086 as UInt16),\n            \"LocalSocks5.ListenAddress\": \"127.0.0.1\",\n            \"PacServer.ListenAddress\":\"127.0.0.1\",\n            \"PacServer.ListenPort\":NSNumber(value: 1089 as UInt16),\n            \"LocalSocks5.Timeout\": NSNumber(value: 60 as UInt),\n            \"LocalSocks5.EnableUDPRelay\": NSNumber(value: false as Bool),\n            \"LocalSocks5.EnableVerboseMode\": NSNumber(value: false as Bool),\n            \"GFWListURL\": \"https://raw.githubusercontent.com/gfwlist/gfwlist/master/gfwlist.txt\",\n            \"AutoConfigureNetworkServices\": NSNumber(value: true as Bool),\n            \"LocalHTTP.ListenAddress\": \"127.0.0.1\",\n            \"LocalHTTP.ListenPort\": NSNumber(value: 1087 as UInt16),\n            \"LocalHTTPOn\": true,\n            \"LocalHTTP.FollowGlobal\": false,\n            \"ProxyExceptions\": \"127.0.0.1, localhost, 192.168.0.0/16, 10.0.0.0/8, FE80::/64, ::1, FD00::/8\",\n            \"ExternalPACURL\": \"\",\n            ])\n        \n        statusItem = NSStatusBar.system.statusItem(withLength: AppDelegate.StatusItemIconWidth)\n        let image : NSImage = NSImage(named: NSImage.Name(rawValue: \"menu_icon\"))!\n        image.isTemplate = true\n        statusItem.image = image\n        statusItem.menu = statusMenu\n        \n        let notifyCenter = NotificationCenter.default\n        \n        _ = notifyCenter.rx.notification(NOTIFY_CONF_CHANGED)\n            .subscribe(onNext: { noti in\n                self.applyConfig()\n                self.updateRunningModeMenu()\n                self.updateCopyHttpProxyExportMenu()\n            })\n        \n        notifyCenter.addObserver(forName: NOTIFY_SERVER_PROFILES_CHANGED, object: nil, queue: nil\n            , using: {\n                (note) in\n                let profileMgr = ServerProfileManager.instance\n                if profileMgr.activeProfileId == nil &&\n                    profileMgr.profiles.count > 0{\n                    if profileMgr.profiles[0].isValid(){\n                        profileMgr.setActiveProfiledId(profileMgr.profiles[0].uuid)\n                    }\n                }\n                self.updateServersMenu()\n                self.updateRunningModeMenu()\n                SyncSSLocal()\n            }\n        )\n        _ = notifyCenter.rx.notification(NOTIFY_TOGGLE_RUNNING_SHORTCUT)\n            .subscribe(onNext: { noti in\n                self.doToggleRunning(showToast: true)\n            })\n        _ = notifyCenter.rx.notification(NOTIFY_SWITCH_PROXY_MODE_SHORTCUT)\n            .subscribe(onNext: { noti in\n                let mode = defaults.string(forKey: \"ShadowsocksRunningMode\")!\n                \n                var toastMessage: String!;\n                switch mode {\n                case \"auto\":\n                    defaults.setValue(\"global\", forKey: \"ShadowsocksRunningMode\")\n                    toastMessage = \"Global Mode\".localized\n                case \"global\":\n                    defaults.setValue(\"manual\", forKey: \"ShadowsocksRunningMode\")\n                    toastMessage = \"Manual Mode\".localized\n                case \"manual\":\n                    if self.externalPACModeMenuItem.isEnabled {\n                        defaults.setValue(\"externalPAC\", forKey: \"ShadowsocksRunningMode\")\n                        toastMessage = \"Auto Mode By External PAC\".localized\n                    } else {\n                        defaults.setValue(\"auto\", forKey: \"ShadowsocksRunningMode\")\n                        toastMessage = \"Auto Mode By PAC\".localized\n                    }\n                case \"externalPAC\":\n                    defaults.setValue(\"auto\", forKey: \"ShadowsocksRunningMode\")\n                    toastMessage = \"Auto Mode By PAC\".localized\n                default:\n                    defaults.setValue(\"auto\", forKey: \"ShadowsocksRunningMode\")\n                    toastMessage = \"Auto Mode By PAC\".localized\n                }\n                \n                self.updateRunningModeMenu()\n                self.applyConfig()\n                \n                self.makeToast(toastMessage)\n            })\n        \n        _ = notifyCenter.rx.notification(NOTIFY_FOUND_SS_URL)\n            .subscribe(onNext: { noti in\n                self.handleFoundSSURL(noti)\n            })\n        \n        // Handle ss url scheme\n        NSAppleEventManager.shared().setEventHandler(self\n            , andSelector: #selector(self.handleURLEvent)\n            , forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))\n        \n        updateMainMenu()\n        updateCopyHttpProxyExportMenu()\n        updateServersMenu()\n        updateRunningModeMenu()\n        \n        ProxyConfHelper.install()\n        ProxyConfHelper.startMonitorPAC()\n        applyConfig()\n\n        // Register global hotkey\n        ShortcutsController.bindShortcuts()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 8434,
+              "start_position" : 2981
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "applicationDidFinishLaunching",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Notification"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 3055,
+                  "start_position" : 3026
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "aNotification",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "StopSSLocal()\n        StopPrivoxy()\n        ProxyConfHelper.disableProxy()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 8653,
+              "start_position" : 8434
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "applicationWillTerminate",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Notification"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 8503,
+                  "start_position" : 8474
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "aNotification",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "SyncSSLocal()\n        \n        let defaults = UserDefaults.standard\n        let isOn = defaults.bool(forKey: \"ShadowsocksOn\")\n        let mode = defaults.string(forKey: \"ShadowsocksRunningMode\")\n        \n        if isOn {\n            if mode == \"auto\" {\n                ProxyConfHelper.enablePACProxy()\n            } else if mode == \"global\" {\n                ProxyConfHelper.enableGlobalProxy()\n            } else if mode == \"manual\" {\n                ProxyConfHelper.disableProxy()\n            } else if mode == \"externalPAC\" {\n                ProxyConfHelper.enableExternalPACProxy()\n            }\n        } else {\n            ProxyConfHelper.disableProxy()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 9364,
+              "start_position" : 8653
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "applyConfig",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "self.doToggleRunning(showToast: false)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 9501,
+              "start_position" : 9364
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "toggleRunning",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 9445,
+                  "start_position" : 9425
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        var isOn = UserDefaults.standard.bool(forKey: \"ShadowsocksOn\")\n        isOn = !isOn\n        defaults.set(isOn, forKey: \"ShadowsocksOn\")\n        \n        self.updateMainMenu()\n        self.applyConfig()\n        \n        if showToast {\n            if isOn {\n                self.makeToast(\"Shadowsocks: On\".localized)\n            }\n            else {\n                self.makeToast(\"Shadowsocks: Off\".localized)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 10043,
+              "start_position" : 9501
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "doToggleRunning",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 9547,
+                  "start_position" : 9532
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "showToast",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "UpdatePACFromGFWList()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 10142,
+              "start_position" : 10043
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateGFWList",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 10102,
+                  "start_position" : 10082
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if editUserRulesWinCtrl != nil {\n            editUserRulesWinCtrl.close()\n        }\n        let ctrl = UserRulesController(windowNibName: NSNib.Name(rawValue: \"UserRulesController\"))\n        editUserRulesWinCtrl = ctrl\n        \n        ctrl.showWindow(self)\n        NSApp.activate(ignoringOtherApps: true)\n        ctrl.window?.makeKeyAndOrderFront(self)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 10578,
+              "start_position" : 10142
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "editUserRulesForPAC",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 10207,
+                  "start_position" : 10187
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if shareWinCtrl != nil {\n            shareWinCtrl.close()\n        }\n        shareWinCtrl = ShareServerProfilesWindowController(windowNibName: NSNib.Name(rawValue: \"ShareServerProfilesWindowController\"))\n        shareWinCtrl.showWindow(self)\n        NSApp.activate(ignoringOtherApps: true)\n        shareWinCtrl.window?.makeKeyAndOrderFront(nil)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 11008,
+              "start_position" : 10578
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showShareServerProfiles",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 10647,
+                  "start_position" : 10627
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if importWinCtrl != nil {\n            importWinCtrl.close()\n        }\n        importWinCtrl = ImportWindowController(windowNibName: .init(rawValue: \"ImportWindowController\"))\n        importWinCtrl.showWindow(self)\n        NSApp.activate(ignoringOtherApps: true)\n        importWinCtrl.window?.makeKeyAndOrderFront(nil)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 11405,
+              "start_position" : 11008
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showImportWindow",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 11070,
+                  "start_position" : 11050
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "ScanQRCodeOnScreen()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 11509,
+              "start_position" : 11405
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "scanQRCodeFromScreen",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 11471,
+                  "start_position" : 11451
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let pb = NSPasteboard.general\n        if #available(OSX 10.13, *) {\n            if let text = pb.string(forType: NSPasteboard.PasteboardType.URL) {\n                if let url = URL(string: text) {\n                    NotificationCenter.default.post(\n                        name: NOTIFY_FOUND_SS_URL, object: nil\n                        , userInfo: [\n                            \"urls\": [url],\n                            \"source\": \"pasteboard\",\n                            ])\n                }\n            }\n        }\n        if let text = pb.string(forType: NSPasteboard.PasteboardType.string) {\n            var urls = text.split(separator: \"\\n\")\n                .map { String($0).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }\n                .map { URL(string: $0) }\n                .filter { $0 != nil }\n                .map { $0! }\n            urls = urls.filter { $0.scheme == \"ss\" }\n            \n            NotificationCenter.default.post(\n                name: NOTIFY_FOUND_SS_URL, object: nil\n                , userInfo: [\n                    \"urls\": urls,\n                    \"source\": \"pasteboard\",\n                    ])\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 12762,
+              "start_position" : 11509
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "importProfileURLFromPasteboard",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 11585,
+                  "start_position" : 11565
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        defaults.setValue(\"auto\", forKey: \"ShadowsocksRunningMode\")\n        updateRunningModeMenu()\n        applyConfig()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 12993,
+              "start_position" : 12762
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "selectPACMode",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 12817,
+                  "start_position" : 12797
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        defaults.setValue(\"global\", forKey: \"ShadowsocksRunningMode\")\n        updateRunningModeMenu()\n        applyConfig()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 13233,
+              "start_position" : 12993
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "selectGlobalMode",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 13055,
+                  "start_position" : 13035
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        defaults.setValue(\"manual\", forKey: \"ShadowsocksRunningMode\")\n        updateRunningModeMenu()\n        applyConfig()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 13473,
+              "start_position" : 13233
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "selectManualMode",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 13295,
+                  "start_position" : 13275
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        defaults.setValue(\"externalPAC\", forKey: \"ShadowsocksRunningMode\")\n        updateRunningModeMenu()\n        applyConfig()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 13723,
+              "start_position" : 13473
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "selectExternalPACMode",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 13540,
+                  "start_position" : 13520
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if preferencesWinCtrl != nil {\n            preferencesWinCtrl.close()\n        }\n        preferencesWinCtrl = PreferencesWindowController(windowNibName: NSNib.Name(rawValue: \"PreferencesWindowController\"))\n        \n        preferencesWinCtrl.showWindow(self)\n        NSApp.activate(ignoringOtherApps: true)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 14113,
+              "start_position" : 13723
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "editServerPreferences",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 13790,
+                  "start_position" : 13770
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if allInOnePreferencesWinCtrl != nil {\n            allInOnePreferencesWinCtrl.close()\n        }\n        \n        allInOnePreferencesWinCtrl = PreferencesWinController(windowNibName: NSNib.Name(rawValue: \"PreferencesWinController\"))\n        \n        allInOnePreferencesWinCtrl.showWindow(self)\n        NSApp.activate(ignoringOtherApps: true)\n        allInOnePreferencesWinCtrl.window?.makeKeyAndOrderFront(self)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 14610,
+              "start_position" : 14113
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showAllInOnePreferences",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 14182,
+                  "start_position" : 14162
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let index = sender.tag - kProfileMenuItemIndexBase\n        let spMgr = ServerProfileManager.instance\n        let newProfile = spMgr.profiles[index]\n        if newProfile.uuid != spMgr.activeProfileId {\n            spMgr.setActiveProfiledId(newProfile.uuid)\n            updateServersMenu()\n            SyncSSLocal()\n            applyConfig()\n        }\n        updateRunningModeMenu()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 15068,
+              "start_position" : 14610
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "selectServer",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 14668,
+                  "start_position" : 14648
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        let address = defaults.string(forKey: \"LocalHTTP.ListenAddress\")!\n        let port = defaults.integer(forKey: \"LocalHTTP.ListenPort\")\n        \n        // Format an export string.\n        let command = \"export http_proxy=http://\\(address):\\(port);export https_proxy=http://\\(address):\\(port);\"\n        \n        // Copy to paste board.\n        NSPasteboard.general.clearContents()\n        NSPasteboard.general.setString(command, forType: NSPasteboard.PasteboardType.string)\n        \n        // Show a toast notification.\n        self.makeToast(\"Export Command Copied.\".localized)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 15809,
+              "start_position" : 15068
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "copyExportCommand",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 15131,
+                  "start_position" : 15111
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let ws = NSWorkspace.shared\n        if let appUrl = ws.urlForApplication(withBundleIdentifier: \"com.apple.Console\") {\n            try! ws.launchApplication(at: appUrl\n                ,options: NSWorkspace.LaunchOptions.default\n                ,configuration: [NSWorkspace.LaunchConfigurationKey.arguments: \"~/Library/Logs/ss-local.log\"])\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 16228,
+              "start_position" : 15809
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showLogs",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 15863,
+                  "start_position" : 15843
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "NSWorkspace.shared.open(URL(string: \"https://github.com/qiuyuzhou/ShadowsocksX-NG/issues\")!)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 16392,
+              "start_position" : 16228
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "feedback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 16282,
+                  "start_position" : 16262
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "NSWorkspace.shared.open(URL(string: \"https://github.com/shadowsocks/ShadowsocksX-NG/releases\")!)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 16567,
+              "start_position" : 16392
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "checkForUpdates",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 16453,
+                  "start_position" : 16433
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let savePanel = NSSavePanel()\n        savePanel.title = \"Save Diagnosis to File\".localized\n        savePanel.canCreateDirectories = true\n        savePanel.allowedFileTypes = [\"txt\"]\n        savePanel.isExtensionHidden = false\n        \n        let formatter = DateFormatter()\n        formatter.dateFormat = \"yyyyMMdd_HHmmss\"\n        let dateString = formatter.string(from: Date())\n        \n        savePanel.nameFieldStringValue = \"ShadowsocksX-NG_diagnose_\\(dateString)\"\n        \n        savePanel.becomeKey()\n        let result = savePanel.runModal()\n        if (result.rawValue == NSFileHandlingPanelOKButton) {\n            if let url = savePanel.url {\n                let diagnosisText = diagnose()\n                try! diagnosisText.write(to: url, atomically: false, encoding: String.Encoding.utf8)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 17472,
+              "start_position" : 16567
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "exportDiagnosis",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 16628,
+                  "start_position" : 16608
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "NSWorkspace.shared.open(URL(string: \"https://github.com/shadowsocks/ShadowsocksX-NG/wiki\")!)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 17636,
+              "start_position" : 17472
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showHelp",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 17526,
+                  "start_position" : 17506
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBAction"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "NSApp.orderFrontStandardAboutPanel(sender);\n        NSApp.activate(ignoringOtherApps: true)"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 17800,
+              "start_position" : 17636
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showAbout",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 17691,
+                  "start_position" : 17671
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        \n        if let pacURL = defaults.string(forKey: \"ExternalPACURL\") {\n            if pacURL != \"\" {\n                externalPACModeMenuItem.isEnabled = true\n            } else {\n                externalPACModeMenuItem.isEnabled = false\n            }\n        }\n\n        // Update running mode state\n        autoModeMenuItem.state = .off\n        globalModeMenuItem.state = .off\n        manualModeMenuItem.state = .off\n        externalPACModeMenuItem.state = .off\n        \n        let mode = defaults.string(forKey: \"ShadowsocksRunningMode\")\n        if mode == \"auto\" {\n            autoModeMenuItem.state = .on\n        } else if mode == \"global\" {\n            globalModeMenuItem.state = .on\n        } else if mode == \"manual\" {\n            manualModeMenuItem.state = .on\n        } else if mode == \"externalPAC\" {\n            externalPACModeMenuItem.state = .on\n        }\n        updateStatusMenuImage()\n        \n        // Update selected server name\n        var serverMenuText = \"Servers - (No Selected)\".localized\n        \n        let mgr = ServerProfileManager.instance\n        for p in mgr.profiles {\n            if mgr.activeProfileId == p.uuid {\n                var profileName :String\n                if !p.remark.isEmpty {\n                    profileName = p.remark\n                } else {\n                    profileName = p.serverHost\n                }\n                serverMenuText = \"Servers\".localized + \" - \\(profileName)\"\n                break\n            }\n        }\n        serversMenuItem.title = serverMenuText"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 19427,
+              "start_position" : 17800
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateRunningModeMenu",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        let mode = defaults.string(forKey: \"ShadowsocksRunningMode\")\n        let isOn = defaults.bool(forKey: \"ShadowsocksOn\")\n        if isOn {\n            if let m = mode {\n                switch m {\n                    case \"auto\":\n                        statusItem.image = NSImage(named: NSImage.Name(rawValue: \"menu_p_icon\"))\n                    case \"global\":\n                        statusItem.image = NSImage(named: NSImage.Name(rawValue: \"menu_g_icon\"))\n                    case \"manual\":\n                        statusItem.image = NSImage(named: NSImage.Name(rawValue: \"menu_m_icon\"))\n                    case \"externalPAC\":\n                        statusItem.image = NSImage(named: NSImage.Name(rawValue: \"menu_e_icon\"))\n                default: break\n                }\n                statusItem.image?.isTemplate = true\n            }\n        } else {\n            statusItem.image = NSImage(named: NSImage.Name(rawValue: \"menu_icon_disabled\"))\n            statusItem.image?.isTemplate = true\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 20533,
+              "start_position" : 19427
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateStatusMenuImage",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        let isOn = defaults.bool(forKey: \"ShadowsocksOn\")\n        if isOn {\n            runningStatusMenuItem.title = \"Shadowsocks: On\".localized\n            runningStatusMenuItem.image = NSImage(named: NSImage.Name(rawValue: \"NSStatusAvailable\"))\n            toggleRunningMenuItem.title = \"Turn Shadowsocks Off\".localized\n            let image = NSImage(named: NSImage.Name(rawValue: \"menu_icon\"))\n            statusItem.image = image\n        } else {\n            runningStatusMenuItem.title = \"Shadowsocks: Off\".localized\n            toggleRunningMenuItem.title = \"Turn Shadowsocks On\".localized\n            runningStatusMenuItem.image = NSImage(named: NSImage.Name(rawValue: \"NSStatusNone\"))\n            let image = NSImage(named: NSImage.Name(rawValue: \"menu_icon_disabled\"))\n            statusItem.image = image\n        }\n        statusItem.image?.isTemplate = true\n        \n        updateStatusMenuImage()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 21529,
+              "start_position" : 20533
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateMainMenu",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        let isOn = defaults.bool(forKey: \"LocalHTTPOn\")\n        copyHttpProxyExportCmdLineMenuItem.isHidden = !isOn"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 21744,
+              "start_position" : 21529
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateCopyHttpProxyExportMenu",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let menu = serversMenuItem.submenu else { return }\n\n        let mgr = ServerProfileManager.instance\n        let profiles = mgr.profiles\n\n        // Remove all profile menu items\n        let beginIndex = menu.index(of: serverProfilesBeginSeparatorMenuItem) + 1\n        let endIndex = menu.index(of: serverProfilesEndSeparatorMenuItem)\n        // Remove from end to begin, so the index won't change :)\n        for index in (beginIndex..<endIndex).reversed() {\n            menu.removeItem(at: index)\n        }\n\n        // Insert all profile menu items\n        for (i, profile) in profiles.enumerated().reversed() {\n            let item = NSMenuItem()\n            item.tag = i + kProfileMenuItemIndexBase\n            item.title = profile.title()\n            item.state = (mgr.activeProfileId == profile.uuid) ? .on : .off\n            item.isEnabled = profile.isValid()\n            item.action = #selector(AppDelegate.selectServer)\n            \n            menu.insertItem(item, at: beginIndex)\n        }\n\n        // End separator is redundant if profile section is empty\n        serverProfilesEndSeparatorMenuItem.isHidden = profiles.isEmpty"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 22938,
+              "start_position" : 21744
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "updateServersMenu",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if let urlString = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue {\n            if let url = URL(string: urlString) {\n                NotificationCenter.default.post(\n                    name: NOTIFY_FOUND_SS_URL, object: nil\n                    , userInfo: [\n                        \"urls\": [url],\n                        \"source\": \"url\",\n                        ])\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 23492,
+              "start_position" : 22938
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "handleURLEvent",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSAppleEventDescriptor"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 23007,
+                  "start_position" : 22974
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSAppleEventDescriptor"
+              },
+              "is_variadic" : false,
+              "label" : "withReplyEvent",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 23056,
+                  "start_position" : 23007
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "replyEvent",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let sendNotify = {\n            (title: String, subtitle: String, infoText: String) in\n            \n            let userNote = NSUserNotification()\n            userNote.title = title\n            userNote.subtitle = subtitle\n            userNote.informativeText = infoText\n            userNote.soundName = NSUserNotificationDefaultSoundName\n            \n            NSUserNotificationCenter.default\n                .deliver(userNote);\n        }\n        \n        if let userInfo = (note as NSNotification).userInfo {\n            let urls: [URL] = userInfo[\"urls\"] as! [URL]\n            \n            let mgr = ServerProfileManager.instance\n            let addCount = mgr.addServerProfileByURL(urls: urls)\n            \n            if addCount > 0 {\n                var subtitle: String = \"\"\n                if userInfo[\"source\"] as! String == \"qrcode\" {\n                    subtitle = \"By scan QR Code\".localized\n                } else if userInfo[\"source\"] as! String == \"url\" {\n                    subtitle = \"By handle SS URL\".localized\n                } else if userInfo[\"source\"] as! String == \"pasteboard\" {\n                    subtitle = \"By import from pasteboard\".localized\n                }\n                \n                sendNotify(\"Add \\(addCount) Shadowsocks Server Profile\".localized, subtitle, \"\")\n            } else {\n                if userInfo[\"source\"] as! String == \"qrcode\" {\n                    sendNotify(\"\", \"\", \"Not found valid QRCode of shadowsocks profile\".localized)\n                } else if userInfo[\"source\"] as! String == \"url\" {\n                    sendNotify(\"\", \"\", \"Not found valid URL of shadowsocks profile\".localized)\n                }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 25257,
+              "start_position" : 23492
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "handleFoundSSURL",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Notification"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 23544,
+                  "start_position" : 23524
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "note",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "return true"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 25535,
+              "start_position" : 25257
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "userNotificationCenter",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSUserNotificationCenter"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 25452,
+                  "start_position" : 25407
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "center",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSUserNotification"
+              },
+              "is_variadic" : false,
+              "label" : "shouldPresent",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 25498,
+                  "start_position" : 25452
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "notification",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if toastWindowCtrl != nil {\n            toastWindowCtrl.close()\n        }\n        toastWindowCtrl = ToastWindowController(windowNibName: NSNib.Name(rawValue: \"ToastWindowController\"))\n        toastWindowCtrl.message = message\n        toastWindowCtrl.showWindow(self)\n        //NSApp.activate(ignoringOtherApps: true)\n        //toastWindowCtrl.window?.makeKeyAndOrderFront(self)\n        toastWindowCtrl.fadeInHud()"
+          },
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 26013,
+              "start_position" : 25535
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "makeToast",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+                "location" : {
+                  "end_position" : 25582,
+                  "start_position" : 25565
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+        "location" : {
+          "end_position" : 26015,
+          "start_position" : 201
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "AppDelegate",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ShareServerProfilesWindowController!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 372,
+              "start_position" : 322
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "shareWinCtrl"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SWBQRCodeWindowController!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 422,
+              "start_position" : 381
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "qrcodeWinCtrl"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "PreferencesWindowController!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 479,
+              "start_position" : 431
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "preferencesWinCtrl"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "UserRulesController!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 530,
+              "start_position" : 488
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "editUserRulesWinCtrl"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "PreferencesWinController!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 592,
+              "start_position" : 539
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "allInOnePreferencesWinCtrl"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ToastWindowController!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 640,
+              "start_position" : 601
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "toastWindowCtrl"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ImportWindowController!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 687,
+              "start_position" : 649
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "importWinCtrl"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSWindow!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 729,
+              "start_position" : 712
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "window"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenu!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 772,
+              "start_position" : 753
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "statusMenu"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 835,
+              "start_position" : 801
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "runningStatusMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 893,
+              "start_position" : 859
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "toggleRunningMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 946,
+              "start_position" : 917
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "autoModeMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1001,
+              "start_position" : 970
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "globalModeMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1056,
+              "start_position" : 1025
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "manualModeMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1116,
+              "start_position" : 1080
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "externalPACModeMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1173,
+              "start_position" : 1145
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "serversMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1223,
+              "start_position" : 1192
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showQRCodeMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1273,
+              "start_position" : 1242
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "scanQRCodeMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1341,
+              "start_position" : 1292
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "serverProfilesBeginSeparatorMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1407,
+              "start_position" : 1360
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "serverProfilesEndSeparatorMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1483,
+              "start_position" : 1436
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "copyHttpProxyExportCmdLineMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSMenuItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1545,
+              "start_position" : 1512
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "lanchAtLoginMenuItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSPanel!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1589,
+              "start_position" : 1570
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "hudWindow"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSView!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1631,
+              "start_position" : 1613
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "panelView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "IBOutlet"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSTextField!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1684,
+              "start_position" : 1655
+            }
+          },
+          "modifiers" : [
+            "weak"
+          ],
+          "name" : "isNameTextField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "100"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1725,
+              "start_position" : 1694
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "kProfileMenuItemIndexBase"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSStatusItem!"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1760,
+              "start_position" : 1735
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "statusItem"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CGFloat"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "variableLength"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "ShadowsocksX-NG/AppDelegate.swift",
+            "location" : {
+              "end_position" : 1834,
+              "start_position" : 1776
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "StatusItemIconWidth"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 16,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "shadowsocks-shadowsocksx-ng",
+  "repoName" : "shadowsocks/ShadowsocksX-NG",
+  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "ShadowsocksX-NG/AppDelegate.swift"
+  ]
+}

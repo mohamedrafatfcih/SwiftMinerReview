@@ -1,0 +1,824 @@
+{
+  "caseID" : "case-1c025a4704b2612be9927f5d",
+  "commitHash" : "b259d067260ad8334aadd6679626cf53a915d67e",
+  "commitMessage" : "feat: added GPU preview (disabled for now)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/b259d067260ad8334aadd6679626cf53a915d67e",
+  "durationSeconds" : 10.610538005828857,
+  "entityNames" : [
+    "(NSView, BarChartView, NSTextField)",
+    "(NSView, LineChartView)",
+    "BarChartView?",
+    "Bool",
+    "GPU_Info",
+    "LineChartView?",
+    "ModuleType",
+    "NSCoder"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "PreviewWrapper"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.distribution = .fill\n        view.orientation = .horizontal\n        view.translatesAutoresizingMaskIntoConstraints = false\n        view.heightAnchor.constraint(equalToConstant: 90).isActive = true\n        view.edgeInsets = NSEdgeInsets(\n            top: Constants.Settings.margin,\n            left: Constants.Settings.margin,\n            bottom: Constants.Settings.margin,\n            right: Constants.Settings.margin\n        )\n        view.spacing = Constants.Settings.margin\n        \n        let details: NSView = {\n            let view = NSStackView()\n            view.orientation = .vertical\n            view.distribution = .fillEqually\n            view.spacing = 2\n            \n            var titleValue = localizedString(\"Unknown\")\n            let gpu = SystemKit.shared.device.info.gpu?.first{ $0.id == self.selectedGPU } ?? SystemKit.shared.device.info.gpu?.first\n            if let gpu {\n                if let name = gpu.name {\n                    titleValue = name\n                }\n                if let cores = gpu.cores {\n                    titleValue.append(\" (\\(cores) cores)\")\n                }\n            }\n            \n            let fpsField = LabelField(\"0 FPS\")\n            self.fpsField = fpsField\n            \n            let title = NSStackView()\n            title.addArrangedSubview(LabelField(titleValue))\n            title.addArrangedSubview(NSView())\n            title.addArrangedSubview(fpsField)\n            \n            let bars: NSView = {\n                let view = NSStackView()\n                view.orientation = .horizontal\n                view.distribution = .fillEqually\n                view.spacing = 4\n                \n                let left: NSView = {\n                    let view = NSStackView()\n                    view.orientation = .vertical\n                    view.distribution = .fillEqually\n                    view.spacing = 2\n                    \n                    let utilization = self.barView(title: localizedString(\"GPU utilization\"))\n                    self.utilizationBar = utilization.1\n                    self.utilizationField = utilization.2\n                    let render = self.barView(title: localizedString(\"Render utilization\"))\n                    self.renderBar = render.1\n                    self.renderField = render.2\n                    \n                    view.addArrangedSubview(utilization.0)\n                    view.addArrangedSubview(render.0)\n                    \n                    return view\n                }()\n                \n                let right: NSView = {\n                    let view = NSStackView()\n                    view.orientation = .vertical\n                    view.distribution = .fillEqually\n                    view.spacing = 2\n                    \n                    let ane = self.barView(title: localizedString(\"ANE utilization\"))\n                    self.aneBar = ane.1\n                    self.aneField = ane.2\n                    let tiler = self.barView(title: localizedString(\"Tiler utilization\"))\n                    self.tilerBar = tiler.1\n                    self.tilerField = tiler.2\n                    \n                    view.addArrangedSubview(ane.0)\n                    view.addArrangedSubview(tiler.0)\n                    \n                    return view\n                }()\n                \n                view.addArrangedSubview(left)\n                view.addArrangedSubview(right)\n                \n                return view\n            }()\n            \n            view.addArrangedSubview(title)\n            view.addArrangedSubview(bars)\n            \n            return view\n        }()\n        \n        view.addArrangedSubview(details)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 6962,
+              "start_position" : 3153
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "quickView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSStackView = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = Constants.Settings.margin*2\n        view.heightAnchor.constraint(equalToConstant: 140).isActive = true\n        \n        let chart = LineChartView(num: 600)\n        chart.setLegend(x: true, y: true)\n        view.addArrangedSubview(chart)\n        \n        return (view, chart)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 7455,
+              "start_position" : 6962
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "historyView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "(NSView, LineChartView)"
+            },
+            "description" : "-> (NSView, LineChartView)"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = 2\n        \n        let titleField = LabelField(title)\n        titleField.font = .systemFont(ofSize: 10, weight: .regular)\n        let valueField = ValueField()\n        valueField.font = .systemFont(ofSize: 10, weight: .regular)\n        \n        let header: NSStackView = NSStackView()\n        header.orientation = .horizontal\n        header.distribution = .fill\n        \n        header.addArrangedSubview(titleField)\n        header.addArrangedSubview(NSView())\n        header.addArrangedSubview(valueField)\n        \n        let bar = BarChartView(size: 8, horizontal: true)\n        bar.heightAnchor.constraint(equalToConstant: 8).isActive = true\n        \n        view.addArrangedSubview(header)\n        view.addArrangedSubview(bar)\n        \n        return (view, bar, valueField)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 8461,
+              "start_position" : 7455
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "barView",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/GPU/preview.swift",
+                "location" : {
+                  "end_position" : 7499,
+                  "start_position" : 7486
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "title",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "(NSView, BarChartView, NSTextField)"
+            },
+            "description" : "-> (NSView, BarChartView, NSTextField)"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "DispatchQueue.main.async(execute: {\n            if (self.window?.isVisible ?? false) || !self.initialized {\n                if let value = value.utilization {\n                    self.utilizationField?.stringValue = \"\\(Int(value.rounded(toPlaces: 2) * 100))%\"\n                    self.utilizationBar?.setValue(ColorValue(value))\n                }\n                if let value = value.renderUtilization {\n                    self.renderField?.stringValue = \"\\(Int(value.rounded(toPlaces: 2) * 100))%\"\n                    self.renderBar?.setValue(ColorValue(value))\n                }\n                if let value = value.tilerUtilization {\n                    self.tilerField?.stringValue = \"\\(Int(value.rounded(toPlaces: 2) * 100))%\"\n                    self.tilerBar?.setValue(ColorValue(value))\n                }\n                if let value = value.aneUtilization {\n                    self.aneField?.stringValue = \"\\(Int(value.rounded(toPlaces: 2) * 100))%\"\n                    self.aneBar?.setValue(ColorValue(value))\n                }\n                if let value = value.fps {\n                    self.fpsField?.stringValue = \"\\(Int(value)) FPS\"\n                }\n                self.initialized = true\n            }\n            if let value = value.utilization {\n                self.utilizationLineChart?.addValue(value)\n            }\n            if let value = value.aneUtilization {\n                self.aneLineChart?.addValue(value)\n            }\n            if let value = value.renderUtilization {\n                self.renderLineChart?.addValue(value)\n            }\n            if let value = value.tilerUtilization {\n                self.tilerLineChart?.addValue(value)\n            }\n            if let value = value.fps {\n                self.fpsLineChart?.addValue(value/100)\n            }\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 10350,
+              "start_position" : 8461
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "loadCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "GPU_Info"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/GPU/preview.swift",
+                "location" : {
+                  "end_position" : 8515,
+                  "start_position" : 8498
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 3045,
+              "start_position" : 1164
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ModuleType"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/GPU/preview.swift",
+                "location" : {
+                  "end_position" : 1206,
+                  "start_position" : 1186
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "module",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 3153,
+              "start_position" : 3045
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/GPU/preview.swift",
+                "location" : {
+                  "end_position" : 3084,
+                  "start_position" : 3070
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/GPU/preview.swift",
+        "location" : {
+          "end_position" : 10352,
+          "start_position" : 221
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "Preview",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 305,
+              "start_position" : 280
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "initialized"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 355,
+              "start_position" : 327
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "fpsField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "BarChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 412,
+              "start_position" : 377
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "utilizationBar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 465,
+              "start_position" : 429
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "utilizationField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "BarChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 517,
+              "start_position" : 487
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "renderBar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 565,
+              "start_position" : 534
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "renderField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "BarChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 616,
+              "start_position" : 587
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "tilerBar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 663,
+              "start_position" : 633
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "tilerField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "BarChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 712,
+              "start_position" : 685
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "aneBar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 757,
+              "start_position" : 729
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "aneField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 821,
+              "start_position" : 779
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "utilizationLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 872,
+              "start_position" : 838
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "aneLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 926,
+              "start_position" : 889
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "renderLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 979,
+              "start_position" : 943
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "tilerLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 1030,
+              "start_position" : 996
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "fpsLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.string(key: \"\\(self.module.stringValue)_gpu\", defaultValue: \"\")"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/preview.swift",
+            "location" : {
+              "end_position" : 1164,
+              "start_position" : 1052
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "selectedGPU"
+        }
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 34,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/GPU/preview.swift"
+  ]
+}

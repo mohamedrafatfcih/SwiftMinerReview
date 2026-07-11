@@ -1,0 +1,1240 @@
+{
+  "caseID" : "case-a4bd38b4e6784b53cda25c83",
+  "commitHash" : "171f563985ab1b09684dcf56d2880b8a3258c327",
+  "commitMessage" : "feat: redesigned Network usage timer (#3175)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/171f563985ab1b09684dcf56d2880b8a3258c327",
+  "durationSeconds" : 5.0351330041885376,
+  "entityNames" : [
+    "(upload: Int64, download: Int64)?",
+    "AppUpdateInterval?",
+    "Bandwidth",
+    "Bool",
+    "CWEventDelegate",
+    "Date",
+    "Date?",
+    "Network_Usage"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : true,
+        "name" : "AppUpdateInterval?"
+      },
+      "getter_block" : {
+        "body" : {
+          "content" : "AppUpdateInterval(rawValue: Store.shared.string(key: \"Network_usageReset\", defaultValue: AppUpdateInterval.never.rawValue))"
+        },
+        "modifier" : "get"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Modules/Net/readers.swift",
+        "location" : {
+          "end_position" : 5214,
+          "start_position" : 5036
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "usageResetInterval"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Reader<Network_Usage>"
+        },
+        {
+          "name" : "CWEventDelegate"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.reachability.reachable = { [weak self] in\n            guard let self else { return }\n            if self.active {\n                self.getPublicIP()\n                self.getDetails()\n                self.getWiFiDetails()\n            }\n        }\n        self.reachability.unreachable = { [weak self] in\n            guard let self else { return }\n            if self.active {\n                self.getWiFiDetails()\n                self.usage.reset()\n                self.callback(self.usage)\n            }\n        }\n        \n        NotificationCenter.default.addObserver(self, selector: #selector(refreshPublicIP), name: .refreshPublicIP, object: nil)\n        NotificationCenter.default.addObserver(self, selector: #selector(resetTotalNetworkUsage), name: .resetTotalNetworkUsage, object: nil)\n        \n        DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1) { [weak self] in\n            guard let self else { return }\n            if self.active {\n                self.getPublicIP()\n                self.getDetails()\n            }\n        }\n        \n        if let usage = self.value {\n            self.usage = usage\n            self.usage.bandwidth = Bandwidth()\n        }\n        \n        self.checkUsageReset()\n        \n        self.wifiClient.delegate = self\n        self.startListeningForWifiEvents()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 7220,
+              "start_position" : 5833
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "setup",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.reachability.stop()\n        self.reachability.reachable = {}\n        self.reachability.unreachable = {}\n        self.stopListeningForWifiEvents()\n        self.wifiClient.delegate = nil"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 7468,
+              "start_position" : 7220
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "terminate",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.checkUsageReset()\n        self.getDetails()\n        \n        let current: Bandwidth = self.reader == \"interface\" ? self.readInterfaceBandwidth() : self.readProcessBandwidth()\n        \n        // allows to reset the value to 0 when first read\n        if self.usage.bandwidth.upload != 0 {\n            self.usage.bandwidth.upload = current.upload - self.usage.bandwidth.upload\n        }\n        if self.usage.bandwidth.download != 0 {\n            self.usage.bandwidth.download = current.download - self.usage.bandwidth.download\n        }\n        \n        self.usage.bandwidth.upload = max(self.usage.bandwidth.upload, 0) // prevent negative upload value\n        self.usage.bandwidth.download = max(self.usage.bandwidth.download, 0) // prevent negative download value\n        \n        // drop one-shot counter jumps (e.g. on reconnect) that exceed what the link can physically deliver\n        let interval = self.interval ?? 1\n        let maxDelta: Int64 = {\n            if let rate = self.usage.interface?.transmitRate, rate > 0 {\n                return Int64(rate * 1_000_000 / 8 * 1.5 * interval) // 50% headroom over negotiated link rate\n            }\n            return Int64(2_000_000_000 * interval) // 16 Gbps fallback when link rate is unknown\n        }()\n        if self.usage.bandwidth.upload > maxDelta { self.usage.bandwidth.upload = 0 }\n        if self.usage.bandwidth.download > maxDelta { self.usage.bandwidth.download = 0 }\n        \n        self.usage.total.upload += self.usage.bandwidth.upload\n        self.usage.total.download += self.usage.bandwidth.download\n        \n        self.usage.status = self.reachability.isReachable\n        \n        if self.vpnConnection && self.VPNMode {\n            self.usage.bandwidth.upload /= 2\n            self.usage.bandwidth.download /= 2\n        }\n        \n        self.callback(self.usage)\n        \n        self.usage.bandwidth.upload = current.upload\n        self.usage.bandwidth.download = current.download"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 9491,
+              "start_position" : 7468
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "read",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var interfaceAddresses: UnsafeMutablePointer<ifaddrs>? = nil\n        var totalUpload: Int64 = 0\n        var totalDownload: Int64 = 0\n        guard getifaddrs(&interfaceAddresses) == 0 else {\n            return Bandwidth()\n        }\n        \n        var pointer = interfaceAddresses\n        while pointer != nil {\n            defer { pointer = pointer?.pointee.ifa_next }\n            guard let pointer = pointer else { break }\n            \n            if String(cString: pointer.pointee.ifa_name) != self.interfaceID {\n                continue\n            }\n            self.usage.interface?.status = (pointer.pointee.ifa_flags & UInt32(IFF_UP)) != 0\n            \n            if let wifiInterface = CWWiFiClient.shared().interface(withName: self.interfaceID) {\n                self.usage.interface?.transmitRate = wifiInterface.transmitRate()\n            } else if let raw = pointer.pointee.ifa_data {\n                let dataPtr = raw.assumingMemoryBound(to: if_data.self)\n                let ifData = dataPtr.pointee\n                let baud = UInt64(ifData.ifi_baudrate)\n                if baud > 0 {\n                    self.usage.interface?.transmitRate = Double(baud) / 1_000_000.0\n                }\n            }\n            \n            self.getLocalIP(pointer)\n            \n            if let info = self.getBytesInfo(pointer) {\n                totalUpload += info.upload\n                totalDownload += info.download\n            }\n        }\n        freeifaddrs(interfaceAddresses)\n        \n        return Bandwidth(upload: totalUpload, download: totalDownload)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 11138,
+              "start_position" : 9491
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readInterfaceBandwidth",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bandwidth"
+            },
+            "description" : "-> Bandwidth"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let task = Process()\n        task.launchPath = \"/usr/bin/nettop\"\n        task.arguments = [\"-P\", \"-L\", \"1\", \"-n\", \"-k\", \"time,interface,state,rx_dupe,rx_ooo,re-tx,rtt_avg,rcvsize,tx_win,tc_class,tc_mgt,cc_algo,P,C,R,W,arch\"]\n        task.environment = [\n            \"NSUnbufferedIO\": \"YES\",\n            \"LC_ALL\": \"en_US.UTF-8\"\n        ]\n        \n        let inputPipe = Pipe()\n        let outputPipe = Pipe()\n        let errorPipe = Pipe()\n        \n        defer {\n            inputPipe.fileHandleForWriting.closeFile()\n            outputPipe.fileHandleForReading.closeFile()\n            errorPipe.fileHandleForReading.closeFile()\n        }\n        \n        task.standardInput = inputPipe\n        task.standardOutput = outputPipe\n        task.standardError = errorPipe\n        \n        do {\n            try task.run()\n        } catch let err {\n            error(\"read bandwidth from processes: \\(err)\", log: self.log)\n            return Bandwidth()\n        }\n        \n        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()\n        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()\n        let output = String(data: outputData, encoding: .utf8)\n        _ = String(data: errorData, encoding: .utf8)\n        guard let output, !output.isEmpty else { return Bandwidth() }\n\n        var totalUpload: Int64 = 0\n        var totalDownload: Int64 = 0\n        var firstLine = false\n        output.enumerateLines { (line, _) in\n            if !firstLine {\n                firstLine = true\n                return\n            }\n            \n            let parsedLine = line.split(separator: \",\")\n            guard parsedLine.count >= 3 else {\n                return\n            }\n            \n            if let download = Int64(parsedLine[1]) {\n                totalDownload += download\n            }\n            if let upload = Int64(parsedLine[2]) {\n                totalUpload += upload\n            }\n        }\n        \n        return Bandwidth(upload: totalUpload, download: totalDownload)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 13236,
+              "start_position" : 11138
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readProcessBandwidth",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bandwidth"
+            },
+            "description" : "-> Bandwidth"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.interfaceID != \"\" else { return }\n        \n        let now = Date()\n        if now.timeIntervalSince(self.lastDetailsReadTS) < 15 { return }\n        \n        for interface in SCNetworkInterfaceCopyAll() as NSArray {\n            if let bsdName = SCNetworkInterfaceGetBSDName(interface as! SCNetworkInterface), bsdName as String == self.interfaceID,\n               let type = SCNetworkInterfaceGetInterfaceType(interface as! SCNetworkInterface),\n               let displayName = SCNetworkInterfaceGetLocalizedDisplayName(interface as! SCNetworkInterface),\n               let address = SCNetworkInterfaceGetHardwareAddressString(interface as! SCNetworkInterface) {\n                self.usage.interface = Network_interface(displayName: displayName as String, BSDName: bsdName as String, address: address as String)\n                \n                switch type {\n                case kSCNetworkInterfaceTypeEthernet:\n                    self.usage.connectionType = .ethernet\n                case kSCNetworkInterfaceTypeIEEE80211, kSCNetworkInterfaceTypeWWAN:\n                    self.usage.connectionType = .wifi\n                case kSCNetworkInterfaceTypeBluetooth:\n                    self.usage.connectionType = .bluetooth\n                default:\n                    self.usage.connectionType = .other\n                }\n            }\n        }\n        \n        if let prefs = SCPreferencesCreate(nil, \"Stats\" as CFString, nil), let services = SCNetworkServiceCopyAll(prefs) as? [SCNetworkService] {\n            for service in services {\n                if let interface = SCNetworkServiceGetInterface(service), let name = SCNetworkInterfaceGetBSDName(interface), name as String == self.interfaceID,\n                   let serviceID = SCNetworkServiceGetServiceID(service) {\n                    let key = \"State:/Network/Service/\\(serviceID)/DNS\" as CFString\n                    if let settings = SCDynamicStoreCopyValue(nil, key) as? [String: Any] {\n                        self.usage.dns = settings[\"ServerAddresses\"] as? [String] ?? []\n                    }\n                }\n            }\n        }\n        \n        guard self.usage.interface != nil else { return }\n        \n        if self.usage.wifiDetails.ssid != nil && (self.usage.wifiDetails.ssid == \"\" || self.usage.wifiDetails.ssid == \"<redacted>\") {\n            self.usage.wifiDetails.ssid = nil\n        }\n        \n        if self.usage.connectionType == .wifi && self.usage.wifiDetails.ssid == nil || self.usage.wifiDetails.ssid == \"\" {\n            self.getWiFiDetails()\n        }\n        \n        self.lastDetailsReadTS = Date()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 15890,
+              "start_position" : 13236
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "getDetails",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if let interface = CWWiFiClient.shared().interface(withName: self.interfaceID) {\n            if let ssid = interface.ssid() {\n                self.usage.wifiDetails.ssid = ssid\n            } else if let cfg = interface.configuration(),\n                      let set = (cfg.value(forKey: \"networkProfiles\") as? NSOrderedSet),\n                      let first = set.firstObject as? CWNetworkProfile,\n                      let raw = first.ssid, !raw.isEmpty {\n                self.usage.wifiDetails.ssid = raw.replacingOccurrences(of: \"’\", with: \"'\").replacingOccurrences(of: \"‘\", with: \"'\").trimmingCharacters(in: .whitespacesAndNewlines)\n            }\n            if let bssid = interface.bssid() {\n                self.usage.wifiDetails.bssid = bssid\n            }\n            if let cc = interface.countryCode() {\n                self.usage.wifiDetails.countryCode = cc\n            }\n            \n            self.usage.wifiDetails.RSSI = interface.rssiValue()\n            self.usage.wifiDetails.noise = interface.noiseMeasurement()\n            \n            self.usage.wifiDetails.standard = interface.activePHYMode().description\n            self.usage.wifiDetails.mode = interface.interfaceMode().description\n            self.usage.wifiDetails.security = interface.security().description\n            \n            if let ch = interface.wlanChannel() {\n                self.usage.wifiDetails.channel = ch.description\n                \n                self.usage.wifiDetails.channelBand = ch.channelBand.description\n                self.usage.wifiDetails.channelWidth = ch.channelWidth.description\n                self.usage.wifiDetails.channelNumber = ch.channelNumber.description\n            }\n        }\n        \n        if self.usage.wifiDetails.ssid == nil || self.usage.wifiDetails.ssid == \"\" {\n            guard let res = process(path: \"/usr/sbin/system_profiler\", arguments: [\"SPAirPortDataType\", \"-json\"]) else {\n                return\n            }\n            do {\n                if let json = try JSONSerialization.jsonObject(with: Data(res.utf8), options: []) as? [String: Any] {\n                    if let arr = json[\"SPAirPortDataType\"] as? [[String: Any]],\n                       let airport = arr.first(where: { $0[\"spairport_airport_interfaces\"] != nil }),\n                       let interfaces = airport[\"spairport_airport_interfaces\"] as? [[String: Any]],\n                       let interface = interfaces.first(where: { $0[\"_name\"] as? String == self.interfaceID }),\n                       let obj = interface[\"spairport_current_network_information\"] as? [String: Any] {\n                        \n                        self.usage.wifiDetails.ssid = obj[\"_name\"] as? String\n                        self.usage.wifiDetails.countryCode = obj[\"spairport_network_country_code\"] as? String\n                        self.usage.wifiDetails.standard = obj[\"spairport_network_phymode\"] as? String\n                    }\n                }\n            } catch let err as NSError {\n                error(\"error to parse system_profiler SPAirPortDataType: \\(err.localizedDescription)\")\n                return\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 19084,
+              "start_position" : 15890
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getWiFiDetails",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var addr = pointer.pointee.ifa_addr.pointee\n        guard addr.sa_family == UInt8(AF_INET) || addr.sa_family == UInt8(AF_INET6) else { return}\n        \n        var ip = [CChar](repeating: 0, count: Int(NI_MAXHOST))\n        getnameinfo(&addr, socklen_t(addr.sa_len), &ip, socklen_t(ip.count), nil, socklen_t(0), NI_NUMERICHOST)\n        \n        let ipStr = String(cString: ip)\n        if addr.sa_family == UInt8(AF_INET) && !ipStr.isEmpty {\n            self.usage.laddr.v4 = ipStr\n        } else if addr.sa_family == UInt8(AF_INET6) && !ipStr.isEmpty {\n            self.usage.laddr.v6 = ipStr\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 19777,
+              "start_position" : 19084
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getLocalIP",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UnsafeMutablePointer<ifaddrs>"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Net/readers.swift",
+                "location" : {
+                  "end_position" : 19158,
+                  "start_position" : 19118
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "pointer",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.publicIPState else { return }\n        \n        struct Addr_s: Decodable {\n            let ipv4: String?\n            let ipv6: String?\n            let country: String?\n        }\n        \n        DispatchQueue.global(qos: .userInitiated).async {\n            let response = syncShell(\"curl -s -4 https://api.mac-stats.com/ip\")\n            if !response.isEmpty, let data = response.data(using: .utf8),\n               let addr = try? JSONDecoder().decode(Addr_s.self, from: data) {\n                if let ip = addr.ipv4, self.isIPv4(ip) {\n                    self.usage.raddr.v4 = ip\n                }\n                if let countryCode = addr.country {\n                    self.usage.raddr.countryCode = countryCode\n                }\n            }\n        }\n        DispatchQueue.global(qos: .userInitiated).async {\n            let response = syncShell(\"curl -s -6 https://api.mac-stats.com/ip\")\n            if !response.isEmpty, let data = response.data(using: .utf8),\n               let addr = try? JSONDecoder().decode(Addr_s.self, from: data) {\n                if let ip = addr.ipv6, !self.isIPv4(ip) {\n                    self.usage.raddr.v6 = ip\n                }\n                if let countryCode = addr.country {\n                    self.usage.raddr.countryCode = countryCode\n                }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 21163,
+              "start_position" : 19777
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getPublicIP",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let addrPtr = pointer.pointee.ifa_addr, addrPtr.pointee.sa_family == UInt8(AF_LINK) else {\n            return nil\n        }\n        guard let raw = pointer.pointee.ifa_data else { return nil }\n        let data = raw.assumingMemoryBound(to: if_data.self)\n        return (upload: Int64(data.pointee.ifi_obytes), download: Int64(data.pointee.ifi_ibytes))"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 21651,
+              "start_position" : 21163
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getBytesInfo",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UnsafeMutablePointer<ifaddrs>"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Net/readers.swift",
+                "location" : {
+                  "end_position" : 21239,
+                  "start_position" : 21199
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "pointer",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "(upload: Int64, download: Int64)?"
+            },
+            "description" : "-> (upload: Int64, download: Int64)?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let arr = ip.split(separator: \".\").compactMap{ Int($0) }\n        return arr.count == 4 && arr.filter{ $0 >= 0 && $0 < 256}.count == 4"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 21852,
+              "start_position" : 21651
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isIPv4",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Net/readers.swift",
+                "location" : {
+                  "end_position" : 21693,
+                  "start_position" : 21681
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ip",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "self.usage.raddr.v4 = nil\n        self.usage.raddr.v6 = nil\n        \n        DispatchQueue.global(qos: .background).async {\n            self.getPublicIP()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 22071,
+              "start_position" : 21852
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "refreshPublicIP",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let cal = Calendar.current\n        switch self.usageResetInterval {\n        case .oncePerDay:\n            return cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: date))\n        case .oncePerWeek:\n            guard let start = cal.dateInterval(of: .weekOfYear, for: date)?.start else { return nil }\n            return cal.date(byAdding: .weekOfYear, value: 1, to: start)\n        case .oncePerMonth:\n            guard let start = cal.dateInterval(of: .month, for: date)?.start else { return nil }\n            return cal.date(byAdding: .month, value: 1, to: start)\n        default:\n            return nil\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 22773,
+              "start_position" : 22071
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "nextUsageReset",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Date"
+              },
+              "is_variadic" : false,
+              "label" : "after",
+              "location_info" : {
+                "file_path" : "Modules/Net/readers.swift",
+                "location" : {
+                  "end_position" : 22125,
+                  "start_position" : 22109
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "date",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "Date?"
+            },
+            "description" : "-> Date?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "switch self.usageResetInterval {\n        case .oncePerDay, .oncePerWeek, .oncePerMonth: break\n        default: return\n        }\n        \n        guard let next = self.nextUsageResetDate else {\n            self.nextUsageResetDate = self.nextUsageReset(after: Date())\n            return\n        }\n        \n        if Date() >= next {\n            self.resetTotalNetworkUsage()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 23213,
+              "start_position" : 22773
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "checkUsageReset",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "self.usage.total = Bandwidth()\n        self.save(self.usage)\n        self.nextUsageResetDate = self.nextUsageReset(after: Date())"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 23404,
+              "start_position" : 23213
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "resetTotalNetworkUsage",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            try self.wifiClient.startMonitoringEvent(with: .ssidDidChange)\n        } catch let err as NSError {\n            error(\"failed to start monitoring Wi-Fi events: \\(err.localizedDescription)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 23689,
+              "start_position" : 23404
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "startListeningForWifiEvents",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            try self.wifiClient.stopMonitoringEvent(with: .ssidDidChange)\n        } catch let err as NSError {\n            error(\"failed to stop monitoring Wi-Fi events: \\(err.localizedDescription)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 23971,
+              "start_position" : 23689
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stopListeningForWifiEvents",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.getWiFiDetails()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 24092,
+              "start_position" : 23971
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "ssidDidChangeForWiFiInterface",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "withName",
+              "location_info" : {
+                "file_path" : "Modules/Net/readers.swift",
+                "location" : {
+                  "end_position" : 24053,
+                  "start_position" : 24023
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "interfaceName",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var addrs: UnsafeMutablePointer<ifaddrs>? = nil\n        guard getifaddrs(&addrs) == 0, let first = addrs else { return false }\n        defer { freeifaddrs(addrs) }\n        \n        var ptr = first\n        while true {\n            let name = String(cString: ptr.pointee.ifa_name)\n            if name == ifName {\n                return (ptr.pointee.ifa_flags & UInt32(IFF_UP)) != 0\n            }\n            if let next = ptr.pointee.ifa_next {\n                ptr = next\n            } else {\n                break\n            }\n        }\n        return false"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 24728,
+              "start_position" : 24092
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isInterfaceUp",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Net/readers.swift",
+                "location" : {
+                  "end_position" : 24145,
+                  "start_position" : 24129
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ifName",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Net/readers.swift",
+        "location" : {
+          "end_position" : 24730,
+          "start_position" : 3254
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "UsageReader",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Reachability"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "start",
+                      "value" : "true"
+                    }
+                  ],
+                  "call" : "Reachability",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Net/readers.swift",
+                    "location" : {
+                      "end_position" : 3395,
+                      "start_position" : 3370
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 3395,
+              "start_position" : 3341
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reachability"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "label",
+                      "value" : "\"eu.exelban.NetworkUsageReader\""
+                    }
+                  ],
+                  "call" : "DispatchQueue",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Net/readers.swift",
+                    "location" : {
+                      "end_position" : 3482,
+                      "start_position" : 3429
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 3482,
+              "start_position" : 3412
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "variablesQueue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Network_Usage"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "Network_Usage",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Net/readers.swift",
+                    "location" : {
+                      "end_position" : 3538,
+                      "start_position" : 3523
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 3538,
+              "start_position" : 3499
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_usage"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "self.variablesQueue.sync { self._usage }"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "self.variablesQueue.sync { self._usage = newValue }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Network_Usage"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 3707,
+              "start_position" : 3554
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "usage"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "if let global = SCDynamicStoreCopyValue(nil, \"State:/Network/Global/IPv4\" as CFString), let name = global[\"PrimaryInterface\"] as? String {\n                return name\n            }\n            return \"\""
+              },
+              "modifier" : "get"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 4000,
+              "start_position" : 3729
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "primaryInterface"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.string(key: \"Network_interface\", defaultValue: self.primaryInterface)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "Store.shared.set(key: \"Network_interface\", value: newValue)"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 4224,
+              "start_position" : 4022
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "interfaceID"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.string(key: \"Network_reader\", defaultValue: \"interface\")"
+              },
+              "modifier" : "get"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 4354,
+              "start_position" : 4246
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reader"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "if let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any], let scopes = settings[\"__SCOPED__\"] as? [String: Any] {\n            return !scopes.filter({ $0.key.contains(\"tap\") || $0.key.contains(\"tun\") || $0.key.contains(\"ppp\") || $0.key.contains(\"ipsec\") || $0.key.contains(\"ipsec0\")}).isEmpty\n        }\n        return false"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 4769,
+              "start_position" : 4376
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "vpnConnection"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.bool(key: \"Network_VPNMode\", defaultValue: false)"
+              },
+              "modifier" : "get"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 4891,
+              "start_position" : 4791
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "VPNMode"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.bool(key: \"Network_publicIP\", defaultValue: true)"
+              },
+              "modifier" : "get"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 5014,
+              "start_position" : 4908
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "publicIPState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "AppUpdateInterval?"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "AppUpdateInterval(rawValue: Store.shared.string(key: \"Network_usageReset\", defaultValue: AppUpdateInterval.never.rawValue))"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 5214,
+              "start_position" : 5036
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usageResetInterval"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "let ts = Store.shared.int(key: \"Network_usageReset_next\", defaultValue: 0)\n            return ts == 0 ? nil : Date(timeIntervalSince1970: TimeInterval(ts))"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "if let newValue {\n                Store.shared.set(key: \"Network_usageReset_next\", value: Int(newValue.timeIntervalSince1970))\n            } else {\n                Store.shared.remove(\"Network_usageReset_next\")\n            }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Date?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 5717,
+              "start_position" : 5231
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "nextUsageResetDate"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "shared",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Net/readers.swift",
+                    "location" : {
+                      "end_position" : 5773,
+                      "start_position" : 5752
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 5773,
+              "start_position" : 5739
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "wifiClient"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Date"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "distantPast"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/readers.swift",
+            "location" : {
+              "end_position" : 5833,
+              "start_position" : 5795
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lastDetailsReadTS"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 21,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Net/readers.swift"
+  ]
+}

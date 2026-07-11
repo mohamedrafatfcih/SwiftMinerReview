@@ -1,0 +1,138 @@
+{
+  "caseID" : "case-1efea0c9a91b18b44cfe4158",
+  "commitHash" : "dc71baf4f1c263ceb419fc306e926a2bb3081c0b",
+  "commitMessage" : "Add Upload Progress Test (#3765)\n\n### Issue Link :link:\r\n#3722\r\n\r\n### Goals :soccer:\r\nThis PR adds a test to show that intermediate upload progress values are\r\nproperly received.\r\n\r\nOne this I noticed here is that, when multiple progress values are\r\nissued, it's not guaranteed that there's a final 100% progress value.\r\n\r\n### Testing Details :mag:\r\nThis test uploads from a stream with a delay between each buffer to\r\nensure that `URLSession` properly issues at least 2 upload progress\r\ncallbacks.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/dc71baf4f1c263ceb419fc306e926a2bb3081c0b",
+  "durationSeconds" : 2.089745044708252,
+  "entityNames" : [
+    "BaseTestCase",
+    "UploadConcurrencyTests",
+    "testThatDelayedUploadStreamResultsInMultipleProgressValues"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "BaseTestCase"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let count = 75\n        let baseString = \"Lorem ipsum dolor sit amet, consectetur adipiscing elit. \"\n        let baseData = Data(baseString.utf8)\n        var request = Endpoint.upload.urlRequest\n        request.headers.add(name: \"Content-Length\", value: \"\\(baseData.count * count)\")\n        let expectation = expectation(description: \"Bytes upload progress should be reported: \\(request.url!)\")\n\n        var uploadProgressValues: [Double] = []\n        var downloadProgressValues: [Double] = []\n\n        var response: DataResponse<UploadResponse, AFError>?\n\n        var inputStream: InputStream!\n        var outputStream: OutputStream!\n        Stream.getBoundStreams(withBufferSize: baseData.count, inputStream: &inputStream, outputStream: &outputStream)\n        CFWriteStreamSetDispatchQueue(outputStream, .main)\n        outputStream.open()\n\n        // When\n        AF.upload(inputStream, with: request)\n            .uploadProgress { progress in\n                uploadProgressValues.append(progress.fractionCompleted)\n            }\n            .downloadProgress { progress in\n                downloadProgressValues.append(progress.fractionCompleted)\n            }\n            .responseDecodable(of: UploadResponse.self) { resp in\n                response = resp\n                expectation.fulfill()\n                inputStream.close()\n            }\n\n        func sendData() {\n            baseData.withUnsafeBytes { (pointer: UnsafeRawBufferPointer) in\n                let bytesStreamed = outputStream.write(pointer.baseAddress!, maxLength: baseData.count)\n                switch bytesStreamed {\n                case baseData.count:\n                    // Successfully sent.\n                    break\n                case 0:\n                    XCTFail(\"outputStream somehow reached end\")\n                case -1:\n                    if let streamError = outputStream.streamError {\n                        XCTFail(\"outputStream.write failed with error: \\(streamError)\")\n                    } else {\n                        XCTFail(\"outputStream.write failed with unknown error\")\n                    }\n                default:\n                    XCTFail(\"outputStream failed to send \\(baseData.count) bytes, sent \\(bytesStreamed) instead.\")\n                }\n            }\n        }\n\n        for _ in 0..<count {\n            sendData()\n\n            try await Task.sleep(nanoseconds: 3 * 1_000_000) // milliseconds\n        }\n\n        outputStream.close()\n\n        await fulfillment(of: [expectation], timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNotNil(response?.data)\n        XCTAssertNil(response?.error)\n\n        for (progress, nextProgress) in zip(uploadProgressValues, uploadProgressValues.dropFirst()) {\n            XCTAssertGreaterThanOrEqual(nextProgress, progress)\n        }\n\n        XCTAssertGreaterThan(uploadProgressValues.count, 1, \"there should more than 1 uploadProgressValues\")\n\n        for (progress, nextProgress) in zip(downloadProgressValues, downloadProgressValues.dropFirst()) {\n            XCTAssertGreaterThanOrEqual(nextProgress, progress)\n        }\n\n        XCTAssertEqual(downloadProgressValues.last, 1.0, \"last item in downloadProgressValues should equal 1.0\")\n        XCTAssertEqual(response?.value?.bytes, baseData.count * count)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ConcurrencyTests.swift",
+            "location" : {
+              "end_position" : 21535,
+              "start_position" : 18067
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDelayedUploadStreamResultsInMultipleProgressValues",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/ConcurrencyTests.swift",
+        "location" : {
+          "end_position" : 21537,
+          "start_position" : 17961
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "UploadConcurrencyTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 0,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/ConcurrencyTests.swift"
+  ]
+}

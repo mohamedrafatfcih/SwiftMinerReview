@@ -139,21 +139,9 @@
     });
   }
 
-  function initializeCasesPage() {
-    const rows = Array.from(document.querySelectorAll("tbody tr"));
-    const reviews = storedReviews();
-    updateProgress(rows.length);
-    for (const row of rows) {
-      const reviewed = Boolean(reviews[row.dataset.caseId]);
-      row.dataset.reviewed = String(reviewed);
-      const status = row.querySelector("[data-review-status]");
-      if (status) {
-        status.textContent = reviewed ? "Reviewed" : "Not reviewed";
-        status.classList.toggle("is-reviewed", reviewed);
-      }
-      for (const link of row.querySelectorAll("[data-case-link]")) link.href = caseURL(row.dataset.caseId, row.dataset.runId);
-    }
-
+  async function initializeCasesPage() {
+    const tbody = document.querySelector("tbody");
+    const tableWrap = document.querySelector(".table-wrap");
     const search = document.getElementById("case-search");
     const repo = document.getElementById("repo-filter");
     const type = document.getElementById("type-filter");
@@ -164,55 +152,170 @@
     const next = document.getElementById("next-page");
     const pageIndicator = document.getElementById("page-indicator");
     const rangeSummary = document.getElementById("range-summary");
+    const toggles = Array.from(document.querySelectorAll(".column-toggle"));
+    const reviews = storedReviews();
+    let allCases = [];
     let page = 1;
+    let searchTimer = null;
 
-    function matchingRows() {
+    function escapeHTML(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function multilineHTML(value) {
+      const text = String(value || "").trim();
+      return text ? escapeHTML(text).replace(/\n/g, "<br>") : "—";
+    }
+
+    function formatDuration(value) {
+      return Number.isFinite(value) ? `${value.toFixed(3)}s` : "—";
+    }
+
+    function commitURL(reviewCase) {
+      if (!reviewCase.commitHash || !reviewCase.repoName) return "";
+      return `https://github.com/${reviewCase.repoName}/commit/${reviewCase.commitHash}`;
+    }
+
+    function applyColumnVisibility() {
+      for (const toggle of toggles) {
+        const checked = toggle.checked;
+        for (const cell of document.querySelectorAll(`[data-column="${toggle.dataset.column}"]`)) {
+          cell.hidden = !checked;
+        }
+      }
+    }
+
+    function rowHTML(reviewCase) {
+      const reviewed = Boolean(reviews[reviewCase.caseID]);
+      const reviewHref = escapeHTML(caseURL(reviewCase.caseID, reviewCase.runID));
+      const rawHref = `raw/${encodeURIComponent(reviewCase.caseID)}.json`;
+      const commitHref = commitURL(reviewCase);
+      const shortCommit = escapeHTML((reviewCase.commitHash || "").slice(0, 12));
+      const repository = escapeHTML(reviewCase.repoName);
+      const typeLabel = escapeHTML(reviewCase.refactoringType);
+      const statusLabel = reviewed ? "Reviewed" : "Not reviewed";
+      const statusClass = reviewed ? " is-reviewed" : "";
+      return `<tr data-case-id="${escapeHTML(reviewCase.caseID)}" data-run-id="${escapeHTML(reviewCase.runID)}" data-repository="${repository}" data-type="${typeLabel}" data-reviewed="${reviewed}">
+  <td data-column="case" data-label="Detection"><a class="case-link" data-case-link href="${reviewHref}">${escapeHTML(reviewCase.caseID)}</a></td>
+  <td data-column="repository" data-label="Repository"><span class="badge">${repository}</span></td>
+  <td data-column="commit" data-label="Commit">${commitHref ? `<a href="${escapeHTML(commitHref)}" target="_blank" rel="noopener">${shortCommit}</a>` : "—"}</td>
+  <td data-column="duration" data-label="Duration">${formatDuration(reviewCase.durationSeconds)}</td>
+  <td data-column="type" data-label="Type"><span class="badge badge--accent">${typeLabel}</span></td>
+  <td data-column="paths" data-label="Swift paths">${multilineHTML(reviewCase.swiftPathsText)}</td>
+  <td data-column="status" data-label="My status"><span class="status-badge${statusClass}" data-review-status>${statusLabel}</span></td>
+  <td data-column="raw" data-label="Actions"><div class="table-actions"><a data-case-link href="${reviewHref}">Review</a><a href="${escapeHTML(rawHref)}">JSON</a></div></td>
+</tr>`;
+    }
+
+    function renderRows(rows) {
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8"><div class="loading-card">No detections match the current filters.</div></td></tr>';
+        applyColumnVisibility();
+        return;
+      }
+      tbody.innerHTML = rows.map(rowHTML).join("");
+      applyColumnVisibility();
+    }
+
+    function populateSelect(select, values) {
+      select.length = 1;
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.append(option);
+      }
+    }
+
+    function matchingCases() {
       const query = search.value.trim().toLowerCase();
-      return rows.filter(row => (!query || row.textContent.toLowerCase().includes(query))
-          && (!repo.value || row.dataset.repository === repo.value)
-          && (!type.value || row.dataset.type === type.value)
-          && (!status.value || row.dataset.reviewed === status.value));
+      return allCases.filter(reviewCase => (!query || reviewCase.searchText.includes(query))
+        && (!repo.value || reviewCase.repoName === repo.value)
+        && (!type.value || reviewCase.refactoringType === type.value)
+        && (!status.value || String(Boolean(reviews[reviewCase.caseID])) === status.value));
     }
 
     function renderPage() {
-      const matches = matchingRows();
+      const matches = matchingCases();
       const pageSize = Number(pageSizeControl.value);
       const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
       page = Math.min(Math.max(page, 1), pageCount);
       const start = (page - 1) * pageSize;
       const end = Math.min(start + pageSize, matches.length);
-      const pageRows = new Set(matches.slice(start, end));
-      for (const row of rows) row.hidden = !pageRows.has(row);
-      visibleCount.textContent = matches.length;
+      renderRows(matches.slice(start, end));
+      visibleCount.textContent = matches.length.toLocaleString();
       rangeSummary.textContent = matches.length ? `Showing ${start + 1}–${end} of ${matches.length}` : "Showing 0 of 0";
       pageIndicator.textContent = `Page ${page} of ${pageCount}`;
-      previous.disabled = page === 1;
-      next.disabled = page === pageCount;
+      previous.disabled = page === 1 || !matches.length;
+      next.disabled = page === pageCount || !matches.length;
+      if (tableWrap) tableWrap.scrollTop = 0;
     }
 
     function resetAndRender() {
       page = 1;
       renderPage();
     }
-    [search, repo, type, status].forEach(control => control.addEventListener(control === search ? "input" : "change", resetAndRender));
-    pageSizeControl.addEventListener("change", resetAndRender);
-    previous.addEventListener("click", () => { page -= 1; renderPage(); });
-    next.addEventListener("click", () => { page += 1; renderPage(); });
-    document.getElementById("clear-filters")?.addEventListener("click", () => {
-      search.value = "";
-      repo.value = "";
-      type.value = "";
-      status.value = "";
-      resetAndRender();
-      search.focus();
-    });
-    for (const toggle of document.querySelectorAll(".column-toggle")) {
-      toggle.addEventListener("change", event => {
-        for (const cell of document.querySelectorAll('[data-column="' + event.target.dataset.column + '"]')) cell.hidden = !event.target.checked;
+
+    tbody.innerHTML = '<tr><td colspan="8"><div class="loading-card">Loading detections…</div></td></tr>';
+    rangeSummary.textContent = "Loading detections…";
+    pageIndicator.textContent = "Loading…";
+
+    try {
+      const response = await fetch("cases-index.json?v=1");
+      if (!response.ok) throw new Error("Unable to load detections.");
+      const loadedCases = await response.json();
+      allCases = loadedCases.map(reviewCase => ({
+        ...reviewCase,
+        searchText: [
+          reviewCase.caseID,
+          reviewCase.repoName,
+          reviewCase.commitHash,
+          reviewCase.refactoringType,
+          reviewCase.swiftPathsText,
+          reviewCase.entityNamesText
+        ].join(" ").toLowerCase()
+      }));
+
+      document.body.dataset.totalCases = String(allCases.length);
+      updateProgress(allCases.length);
+      visibleCount.textContent = allCases.length.toLocaleString();
+      populateSelect(repo, [...new Set(allCases.map(reviewCase => reviewCase.repoName))].sort((left, right) => left.localeCompare(right)));
+      populateSelect(type, [...new Set(allCases.map(reviewCase => reviewCase.refactoringType))].sort((left, right) => left.localeCompare(right)));
+
+      search.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(resetAndRender, 120);
       });
+      [repo, type, status].forEach(control => control.addEventListener("change", resetAndRender));
+      pageSizeControl.addEventListener("change", resetAndRender);
+      previous.addEventListener("click", () => { page -= 1; renderPage(); });
+      next.addEventListener("click", () => { page += 1; renderPage(); });
+      document.getElementById("clear-filters")?.addEventListener("click", () => {
+        search.value = "";
+        repo.value = "";
+        type.value = "";
+        status.value = "";
+        resetAndRender();
+        search.focus();
+      });
+      for (const toggle of toggles) toggle.addEventListener("change", applyColumnVisibility);
+
+      renderPage();
+    } catch (caught) {
+      tbody.innerHTML = '<tr><td colspan="8"><p class="error">Unable to load detections. Please refresh and try again.</p></td></tr>';
+      visibleCount.textContent = "0";
+      rangeSummary.textContent = "Unable to load detections";
+      pageIndicator.textContent = "Page 1 of 1";
+      previous.disabled = true;
+      next.disabled = true;
+      console.error(caught);
     }
-    renderPage();
   }
+
 
   function addMetadata(container, label, value, link) {
     const dt = document.createElement("dt");
@@ -280,144 +383,162 @@
     container.append(field);
   }
 
+  function detectorType(reviewCase) {
+    return reviewCase.rawRefactoring?.type || reviewCase.refactoringType || "Unknown refactoring";
+  }
+
+  function detectorSide(raw, side) {
+    return raw?.[side + "_content"] ?? raw?.[side === "old" ? "oldContent" : "currentContent"];
+  }
+
+  function valueAt(value, path) {
+    return path.split(".").reduce((current, key) => current == null ? undefined : current[key], value);
+  }
+
+  function firstValue(value, paths) {
+    for (const path of paths) {
+      const found = valueAt(value, path);
+      if (found != null && found !== "" && (!Array.isArray(found) || found.length)) return found;
+    }
+    return undefined;
+  }
+
+  function detectorFieldSpecs(type) {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized.includes("return type")) return [{ label: "Return type", paths: ["return_clause.description", "return_clause.data_type.name", "data_type.name"] }];
+    if (normalized.includes("generic clause")) return [{ label: "Generic clause", paths: ["generic_clause"] }];
+    if (normalized.includes("where clause")) return [{ label: "Where clause", paths: ["where_clause"] }];
+    if (normalized.includes("parameter")) return [{ label: "Parameter", paths: ["parameter", "parameters", "label", "name", "data_type.name"] }];
+    if (normalized.includes("function call arguments")) return [{ label: "Arguments", paths: ["arguments", "parameters"] }];
+    if (normalized.includes("datatype") || normalized.includes("type alias")) return [{ label: "Data type", paths: ["data_type.name", "typealias", "value", "name"] }];
+    if (normalized.includes("modifier")) return [{ label: "Modifiers", paths: ["modifiers"] }];
+    if (normalized.includes("attribute")) return [{ label: "Attributes", paths: ["attributes"] }];
+    return [];
+  }
+
+  function displayValue(value) {
+    if (value == null || value === "") return "Not provided";
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+    if (Array.isArray(value)) {
+      const rendered = value.map(displayValue).filter(item => item && item !== "Not provided");
+      return rendered.length ? rendered.join("\n") : "Not provided";
+    }
+    if (typeof value.description === "string") return value.description;
+    if (typeof value.content === "string") return value.content;
+    if (typeof value.value === "string") return value.value;
+    if (typeof value.name === "string" || value.data_type || value.dataType) return parameterSnippet(value);
+    const cleaned = cleanStructuredValue(value);
+    return cleaned ? JSON.stringify(cleaned, null, 2) : "Not provided";
+  }
+
+  function addCoreDetectorChanges(container, reviewCase) {
+    const raw = reviewCase.rawRefactoring || {};
+    const oldContent = detectorSide(raw, "old");
+    const currentContent = detectorSide(raw, "current");
+    if (!oldContent && !currentContent) return;
+
+    const specs = detectorFieldSpecs(detectorType(reviewCase));
+    for (const spec of specs) {
+      const before = firstValue(oldContent, spec.paths);
+      const after = firstValue(currentContent, spec.paths);
+      if (before != null || after != null) {
+        addDetectionChange(container, spec.label, before, after, displayValue);
+        return;
+      }
+    }
+
+    const fallback = [
+      { label: "Value", paths: ["value"] },
+      { label: "Data type", paths: ["data_type.name", "dataType.name"] },
+      { label: "Return type", paths: ["return_clause.description", "return_clause.data_type.name"] },
+      { label: "Generic clause", paths: ["generic_clause"] },
+      { label: "Where clause", paths: ["where_clause"] },
+      { label: "Parameters", paths: ["parameters"] },
+      { label: "Modifiers", paths: ["modifiers"] },
+      { label: "Attributes", paths: ["attributes"] }
+    ];
+    for (const spec of fallback) {
+      const before = firstValue(oldContent, spec.paths);
+      const after = firstValue(currentContent, spec.paths);
+      if ((before != null || after != null) && displayValue(before) !== displayValue(after)) {
+        addDetectionChange(container, spec.label, before, after, displayValue);
+        return;
+      }
+    }
+  }
+
   function renderDetectionSummary(reviewCase) {
     const raw = reviewCase.rawRefactoring || {};
-    const oldContent = raw.old_content ?? raw.oldContent;
-    const currentContent = raw.current_content ?? raw.currentContent;
     const fields = document.getElementById("detection-summary-fields");
-    addDetectionValue(fields, "Type", reviewCase.refactoringType);
+    fields.replaceChildren();
+    addDetectionValue(fields, "Type", detectorType(reviewCase));
     addDetectionValue(fields, "Category", readableCategory(raw.category));
-
     const functionName = raw.function_name ?? raw.functionName;
     addDetectionValue(fields, "Function", functionName);
-    if (!oldContent || !currentContent || typeof oldContent !== "object" || typeof currentContent !== "object") return;
-    const order = currentContent.order ?? oldContent.order;
-    if (Number.isInteger(order)) addDetectionValue(fields, "Parameter position", String(order + 1));
-    if ("label" in oldContent || "label" in currentContent) {
-      addDetectionChange(fields, "External label", oldContent.label, currentContent.label, readableLabel);
-    }
-    if ("name" in oldContent || "name" in currentContent) {
-      addDetectionChange(fields, functionName ? "Internal name" : "Name", oldContent.name, currentContent.name);
-    }
+    addCoreDetectorChanges(fields, reviewCase);
   }
 
-  function contentFor(raw, side) {
-    const value = raw?.rawRefactoring?.[side + "_content"] ?? raw?.rawRefactoring?.[side === "old" ? "oldContent" : "currentContent"];
-    if (value == null) return "No " + (side === "old" ? "before" : "after") + " payload for this detection.";
-    return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  function cleanStructuredValue(value) {
+    if (value == null) return null;
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+    if (Array.isArray(value)) {
+      const cleaned = value.map(cleanStructuredValue).filter(item => item != null && item !== "" && (!Array.isArray(item) || item.length) && (typeof item !== "object" || Object.keys(item).length));
+      return cleaned.length ? cleaned : null;
+    }
+    if (typeof value !== "object") return null;
+    const ignored = new Set(["attributes", "location", "location_info", "modifiers", "end_position", "start_position", "is_optional", "is_variadic"]);
+    const cleaned = {};
+    for (const [key, nested] of Object.entries(value)) {
+      if (ignored.has(key)) continue;
+      const reduced = cleanStructuredValue(nested);
+      if (reduced == null || reduced === "" || (Array.isArray(reduced) && !reduced.length) || (typeof reduced === "object" && !Array.isArray(reduced) && !Object.keys(reduced).length)) continue;
+      cleaned[key] = reduced;
+    }
+    return Object.keys(cleaned).length ? cleaned : null;
   }
 
-  function renderLocation(container, evidence) {
-    container.replaceChildren();
-    if (!evidence) {
-      container.textContent = "Structured detector evidence";
-      return;
-    }
-    const label = evidence.filePath + " · L" + evidence.focusedStartLine
-      + (evidence.focusedEndLine === evidence.focusedStartLine ? "" : "–L" + evidence.focusedEndLine);
-    if (evidence.sourceURL) {
-      const link = document.createElement("a");
-      link.href = evidence.sourceURL;
-      link.target = "_blank";
-      link.rel = "noopener";
-      link.textContent = label;
-      container.append(link);
-    } else container.textContent = label;
+  function parameterSnippet(value) {
+    if (value == null) return "";
+    if (typeof value !== "object") return String(value);
+    const label = typeof value.label === "string" && value.label && value.label !== "_" ? value.label + " " : "";
+    const name = typeof value.name === "string" ? value.name : "";
+    const typeName = typeof value.data_type?.name === "string"
+      ? value.data_type.name
+      : (typeof value.dataType?.name === "string" ? value.dataType.name : "");
+    if (name || typeName) return `${label}${name}${typeName ? `: ${typeName}` : ""}`.trim();
+    if (typeof value.value === "string") return value.value;
+    return structuredSnippet(value.value ?? value.expression ?? value.data_type ?? value.dataType ?? value.call ?? value.name ?? "");
   }
 
-  function renderSource(targetID, locationID, evidence, fallback) {
-    const code = document.getElementById(targetID).firstElementChild;
-    code.replaceChildren();
-    renderLocation(document.getElementById(locationID), evidence);
-    if (!evidence) {
-      code.textContent = fallback;
-      return;
+  function structuredSnippet(value) {
+    if (value == null) return "";
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+    if (Array.isArray(value)) {
+      const rendered = value.map(structuredSnippet).map(item => item.trim()).filter(Boolean);
+      return rendered.join(rendered.some(item => item.includes("\n")) ? "\n\n" : "\n");
     }
-    evidence.source.split("\n").forEach((text, index) => {
-      const lineNumber = evidence.contextStartLine + index;
-      const line = document.createElement("span");
-      line.className = "source-line";
-      line.dataset.line = lineNumber;
-      line.classList.toggle("is-focused", lineNumber >= evidence.focusedStartLine && lineNumber <= evidence.focusedEndLine);
-      line.textContent = text;
-      code.append(line);
-    });
-  }
-
-  function lineDiff(before, after) {
-    const oldLines = before.split("\n");
-    const newLines = after.split("\n");
-    if (oldLines.length * newLines.length > 200000) {
-      return oldLines.map(text => ({ type: "remove", text }))
-        .concat(newLines.map(text => ({ type: "add", text })));
+    if (typeof value !== "object") return "";
+    if (typeof value.value === "string") return value.value;
+    if (typeof value.call === "string") {
+      const args = Array.isArray(value.arguments) ? value.arguments.map(structuredSnippet).filter(Boolean).join(", ") : "";
+      return `${value.call}(${args})`;
     }
-    const table = Array.from({ length: oldLines.length + 1 }, () => new Uint32Array(newLines.length + 1));
-    for (let oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex -= 1) {
-      for (let newIndex = newLines.length - 1; newIndex >= 0; newIndex -= 1) {
-        table[oldIndex][newIndex] = oldLines[oldIndex] === newLines[newIndex]
-          ? table[oldIndex + 1][newIndex + 1] + 1
-          : Math.max(table[oldIndex + 1][newIndex], table[oldIndex][newIndex + 1]);
+    if (typeof value.name === "string") {
+      const params = Array.isArray(value.parameters) ? value.parameters.map(parameterSnippet).filter(Boolean).join(", ") : "";
+      return params ? `${value.name}(${params})` : value.name;
+    }
+    for (const key of ["expression", "expressions", "arguments", "cases", "elements", "items", "body", "statements", "members", "children", "target", "source"]) {
+      if (key in value) {
+        const rendered = structuredSnippet(value[key]);
+        if (rendered) return rendered;
       }
     }
-    const result = [];
-    let oldIndex = 0;
-    let newIndex = 0;
-    while (oldIndex < oldLines.length || newIndex < newLines.length) {
-      if (oldIndex < oldLines.length && newIndex < newLines.length && oldLines[oldIndex] === newLines[newIndex]) {
-        result.push({ type: "same", text: oldLines[oldIndex] });
-        oldIndex += 1;
-        newIndex += 1;
-      } else if (newIndex < newLines.length && (oldIndex === oldLines.length || table[oldIndex][newIndex + 1] > table[oldIndex + 1][newIndex])) {
-        result.push({ type: "add", text: newLines[newIndex++] });
-      } else {
-        result.push({ type: "remove", text: oldLines[oldIndex++] });
-      }
-    }
-    return result;
+    const cleaned = cleanStructuredValue(value);
+    return cleaned ? JSON.stringify(cleaned, null, 2) : "";
   }
 
-  function renderUnified(beforeText, afterText, beforeStart, afterStart) {
-    const code = document.getElementById("unified-content").firstElementChild;
-    code.replaceChildren();
-    let oldLine = beforeStart;
-    let newLine = afterStart;
-    for (const entry of lineDiff(beforeText, afterText)) {
-      const line = document.createElement("span");
-      line.className = "source-line diff-line diff-line--" + entry.type;
-      line.dataset.oldLine = entry.type === "add" ? "" : oldLine;
-      line.dataset.newLine = entry.type === "remove" ? "" : newLine;
-      line.dataset.prefix = entry.type === "add" ? "+" : (entry.type === "remove" ? "−" : " ");
-      line.textContent = entry.text;
-      code.append(line);
-      if (entry.type !== "add") oldLine += 1;
-      if (entry.type !== "remove") newLine += 1;
-    }
-  }
 
-  function initializeSourceView() {
-    const buttons = Array.from(document.querySelectorAll("[data-source-view]"));
-    for (const button of buttons) {
-      button.addEventListener("click", () => {
-        for (const candidate of buttons) candidate.setAttribute("aria-pressed", String(candidate === button));
-        for (const panel of document.querySelectorAll("[data-source-panel]")) panel.hidden = panel.dataset.sourcePanel !== button.dataset.sourceView;
-      });
-    }
-  }
 
-  function renderCaseEvidence(reviewCase) {
-    const before = reviewCase.beforeSource;
-    const after = reviewCase.afterSource;
-    const beforeText = before?.source ?? contentFor(reviewCase, "old");
-    const afterText = after?.source ?? contentFor(reviewCase, "current");
-    renderSource("old-content", "old-location", before, beforeText);
-    renderSource("current-content", "current-location", after, afterText);
-    document.getElementById("source-evidence-note").textContent = before && after
-      ? "Focused source lines are highlighted; three surrounding lines provide context."
-      : "A source excerpt was unavailable on one or both sides, so structured detector evidence is shown as a fallback.";
-    document.getElementById("unified-location").textContent = (before?.filePath || "Before") + " → " + (after?.filePath || "After");
-    renderUnified(beforeText, afterText, before?.contextStartLine || 1, after?.contextStartLine || 1);
-    initializeSourceView();
-  }
 
   async function initializeCasePage() {
     const caseID = params.get("case_id") || "";
@@ -434,18 +555,16 @@
       const response = await fetch("raw/" + encodeURIComponent(caseID) + ".json?v=2", { cache: "no-store" });
       if (!response.ok) throw new Error("Detection not found.");
       const reviewCase = await response.json();
-      document.title = reviewCase.refactoringType + " · SwiftMiner Review";
+      document.title = detectorType(reviewCase) + " · SwiftMiner Review";
       document.getElementById("case-id").textContent = reviewCase.caseID;
-      document.getElementById("case-type").textContent = reviewCase.refactoringType;
+      document.getElementById("case-type").textContent = detectorType(reviewCase);
       renderDetectionSummary(reviewCase);
-      renderCaseEvidence(reviewCase);
       document.getElementById("raw-json").firstElementChild.textContent = JSON.stringify(reviewCase.rawRefactoring, null, 2);
       const metadata = document.getElementById("case-metadata");
       addMetadata(metadata, "Repository", reviewCase.repoName || reviewCase.repoID, reviewCase.repoURL);
       addMetadata(metadata, "Commit", reviewCase.commitHash, reviewCase.commitURL);
       addMetadata(metadata, "Message", reviewCase.commitMessage);
       addMetadata(metadata, "Swift paths", (reviewCase.swiftPaths || []).join(", "));
-      addMetadata(metadata, "Entities", (reviewCase.entityNames || []).join(", "));
 
       const back = document.getElementById("back-link");
       back.href = "cases.html?reviewer_id=" + encodeURIComponent(reviewer);

@@ -1,0 +1,339 @@
+{
+  "caseID" : "case-c0f87f43305ae087575871a7",
+  "commitHash" : "4e8146009aa88908291a3c083493b073db34a40a",
+  "commitMessage" : "Update Infrastructure (#4017)\n\n### Goals :soccer:\nThis PR updates actions and dependencies.\n\nThis PR also fixes two issues:\n- A rare duplicate metrics crash seen when using `usesClassicLoadingMode\n= false`.\n- An extremely rare logic race between the creation of a `StreamOf` and\nthe start of iteration, where values could be lost.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/4e8146009aa88908291a3c083493b073db34a40a",
+  "durationSeconds" : 7.6937869787216187,
+  "entityNames" : [
+    "OfflineRetrierTests",
+    "offlineRetrierNeverStartsOrStopsWhenImmediatelyDeinited",
+    "requestIsNotRetriedWhenPathTimesOut",
+    "requestIsNotRetriedWhenTheErrorIsNotOfflineError",
+    "requestIsRetriedWhenConnectivityIsRestored",
+    "sessionWideRetrierCanRetryMultipleRequests",
+    "sessionWideRetrierCanRetryMultipleRequestsTwice",
+    "sessionWideRetrierCanTimeOutMultipleRequests"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "annotation" : {
+        "unsupported" : {
+          "_0" : "Suite"
+        }
+      },
+      "arguments" : [
+        {
+          "value" : "OfflineRetrierTests"
+        }
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : "OfflineRetrierTests"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let didStop = Protected(false)\n        let monitor = PathMonitor { queue, onResult in\n            queue.async {\n                onResult(.pathAvailable)\n            }\n        } stop: {\n            didStop.write(true)\n        }\n\n        // When: retrier considers error to be offline error.\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .milliseconds(100)) { _ in true }\n        // When: request fails due to error (type doesn't matter).\n        let request = AF.request(.endpoints(.status(404), .get), interceptor: retrier).validate()\n        let result = await request.serializingData().result\n\n        // Then: request is retried successfully.\n        #expect(result.isSuccess == true)\n        // Then: two tasks are created.\n        #expect(request.tasks.count == 2)\n        // Then: monitor is stopped.\n        #expect(didStop.value == true)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/OfflineRetrierTests.swift",
+            "location" : {
+              "end_position" : 1111,
+              "start_position" : 140
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestIsRetriedWhenConnectivityIsRestored",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let didStop = Protected(false)\n        let monitor = PathMonitor { queue, onResult in\n            queue.async {\n                onResult(.pathAvailable)\n            }\n        } stop: {\n            didStop.write(true)\n        }\n\n        // When\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .milliseconds(100))\n        // When: request fails due to validation.\n        let request = AF.request(.endpoints(.status(404), .get), interceptor: retrier).validate()\n        let result = await request.serializingData().result\n\n        // Then: request fails since validation failures aren't retried.\n        #expect(result.isSuccess == false)\n        // Then: only one task is created.\n        #expect(request.tasks.count == 1)\n        // Then: stop not called, as retrier isn't immediately deinit'd.\n        #expect(didStop.value == false)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/OfflineRetrierTests.swift",
+            "location" : {
+              "end_position" : 2076,
+              "start_position" : 1111
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestIsNotRetriedWhenTheErrorIsNotOfflineError",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let didStop = Protected(false)\n        let pathAvailable: Protected<DispatchWorkItem?> = .init(nil)\n        let monitor = PathMonitor { queue, onResult in\n            let work = DispatchWorkItem { onResult(.pathAvailable) }\n            pathAvailable.write(work)\n            // Given: path available after one second.\n            queue.asyncAfter(deadline: .now() + .seconds(1), execute: work)\n        } stop: {\n            pathAvailable.write { $0?.cancel() }\n            didStop.write(true)\n        }\n\n        // When: retrier times out after one millisecond.\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .milliseconds(1)) { _ in true }\n        // When: request fails due to validation but would succeed on retry.\n        let request = AF.request(.endpoints(.status(404), .get), interceptor: retrier).validate()\n        let result = await request.serializingData().result\n\n        // Then: request fails since it's not retried.\n        #expect(result.isSuccess == false)\n        // Then: only one task is created.\n        #expect(request.tasks.count == 1)\n        // Then: stop is called since timeout resets retrier.\n        #expect(didStop.value == true)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/OfflineRetrierTests.swift",
+            "location" : {
+              "end_position" : 3354,
+              "start_position" : 2076
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestIsNotRetriedWhenPathTimesOut",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let didStop = Protected(false)\n        let pathAvailable: Protected<DispatchWorkItem?> = .init(nil)\n        let monitor = PathMonitor { queue, onResult in\n            let work = DispatchWorkItem { onResult(.pathAvailable) }\n            pathAvailable.write(work)\n            // Given: path available after ten milliseconds.\n            queue.asyncAfter(deadline: .now() + .milliseconds(10), execute: work)\n        } stop: {\n            pathAvailable.write { $0?.cancel() }\n            didStop.write(true)\n        }\n\n        // When\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .milliseconds(500)) { _ in true }\n        let session = Session(interceptor: retrier)\n        // When: multiple requests are started which initially fail due to validation.\n        async let first = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let second = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let third = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let fourth = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n\n        // Then: all requests succeed after retry.\n        await #expect(first.isSuccess == true)\n        await #expect(second.isSuccess == true)\n        await #expect(third.isSuccess == true)\n        await #expect(fourth.isSuccess == true)\n        // Then: monitor has stopped due to `Session` deinit.\n        #expect(didStop.value == true)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/OfflineRetrierTests.swift",
+            "location" : {
+              "end_position" : 5015,
+              "start_position" : 3354
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "sessionWideRetrierCanRetryMultipleRequests",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let didStop = Protected(false)\n        let pathAvailable: Protected<DispatchWorkItem?> = .init(nil)\n        let monitor = PathMonitor { queue, onResult in\n            let work = DispatchWorkItem { onResult(.pathAvailable) }\n            pathAvailable.write(work)\n            // Given: path available after ten milliseconds.\n            queue.asyncAfter(deadline: .now() + .milliseconds(10), execute: work)\n        } stop: {\n            pathAvailable.write { $0?.cancel() }\n            didStop.write(true)\n        }\n\n        // When\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .milliseconds(500)) { _ in true }\n        let session = Session(interceptor: retrier)\n        // When: multiple requests are started which initially fail due to validation.\n        async let first = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let second = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let third = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let fourth = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n\n        // Then: all requests succeed after retry.\n        await #expect(first.isSuccess == true)\n        await #expect(second.isSuccess == true)\n        await #expect(third.isSuccess == true)\n        await #expect(fourth.isSuccess == true)\n\n        // When: another set of requests are started which initially fail due to validation.\n        async let fifth = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let sixth = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let seventh = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let eighth = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n\n        // Then: second set of requests succeed after retry.\n        await #expect(fifth.isSuccess == true)\n        await #expect(sixth.isSuccess == true)\n        await #expect(seventh.isSuccess == true)\n        await #expect(eighth.isSuccess == true)\n        // Then: monitor has stopped due to `Session` deinit.\n        #expect(didStop.value == true)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/OfflineRetrierTests.swift",
+            "location" : {
+              "end_position" : 7471,
+              "start_position" : 5015
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "sessionWideRetrierCanRetryMultipleRequestsTwice",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let didStop = Protected(false)\n        let pathAvailable: Protected<DispatchWorkItem?> = .init(nil)\n        let monitor = PathMonitor { queue, onResult in\n            let work = DispatchWorkItem { onResult(.pathAvailable) }\n            pathAvailable.write(work)\n            // Given: path available after one second.\n            queue.asyncAfter(deadline: .now() + .seconds(1), execute: work)\n        } stop: {\n            pathAvailable.write { $0?.cancel() }\n            didStop.write(true)\n        }\n\n        // When\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .milliseconds(10)) { _ in true }\n        let session = Session(interceptor: retrier)\n        // When: multiple requests are started which initially fail due to validation.\n        async let first = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let second = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let third = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n        async let fourth = session.request(.endpoints(.status(404), .get)).validate().serializingData().result\n\n        // Then: all requests succeed after retry.\n        await #expect(first.isSuccess == false)\n        await #expect(second.isSuccess == false)\n        await #expect(third.isSuccess == false)\n        await #expect(fourth.isSuccess == false)\n        // Then: monitor has stopped due to `Session` deinit.\n        #expect(didStop.value == true)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/OfflineRetrierTests.swift",
+            "location" : {
+              "end_position" : 9125,
+              "start_position" : 7471
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "sessionWideRetrierCanTimeOutMultipleRequests",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let didStart = Protected(false)\n        let didStop = Protected(false)\n        let monitor = PathMonitor { _, _ in\n            didStart.write(true)\n        } stop: {\n            didStop.write(true)\n        }\n\n        // When: retrier created with no start and long timeout.\n        let retrier = OfflineRetrier(monitor: monitor, maximumWait: .seconds(100))\n        // When: retrier is deinit'd.\n        _ = consume retrier\n\n        // Then: didStart is false.\n        #expect(didStart.value == false)\n        // Then: didStop is false.\n        #expect(didStop.value == false)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/OfflineRetrierTests.swift",
+            "location" : {
+              "end_position" : 9812,
+              "start_position" : 9125
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "offlineRetrierNeverStartsOrStopsWhenImmediatelyDeinited",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/OfflineRetrierTests.swift",
+        "location" : {
+          "end_position" : 9814,
+          "start_position" : 80
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "OfflineRetrierTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove attribute refactoring"
+  },
+  "refactoringIndex" : 21,
+  "refactoringType" : "Remove attribute refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/OfflineRetrierTests.swift"
+  ]
+}

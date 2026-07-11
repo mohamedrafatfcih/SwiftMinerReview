@@ -1,0 +1,490 @@
+{
+  "caseID" : "case-8a1290aead339e187dad0c83",
+  "commitHash" : "7358102c68c7a8e26ff6d534ef9cbcdff4ee573f",
+  "commitMessage" : "Fix system df to count content blobs and deduplicate shared storage (#1555)\n\n- Closes #1526 and #1527.\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nThis PR fixes `system df` to report actual on-disk allocated bytes\n(content blobs + snapshots) instead of summing per-image snapshot sizes.\nOrphaned blobs are now included as reclaimable, and storage shared\nacross tags is no longer double counted. Also consolidates three\nidentical `calculateDirectorySize` implementations into a shared\n`FileManager.allocatedSize(of:)` extension.\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/7358102c68c7a8e26ff6d534ef9cbcdff4ee573f",
+  "durationSeconds" : 6.2201160192489624,
+  "entityNames" : [
+    "() throws -> Void",
+    "CLITest",
+    "Decodable",
+    "DiskUsageStats",
+    "Int",
+    "ResourceUsage",
+    "TestCLISystemDF",
+    "UInt64"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialSuites"
+            },
+            {
+              "value" : ".serialized"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try withCleanImageStore {\n            try doPull(imageName: alpine)\n            let stats = try systemDiskUsage()\n            #expect(stats.images.total >= 1)\n            #expect(stats.images.active == 0)\n            #expect(stats.images.sizeInBytes > 0)\n            #expect(stats.images.reclaimable == stats.images.sizeInBytes)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+            "location" : {
+              "end_position" : 1657,
+              "start_position" : 1145
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "imageDiskUsageIsPopulatedAfterPull",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try withCleanImageStore {\n            try doPull(imageName: alpine)\n            let before = try systemDiskUsage()\n\n            try doImageTag(image: alpine, newName: \"local/system-df-alpine:tag-one\")\n            try doImageTag(image: alpine, newName: \"local/system-df-alpine:tag-two\")\n            let after = try systemDiskUsage()\n\n            #expect(after.images.total == before.images.total + 2)\n            #expect(after.images.sizeInBytes == before.images.sizeInBytes)\n            #expect(after.images.reclaimable == before.images.reclaimable)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+            "location" : {
+              "end_position" : 2369,
+              "start_position" : 1657
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "tagsDoNotDoubleCountImageStorage",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try withCleanImageStore {\n            let baseline = try systemDiskUsage()\n\n            try doPull(imageName: alpine)\n            try doImageTag(image: alpine, newName: \"local/system-df-alpine:delete-probe\")\n            let beforeDelete = try systemDiskUsage()\n\n            try doRemoveImages(images: [\"local/system-df-alpine:delete-probe\"])\n            let afterAliasDelete = try systemDiskUsage()\n\n            #expect(afterAliasDelete.images.total == beforeDelete.images.total - 1)\n            #expect(afterAliasDelete.images.sizeInBytes == beforeDelete.images.sizeInBytes)\n            #expect(afterAliasDelete.images.reclaimable == beforeDelete.images.reclaimable)\n\n            _ = try? run(arguments: [\"image\", \"rm\", \"--all\"])\n            let afterFullClean = try systemDiskUsage()\n            #expect(afterFullClean.images.total <= baseline.images.total)\n            #expect(afterFullClean.images.sizeInBytes <= baseline.images.sizeInBytes)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+            "location" : {
+              "end_position" : 3595,
+              "start_position" : 2369
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "deletingOneOfMultipleTagsPreservesSharedStorage",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "_ = try? run(arguments: [\"image\", \"rm\", \"--all\"])\n        defer {\n            _ = try? run(arguments: [\"image\", \"rm\", \"--all\"])\n        }\n        try body()"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+            "location" : {
+              "end_position" : 3840,
+              "start_position" : 3595
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "withCleanImageStore",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "() throws -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+                "location" : {
+                  "end_position" : 3659,
+                  "start_position" : 3634
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "body",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let (data, _, error, status) = try run(arguments: [\"system\", \"df\", \"--format\", \"json\"])\n        guard status == 0 else {\n            throw CLIError.executionFailed(\"system df failed: \\(error)\")\n        }\n        return try JSONDecoder().decode(DiskUsageStats.self, from: data)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+            "location" : {
+              "end_position" : 4194,
+              "start_position" : 3840
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "systemDiskUsage",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "DiskUsageStats"
+            },
+            "description" : "-> DiskUsageStats"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+        "location" : {
+          "end_position" : 4196,
+          "start_position" : 819
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "TestCLISystemDF",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Decodable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+            "location" : {
+              "end_position" : 981,
+              "start_position" : 894
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "DiskUsageStats",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ResourceUsage"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+                "location" : {
+                  "end_position" : 975,
+                  "start_position" : 954
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "images"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Decodable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+            "location" : {
+              "end_position" : 1145,
+              "start_position" : 981
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "ResourceUsage",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+                "location" : {
+                  "end_position" : 1052,
+                  "start_position" : 1041
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "active"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UInt64"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+                "location" : {
+                  "end_position" : 1084,
+                  "start_position" : 1065
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "reclaimable"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UInt64"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+                "location" : {
+                  "end_position" : 1116,
+                  "start_position" : 1097
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sizeInBytes"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift",
+                "location" : {
+                  "end_position" : 1139,
+                  "start_position" : 1129
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "total"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 47,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/System/TestCLISystemDF.swift"
+  ]
+}

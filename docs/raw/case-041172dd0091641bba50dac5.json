@@ -1,0 +1,84 @@
+{
+  "caseID" : "case-041172dd0091641bba50dac5",
+  "commitHash" : "0df0243b143bc1da71a7346ff5b940372d324a8d",
+  "commitMessage" : "ui: update settings sidebar tab buttons\n",
+  "commitURL" : "https://github.com/iina/iina/commit/0df0243b143bc1da71a7346ff5b940372d324a8d",
+  "durationSeconds" : 21.725386023521423,
+  "entityNames" : [
+    "viewDidLoad"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "description" : "closeSidebarBtnSizeConstraint = closeSidebarBtn.widthAnchor.constraint(equalToConstant: 28)",
+      "left_operand" : "closeSidebarBtnSizeConstraint",
+      "location_info" : {
+        "file_path" : "iina/QuickSettingViewController.swift",
+        "location" : {
+          "end_position" : 10442,
+          "start_position" : 10346
+        }
+      },
+      "operator_value" : "=",
+      "right_operand" : {
+        "function_call" : {
+          "_0" : {
+            "additional_trailing_closures" : [
+
+            ],
+            "arguments" : [
+              {
+                "label" : "equalToConstant",
+                "value" : "28"
+              }
+            ],
+            "call" : "constraint",
+            "has_self_reference" : false,
+            "internal_inline_calls" : [
+
+            ],
+            "location_info" : {
+              "file_path" : "iina/QuickSettingViewController.swift",
+              "location" : {
+                "end_position" : 10442,
+                "start_position" : 10383
+              }
+            }
+          }
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "super.viewDidLoad()\n\n    self.tabButtonsStackView = NSStackView()\n    tabButtonsStackView.translatesAutoresizingMaskIntoConstraints = false\n    tabButtonsStackView.orientation = .horizontal\n    view.addSubview(tabButtonsStackView)\n    topConstraint = tabButtonsStackView.topAnchor.constraint(equalTo: view.topAnchor)\n    topConstraint.isActive = true\n    tabButtonsLeadingConstraint = tabButtonsStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor)\n    tabButtonsLeadingConstraint.isActive = true\n    tabButtonsTrailingConstraint = view.trailingAnchor.constraint(equalTo: tabButtonsStackView.trailingAnchor)\n    tabButtonsTrailingConstraint.isActive = true\n    tabButtonsHeightConstraint = tabButtonsStackView.heightAnchor.constraint(equalToConstant: 64)\n    tabButtonsHeightConstraint.isActive = true\n\n    self.tabViewController = AnimatedTabViewController()\n    view.addSubview(tabViewController.view)\n\n    tabViewController.view.padding(.bottom, .horizontal)\n      .spacing(.top(1), to: tabButtonsStackView)\n\n    tabViewController.tabView.padding(.all)\n    tabViewController.tabView.wantsLayer = true\n\n    layoutTabScrollView = SidebarLayoutPane(player: player)\n\n    // set up the tab buttons\n\n    self.tabButtonsSegmentControl = NSSegmentedControl()\n    tabButtonsSegmentControl.segmentCount = 4\n\n    for config in tabConfig {\n      tabButtonsSegmentControl.setImage(config.1, forSegment: config.2)\n      tabButtonsSegmentControl.setTag(config.2, forSegment: config.2)\n    }\n    tabButtonsSegmentControl.target = self\n    tabButtonsSegmentControl.action = #selector(tabBtnSegmentControlAction(_:))\n\n    self.closeSidebarBtn = NSButton(\n      image: .sf(\"sidebar.squares.leading\")!,\n      target: self, action: #selector(dismissSidebar)\n    )\n    closeSidebarBtn.widthAnchor.constraint(equalTo: closeSidebarBtn.heightAnchor).isActive = true\n    closeSidebarBtnSizeConstraint = closeSidebarBtn.widthAnchor.constraint(equalToConstant: 28)\n    closeSidebarBtnSizeConstraint.isActive = true\n    if #available(macOS 26.0, *) {\n      if #available(macOS 27.0, *) {\n        closeSidebarBtn.bezelStyle = .glass\n        closeSidebarBtn.borderShape = .circle\n      } else {\n        closeSidebarBtn.bezelStyle = .circular\n      }\n    } else {\n      closeSidebarBtn.bezelStyle = .circular\n    }\n\n    func makeTabButton(_ title: String, image: NSImage?, tag: Int) -> NSButton {\n      let item = TabButton(title: title,\n                           target: self, action: #selector(tabBtnAction))\n      item.bezelStyle = .smallSquare\n      item.isBordered = false\n      if let image {\n        image.size = .init(width: 26, height: 18)\n        item.image = image\n        item.imageScaling = .scaleProportionallyUpOrDown\n        item.imagePosition = .imageAbove\n      }\n      item.font = .systemFont(ofSize: 11, weight: .regular)\n      item.tag = tag\n      return item\n    }\n\n    self.dismissBtn = NSButton(\n      image: .sf(\"chevron.forward\")!,\n      target: self, action: #selector(dismissSidebar(_:))\n    )\n    self.layoutTabBtn = makeTabButton(\"Layout\", image: .sf(\"paintpalette.fill\"), tag: 0)\n    self.videoTabBtn = makeTabButton(\"Video\", image: .tabVideo, tag: 1)\n    self.audioTabBtn = makeTabButton(\"Audio\", image: .tabAudio, tag: 2)\n    self.subTabBtn = makeTabButton(\"Subtitles\", image: .tabSub, tag: 3)\n\n    prefObserver.addAll(.compactUI, .sidebarSettingsDisplayAtLeading, runNow: true) {\n      [unowned self] key in\n      let compactUI = Preference.bool(for: .compactUI)\n      let isLeading = Preference.bool(for: .sidebarSettingsDisplayAtLeading)\n\n      let height: CGFloat = (compactUI && !isLeading) ? 48 : 52\n      tabButtonsHeightConstraint.constant = height\n\n      if #available(macOS 26.0, *), !compactUI {\n        tabButtonsSegmentControl.controlSize = .extraLarge\n      } else {\n        tabButtonsSegmentControl.controlSize = .large\n      }\n\n      closeSidebarBtnSizeConstraint.constant =  compactUI ? 28 : 36\n\n      if key == .sidebarSettingsDisplayAtLeading {\n        updateTabButtons()\n        updateTabActiveStatus()\n      }\n    }\n\n    // add pages\n\n    func createViewController(_ view: NSView) -> NSViewController {\n      let vc = NSViewController()\n      vc.view = view\n      return vc\n    }\n\n    let tabScrollViews = [layoutTabScrollView, videoTabScrollView, audioTabScrollView, subtitlesTabScrollView]\n\n    for view in tabScrollViews {\n      view?.horizontalScroll = self.switchTabByScroll(_:)\n      let viewItem = NSTabViewItem(viewController: createViewController(view!))\n      tabViewController.addTabViewItem(viewItem)\n    }\n    tabViewController.selectedTabViewItemIndex = TabViewType.video.buttonTag\n\n    withAllTableViews { (view, _) in\n      view.delegate = self\n      view.dataSource = self\n      view.superview?.superview?.layer?.cornerRadius = 4\n    }\n\n    // Color Wells\n    if #available(macOS 13.0, *) {\n      subTextColorWell = NSColorWell(style: .minimal)\n      subTextBgColorWell = NSColorWell(style: .minimal)\n      subTextBorderColorWell = NSColorWell(style: .minimal)\n    } else {\n      subTextColorWell = RoundedColorWell()\n      subTextBgColorWell = RoundedColorWell()\n      subTextBorderColorWell = RoundedColorWell()\n    }\n    [(subTextColorWellContainer, subTextColorWell),\n     (subTextBgColorWellContainer, subTextBgColorWell),\n     (subTextBorderColorWellContainer, subTextBorderColorWell)].forEach { (view, well) in\n      well.translatesAutoresizingMaskIntoConstraints = false\n      view.addSubview(well)\n      Utility.quickConstraints([\"H:|[v]|\", \"V:|[v]|\"], [\"v\": well])\n    }\n    \n    // Wire color wells to IBAction handlers\n    subTextColorWell.target = self\n    subTextColorWell.action = #selector(subTextColorAction(_:))\n\n    subTextBgColorWell.target = self\n    subTextBgColorWell.action = #selector(subTextBgColorAction(_:))\n\n    subTextBorderColorWell.target = self\n    subTextBorderColorWell.action = #selector(subTextBorderColorAction(_:))\n    \n    \n    if #available(macOS 26, *) {\n      subtitleSwitch.controlSize = .small\n      secondarySubtitleSwitch.controlSize = .small\n\n      speedSlider.neutralValue = 8\n      (audioEQSliders + videoEQSliders + [audioDelaySlider, subDelaySlider, subScaleSlider]).forEach {\n        $0.neutralValue = 0\n      }\n\n      subPosSlider.tintProminence = .none\n    }\n\n    // colors\n    withAllTableViews { tableView, _ in tableView.backgroundColor = NSColor.sidebarTableBackground }\n\n    if pendingSwitchRequest == nil {\n      updateTabActiveStatus()\n    } else {\n      switchToTab(pendingSwitchRequest!)\n      pendingSwitchRequest = nil\n    }\n\n    speedResetBtn.toolTip = NSLocalizedString(\"quicksetting.reset_speed\", comment: \"Reset speed to 1x\")\n\n    subLoadSegmentedControl.image(forSegment: 1)?.isTemplate = true\n    switchHorizontalLine.wantsLayer = true\n    switchHorizontalLine.layer?.opacity = 0.5\n    switchHorizontalLine2.wantsLayer = true\n    switchHorizontalLine2.layer?.opacity = 0.5\n\n    // Localize decimal format of numbers\n    speedSlider0_25xLabel.stringValue = \"\\(0.25.groupedStringUpTo6Decimals)x\"\n    speedSlider1xLabel.stringValue = \"1x\"\n    speedSlider4xLabel.stringValue = \"4x\"\n    speedSlider16xLabel.stringValue = \"16x\"\n\n    customSpeedTextField.formatter = speedFormatter\n\n    if let data = UserDefaults.standard.data(forKey: Preference.Key.userEQPresets.rawValue),\n       let dict = try? JSONDecoder().decode(Dictionary<String, EQProfile>.self, from: data) {\n      userEQs = dict\n    }\n\n    eqPopUpButton.menu!.delegate = self\n    presetEQs.forEach { preset in\n      eqPopUpButton.menu?.addItem(withTitle: preset.name, tag: eqPresetProfileMenuItemTag, obj: preset.localizationKey)\n    }\n    eqPopUpButton.selectItem(withTag: eqCustomMenuItemTag)\n    lastUsedProfileName = eqPopUpButton.selectedItem!.title\n\n    func observe(_ name: Notification.Name, block: @escaping (Notification) -> Void) {\n      observers.append(NotificationCenter.default.addObserver(forName: name, object: player, queue: .main, using: block))\n    }\n\n    // notifications\n    observe(.iinaTracklistChanged) { [unowned self] _ in\n      self.withAllTableViews { view, _ in view.reloadData() }\n    }\n    observe(.iinaVIDChanged) { [unowned self] _ in self.videoTableView.reloadData() }\n    observe(.iinaAIDChanged) { [unowned self] _ in self.audioTableView.reloadData() }\n    observe(.iinaSIDChanged) { [unowned self] _ in self.reload() }\n    observe(.iinaSecondSubVisibilityChanged) { [unowned self] _ in secHideSwitch.state = player.info.isSecondSubVisible ? .on : .off }\n    observe(.iinaSubVisibilityChanged) { [unowned self] _ in hideSwitch.state = player.info.isSubVisible ? .on : .off }"
+      },
+      "location_info" : {
+        "file_path" : "iina/QuickSettingViewController.swift",
+        "location" : {
+          "end_position" : 17088,
+          "start_position" : 8455
+        }
+      },
+      "modifiers" : [
+        "override"
+      ],
+      "name" : "viewDidLoad",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 70,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "iina-iina",
+  "repoName" : "iina/iina",
+  "repoURL" : "https://github.com/iina/iina.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "iina/QuickSettingViewController.swift"
+  ]
+}

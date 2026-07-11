@@ -1,0 +1,2129 @@
+{
+  "caseID" : "case-9a3aee83316e5aee6de027c5",
+  "commitHash" : "c37c405bbd181182732679eb4329f5dbf9accc78",
+  "commitMessage" : "Migrates container machine tests. (#1856)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/c37c405bbd181182732679eb4329f5dbf9accc78",
+  "durationSeconds" : 5.2414770126342773,
+  "entityNames" : [
+    "TestCLIMachineRuntimeSerial",
+    "machineImage",
+    "testAmd64PlatformSupported",
+    "testContainerExitState",
+    "testCreateAutoBoots",
+    "testCreateWithCpus",
+    "testCreateWithHomeMount",
+    "testCreateWithMemory"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialized"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let before = try f.doMachineInspect(name: name)\n            #expect(before.startedDate != nil, \"running machine should have startedDate\")\n\n            let output = try f.doMachineStop(name: name)\n            #expect(output == name, \"stop should output the machine name\")\n\n            let after = try f.doMachineInspect(name: name)\n            #expect(after.status == \"stopped\")\n            #expect(after.startedDate == nil, \"stopped machine should not have startedDate\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 2116,
+              "start_position" : 1208
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStopRunningMachine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            let output = try f.doMachineStop(name: name)\n            #expect(output == name, \"stop on already-stopped machine should succeed\")\n\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"stopped\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 2652,
+              "start_position" : 2116
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStopIdempotent",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"nonexistent-\\(f.testID)\"\n            let result = try f.runMachine([\"stop\", name])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"not found\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 2978,
+              "start_position" : 2652
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStopNonExistentMachine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"stopped\")\n            #expect(snapshot.startedDate == nil)\n            #expect(snapshot.id == name)\n            #expect(snapshot.image.reference.contains(\"alpine\"))\n            #expect(snapshot.createdDate != nil)\n            #expect(snapshot.ipAddress == nil)\n            #expect(snapshot.cpus > 0)\n            #expect(snapshot.memory > 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 3738,
+              "start_position" : 2978
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testInspectStoppedMachine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"running\")\n            #expect(snapshot.startedDate != nil)\n            #expect(snapshot.id == name)\n            #expect(snapshot.platform.os == \"linux\")\n            #expect(snapshot.ipAddress != nil)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 4441,
+              "start_position" : 3738
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testInspectRunningMachine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"nonexistent-\\(f.testID)\"\n            let result = try f.runMachine([\"inspect\", name])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"not found\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 4773,
+              "start_position" : 4441
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testInspectNonExistentMachine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let output = try f.doMachineRun(name: name, root: true, command: [\"echo\", \"hello\"])\n            #expect(output.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 5378,
+              "start_position" : 4773
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunSimpleCommand",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            let before = try f.doMachineInspect(name: name)\n            #expect(before.status == \"stopped\")\n\n            let output = try f.doMachineRun(name: name, root: true, command: [\"echo\", \"autoboot\"])\n            #expect(output.trimmingCharacters(in: .whitespacesAndNewlines) == \"autoboot\")\n\n            let after = try f.doMachineInspect(name: name)\n            #expect(after.status == \"running\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 6061,
+              "start_position" : 5378
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunAutoBoots",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let uid = try f.doMachineRun(name: name, root: true, command: [\"id\", \"-u\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(uid == \"0\", \"running with --root should execute as uid 0\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 6682,
+              "start_position" : 6061
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunAsRoot",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let hostUid = getuid()\n            let uid = try f.doMachineRun(name: name, command: [\"id\", \"-u\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(uid == \"\\(hostUid)\", \"default run should use host user's UID\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 7334,
+              "start_position" : 6682
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunAsHostUser",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let output = try f.doMachineRun(\n                name: name, root: true, env: [\"MY_VAR=hello_world\"],\n                command: [\"echo\", \"$MY_VAR\"])\n            #expect(output.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello_world\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 7985,
+              "start_position" : 7334
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunWithEnvironment",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let output = try f.doMachineRun(name: name, root: true, cwd: \"/tmp\", command: [\"pwd\"])\n            #expect(output.trimmingCharacters(in: .whitespacesAndNewlines) == \"/tmp\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 8560,
+              "start_position" : 7985
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunWithCwd",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"nonexistent-\\(f.testID)\"\n            let result = try f.runMachine([\"run\", \"-n\", name, \"echo\", \"test\"])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"not found\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 8906,
+              "start_position" : 8560
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunNonExistentMachine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let inspect = try f.doMachineInspect(name: name)\n            let ip = try #require(inspect.ipAddress, \"running machine should have an IP address\")\n\n            let output = try f.doMachineRun(name: name, root: true, command: [\"cat\", \"/etc/hosts\"])\n            let lines = output.split(separator: \"\\n\")\n            let expectedEntries = [(\"127.0.0.1\", \"localhost\"), (ip, name)]\n            for (i, line) in lines.enumerated() {\n                guard i < expectedEntries.count else { break }\n                let words = line.split(separator: \" \").map { String($0) }\n                #expect(words.count >= 2)\n                #expect(expectedEntries[i].0 == words[0])\n                #expect(expectedEntries[i].1 == words[1])\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 10056,
+              "start_position" : 8906
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunDefaultHostsEntries",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let output = try f.doMachineRun(name: name, root: true, command: [\"echo\", \"$0\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"/bin/sh\", \"alpine shell should expand $0 to /bin/sh\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 10696,
+              "start_position" : 10056
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandInShell",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"run\", \"-n\", name, \"--root\", \"exit\", \"42\"])\n            #expect(result.status == 42, \"exit code should propagate from command\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 11265,
+              "start_position" : 10696
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunCommandExitCode",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\n                \"run\", \"-n\", name, \"--root\",\n                \"-e\", \"VAR1=one\", \"-e\", \"VAR2=two\", \"-e\", \"VAR3=three\",\n                \"echo\", \"$VAR1-$VAR2-$VAR3\",\n            ])\n            #expect(result.status == 0)\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == \"one-two-three\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 12026,
+              "start_position" : 11265
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunMultipleEnvVars",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"run\", \"-n\", name, \"--uid\", \"1000\", \"id\", \"-u\"])\n            #expect(result.status == 0)\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == \"1000\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 12641,
+              "start_position" : 12026
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunWithUid",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"run\", \"-n\", name, \"--root\", \"--gid\", \"1000\", \"id\", \"-G\"])\n            #expect(result.status == 0)\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == \"0 1000\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 13268,
+              "start_position" : 12641
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunWithGid",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\n                \"run\", \"-n\", name, \"--user\", \"1000:1000\",\n                \"echo\", \"$(id -u):$(id -g)\",\n            ])\n            #expect(result.status == 0)\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == \"1000:1000\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 13963,
+              "start_position" : 13268
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunWithUserFlag",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let envFile = f.testDir.appending(\"test.env\")\n            try \"TEST_VAR=from_file\\n\".write(toFile: envFile.string, atomically: true, encoding: .utf8)\n\n            let result = try f.runMachine([\n                \"run\", \"-n\", name, \"--root\", \"--env-file\", envFile.string, \"echo\", \"$TEST_VAR\",\n            ])\n            #expect(result.status == 0)\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == \"from_file\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 14813,
+              "start_position" : 13963
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunWithEnvFile",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"ls\"]).check()\n            #expect(result.output.contains(name))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 15347,
+              "start_position" : 14813
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testListRunningMachines",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            let result = try f.runMachine([\"ls\"]).check()\n            #expect(result.output.contains(name), \"stopped machine should appear in list\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 15777,
+              "start_position" : 15347
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testListAllMachines",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"ls\", \"-q\"]).check()\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 16325,
+              "start_position" : 15777
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testListQuietMode",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"ls\", \"--format\", \"json\"]).check()\n            let decoder = JSONDecoder()\n            decoder.dateDecodingStrategy = .iso8601\n            let items = try decoder.decode([MachineListItem].self, from: result.outputData)\n            let item = items.first { $0.id == name }\n            try #require(item != nil)\n            #expect(item?.status == \"running\")\n            #expect(item?.ipAddress != nil)\n            #expect(item?.cpus ?? 0 > 0)\n            #expect(item?.memory ?? 0 > 0)\n            #expect(item?.createdDate != nil)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 17293,
+              "start_position" : 16325
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testListJsonFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            let result = try f.runMachine([\"set-default\", name]).check()\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == name)\n\n            let list = try f.runMachine([\"ls\"]).check()\n            #expect(list.output.contains(\"*\"), \"machine should be marked as default in list\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 17918,
+              "start_position" : 17293
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetDefault",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.runMachine([\"set-default\", \"nonexistent-\\(f.testID)\"])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"not found\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 18222,
+              "start_position" : 17918
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetDefaultNonExistent",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name1 = \"\\(f.testID)-m1\"\n            let name2 = \"\\(f.testID)-m2\"\n            f.addCleanup {\n                f.cleanupMachine(name1)\n                f.cleanupMachine(name2)\n            }\n            try f.doMachineCreate(name: name1, image: machineImage)\n            try f.doMachineCreate(name: name2, image: machineImage)\n\n            try f.runMachine([\"set-default\", name1]).check()\n            let result = try f.runMachine([\"set-default\", name2]).check()\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == name2)\n\n            let snapshot = try f.doMachineInspect()\n            #expect(snapshot.id == name2, \"inspect without ID should use the new default\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 19053,
+              "start_position" : 18222
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetDefaultSwitching",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.runMachine([\"set-default\", name]).check()\n\n            let snapshot = try f.doMachineInspect()\n            #expect(snapshot.id == name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 19490,
+              "start_position" : 19053
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testInspectUsesDefault",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.runMachine([\"set-default\", name]).check()\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"run\", \"--root\", \"echo\", \"default-test\"])\n            #expect(result.status == 0)\n            #expect(result.output.trimmingCharacters(in: .whitespacesAndNewlines) == \"default-test\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 20170,
+              "start_position" : 19490
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunUsesDefault",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let username = NSUserName()\n            let output = try f.doMachineRun(\n                name: name, root: true,\n                command: [\"cat\", \"/etc/sudoers.d/\\(username)\"]\n            )\n            .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"\\(username) ALL=(ALL) NOPASSWD:ALL\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 20943,
+              "start_position" : 20170
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testFirstBootCreatesSudoersEntry",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let uid1 = try f.doMachineRun(name: name, command: [\"id\", \"-u\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            let uid2 = try f.doMachineRun(name: name, command: [\"id\", \"-u\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(uid1 == uid2)\n            #expect(uid1 == \"\\(getuid())\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 21703,
+              "start_position" : 20943
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testUserSetupIdempotent",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let home = try f.doMachineRun(name: name, command: [\"echo\", \"$HOME\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(home == \"/home/\\(NSUserName())\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 22305,
+              "start_position" : 21703
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testHostUserHasCorrectHome",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            try f.runMachine([\"set\", \"--name\", name, \"cpus=4\"]).check()\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.cpus == 4)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 22778,
+              "start_position" : 22305
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetCpus",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            try f.runMachine([\"set\", \"--name\", name, \"memory=8G\"]).check()\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.memory == UInt64(8 * 1024 * 1024 * 1024))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 23261,
+              "start_position" : 22778
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetMemory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            try f.runMachine([\"set\", \"--name\", name, \"cpus=2\", \"memory=4G\"]).check()\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.cpus == 2)\n            #expect(snapshot.memory == UInt64(4 * 1024 * 1024 * 1024))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 23796,
+              "start_position" : 23261
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetMultiple",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            let result = try f.runMachine([\"set\", \"--name\", name, \"bogus=value\"])\n            #expect(result.status != 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 24197,
+              "start_position" : 23796
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetInvalidKey",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let result = try f.runMachine([\"set\", \"--name\", name, \"cpus=2\"])\n            #expect(result.status == 0)\n            #expect(result.error.contains(\"will take effect\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 24774,
+              "start_position" : 24197
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetRunningWarning",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            try f.runMachine([\"set\", \"--name\", name, \"home-mount=ro\"]).check()\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.homeMount == \"ro\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 25241,
+              "start_position" : 24774
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetHomeMount",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            let result = try f.runMachine([\"set\", \"--name\", name, \"home-mount=badvalue\"])\n            #expect(result.status != 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 25656,
+              "start_position" : 25241
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSetHomeMountInvalid",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage, extraArgs: [\"--cpus\", \"2\"])\n\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.cpus == 2)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 26107,
+              "start_position" : 25656
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateWithCpus",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage, extraArgs: [\"--cpus\", \"2\"])\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let guestCpus = try f.doMachineRun(name: name, root: true, command: [\"nproc\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(guestCpus == \"2\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 26738,
+              "start_position" : 26107
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testGuestCpuCountMatchesRequested",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage, extraArgs: [\"--memory\", \"2G\"])\n\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.memory == UInt64(2 * 1024 * 1024 * 1024))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 27184,
+              "start_position" : 26738
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateWithMemory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage, extraArgs: [\"--home-mount\", \"none\"])\n\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.homeMount == \"none\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 27618,
+              "start_position" : 27184
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateWithHomeMount",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            // Omit --no-boot so the machine boots automatically.\n            try f.runMachine([\"create\", \"--name\", name, machineImage]).check()\n\n            let snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"running\")\n            #expect(snapshot.startedDate != nil)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 28138,
+              "start_position" : 27618
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateAutoBoots",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(\n                name: name, image: \"alpine:3.22\",\n                extraArgs: [\"--platform\", \"linux/amd64\"])\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let arch = try f.doMachineRun(name: name, root: true, command: [\"uname\", \"-m\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(arch == \"x86_64\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 28811,
+              "start_position" : 28138
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testAmd64PlatformSupported",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n            try f.doMachineStop(name: name)\n\n            let boot = try f.runMachine([\"logs\", \"--boot\", name]).check()\n            #expect(!boot.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)\n\n            let stdio = try f.runMachine([\"logs\", name])\n            #expect(stdio.status == 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 29527,
+              "start_position" : 28811
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testLogs",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let boot = try f.runMachine([\"logs\", \"--boot\", name]).check()\n            #expect(!boot.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)\n\n            let stdio = try f.runMachine([\"logs\", name])\n            #expect(stdio.status == 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 30184,
+              "start_position" : 29527
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testLogsWhileRunning",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.runMachine([\"logs\", \"nonexistent-\\(f.testID)\"])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"not found\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 30482,
+              "start_position" : 30184
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testLogsNonExistentMachine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let inspect = try f.doMachineInspect(name: name)\n            let containerId = try #require(inspect.containerId)\n\n            let running = try f.run([\"ls\", \"-q\"]).check()\n            #expect(!running.output.contains(containerId))\n\n            let all = try f.run([\"ls\", \"-a\", \"-q\"]).check()\n            #expect(!all.output.contains(containerId))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 31304,
+              "start_position" : 30482
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testMachineNotInContainerList",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let inspect = try f.doMachineInspect(name: name)\n            let containerId = try #require(inspect.containerId)\n\n            try f.run([\"delete\", \"--all\"]).check()\n\n            let containerInspect = try f.inspectContainer(containerId)\n            #expect(\n                containerInspect.status.state == \"running\",\n                \"machine container should survive 'container delete --all'\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 32115,
+              "start_position" : 31304
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testMachineNotDeletedByRmAll",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let inspect = try f.doMachineInspect(name: name)\n            let containerId = try #require(inspect.containerId)\n\n            try f.run([\"kill\", \"--all\"]).check()\n\n            let containerInspect = try f.inspectContainer(containerId)\n            #expect(\n                containerInspect.status.state == \"running\",\n                \"machine container should survive 'container kill --all'\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 32923,
+              "start_position" : 32115
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testMachineNotKilledByKillAll",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let inspect = try f.doMachineInspect(name: name)\n            let containerId = try #require(inspect.containerId)\n\n            try f.run([\"stop\", \"--all\"]).check()\n\n            let containerInspect = try f.inspectContainer(containerId)\n            #expect(\n                containerInspect.status.state == \"running\",\n                \"machine container should survive 'container stop --all'\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 33732,
+              "start_position" : 32923
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testMachineNotStoppedByStopAll",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let inspect = try f.doMachineInspect(name: name)\n            let containerId = try #require(\n                inspect.containerId,\n                \"running machine should have a containerId\")\n\n            try f.doStop(containerId)\n            try await f.waitForMachineStatus(name, status: \"stopped\")\n\n            let after = try f.doMachineInspect(name: name)\n            #expect(after.status == \"stopped\")\n            #expect(after.containerId == nil)\n            #expect(after.startedDate == nil)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 34641,
+              "start_position" : 33732
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testContainerExitState",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n            try f.doMachineCreate(name: name, image: machineImage)\n\n            var snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"stopped\")\n\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n            snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"running\")\n\n            let output = try f.doMachineRun(name: name, root: true, command: [\"hostname\"])\n            #expect(!output.isEmpty)\n\n            try f.doMachineStop(name: name)\n            snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"stopped\")\n\n            try f.doMachineBoot(name: name)\n            try await f.waitForMachineStatus(name, status: \"running\")\n            snapshot = try f.doMachineInspect(name: name)\n            #expect(snapshot.status == \"running\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 35791,
+              "start_position" : 34641
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testFullLifecycle",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n\n            // sockaddr_un.sun_path is 104 bytes on macOS — use /tmp to keep\n            // the path short enough to fit regardless of the project directory depth.\n            let socketDir = \"/tmp/\\(f.testID)-ssh\"\n            try FileManager.default.createDirectory(\n                atPath: socketDir, withIntermediateDirectories: true)\n            f.addCleanup { try? FileManager.default.removeItem(atPath: socketDir) }\n            let socketPath = socketDir + \"/ssh-auth.sock\"\n\n            let serverFd = socket(AF_UNIX, SOCK_STREAM, 0)\n            guard serverFd >= 0 else {\n                Issue.record(\"socket() failed\")\n                return\n            }\n            defer { Darwin.close(serverFd) }\n\n            var addr = sockaddr_un()\n            addr.sun_family = sa_family_t(AF_UNIX)\n            withUnsafeMutableBytes(of: &addr.sun_path) { bytes in\n                socketPath.withCString { cStr in\n                    bytes.copyMemory(\n                        from: UnsafeRawBufferPointer(\n                            start: cStr, count: socketPath.utf8.count + 1))\n                }\n            }\n            let bindResult = withUnsafePointer(to: addr) { ptr in\n                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {\n                    bind(serverFd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))\n                }\n            }\n            guard bindResult == 0 else {\n                Issue.record(\"bind() failed\")\n                return\n            }\n            guard listen(serverFd, 5) == 0 else {\n                Issue.record(\"listen() failed\")\n                return\n            }\n\n            let acceptThread = Thread {\n                while true {\n                    let clientFd = accept(serverFd, nil, nil)\n                    if clientFd < 0 { break }\n                    Darwin.close(clientFd)\n                }\n            }\n            acceptThread.start()\n            try await Task.sleep(for: .seconds(1))\n\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.runMachine(\n                [\"run\", \"--root\", \"-n\", name, \"true\"],\n                env: [\"SSH_AUTH_SOCK\": socketPath]\n            ).check()\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let sockValue = try f.doMachineRun(\n                name: name, root: true,\n                command: [\"echo\", \"$SSH_AUTH_SOCK\"]\n            )\n            .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(sockValue == \"/var/host-services/ssh-auth.sock\")\n\n            let exists = try f.doMachineRun(\n                name: name, root: true,\n                command: [\n                    \"[ -S /var/host-services/ssh-auth.sock ]\", \"&&\", \"echo\", \"exists\", \"||\", \"echo\", \"missing\",\n                ]\n            ).trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(exists == \"exists\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 38923,
+              "start_position" : 35791
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSSHForwarding",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+        "location" : {
+          "end_position" : 38925,
+          "start_position" : 833
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIMachineRuntimeSerial",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "ghcr.io/linuxcontainers/alpine:3.20"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+            "location" : {
+              "end_position" : 1208,
+              "start_position" : 1156
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "machineImage"
+        }
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 19,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift"
+  ]
+}

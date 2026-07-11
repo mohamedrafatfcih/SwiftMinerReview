@@ -1,0 +1,130 @@
+{
+  "caseID" : "case-51f71c6640796a61e7115219",
+  "commitHash" : "7358102c68c7a8e26ff6d534ef9cbcdff4ee573f",
+  "commitMessage" : "Fix system df to count content blobs and deduplicate shared storage (#1555)\n\n- Closes #1526 and #1527.\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nThis PR fixes `system df` to report actual on-disk allocated bytes\n(content blobs + snapshots) instead of summing per-image snapshot sizes.\nOrphaned blobs are now included as reclaimable, and storage shared\nacross tags is no longer double counted. Also consolidates three\nidentical `calculateDirectorySize` implementations into a shared\n`FileManager.allocatedSize(of:)` extension.\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/7358102c68c7a8e26ff6d534ef9cbcdff4ee573f",
+  "durationSeconds" : 6.2201160192489624,
+  "entityNames" : [
+    "(totalCount: Int, activeCount: Int, totalSize: UInt64, reclaimableSize: UInt64)",
+    "Set<String>",
+    "activeReferences",
+    "activeSize",
+    "calculateDiskUsage",
+    "reclaimable"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "infix_expr" : {
+            "_0" : {
+              "description" : "totalOnDisk - activeSize",
+              "left_operand" : "totalOnDisk",
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerImagesService/Server/ImagesService.swift",
+                "location" : {
+                  "end_position" : 11619,
+                  "start_position" : 11594
+                }
+              },
+              "operator_value" : "-",
+              "right_operand" : {
+                "reference" : {
+                  "arguments" : [
+
+                  ],
+                  "name" : "activeSize"
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerImagesService/Server/ImagesService.swift",
+        "location" : {
+          "end_position" : 11622,
+          "start_position" : 11553
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "reclaimable"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "self.log.debug(\n            \"ImagesService: enter\",\n            metadata: [\n                \"func\": \"\\(#function)\",\n                \"references\": \"\\(activeReferences)\",\n            ]\n        )\n        defer {\n            self.log.debug(\n                \"ImagesService: exit\",\n                metadata: [\n                    \"func\": \"\\(#function)\",\n                    \"references\": \"\\(activeReferences)\",\n                ]\n            )\n        }\n\n        let images = try await self._list()\n        var activeCount = 0\n        var activeContentSizes: [String: UInt64] = [:]\n        var activeSnapshotSizes: [String: UInt64] = [:]\n        var processedDigests = Set<String>()\n\n        for image in images {\n            guard activeReferences.contains(image.reference) else { continue }\n            activeCount += 1\n            let imageDigest = image.digest.trimmingDigestPrefix\n            guard processedDigests.insert(imageDigest).inserted else { continue }\n\n            for digest in try await image.referencedDigests() where activeContentSizes[digest] == nil {\n                guard let content: Content = try await self.contentStore.get(digest: digest) else { continue }\n                activeContentSizes[digest] = try self.contentDiskSize(content)\n            }\n            for (digest, size) in try await self.snapshotStore.getSnapshotSizes(for: image) {\n                activeSnapshotSizes[digest] = size\n            }\n        }\n\n        let snapshotDiskSize = await self.snapshotStore.totalAllocatedSize()\n        let contentDiskTotal = try await self.contentStore.totalAllocatedSize()\n        let totalOnDisk = contentDiskTotal + snapshotDiskSize\n        let activeSize = activeContentSizes.values.reduce(0, +) + activeSnapshotSizes.values.reduce(0, +)\n        let reclaimable = totalOnDisk > activeSize ? totalOnDisk - activeSize : 0\n\n        return (images.count, activeCount, totalOnDisk, reclaimable)"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerImagesService/Server/ImagesService.swift",
+        "location" : {
+          "end_position" : 11698,
+          "start_position" : 9469
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "calculateDiskUsage",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Set<String>"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerImagesService/Server/ImagesService.swift",
+            "location" : {
+              "end_position" : 9668,
+              "start_position" : 9639
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "activeReferences",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "(totalCount: Int, activeCount: Int, totalSize: UInt64, reclaimableSize: UInt64)"
+        },
+        "description" : "-> (totalCount: Int, activeCount: Int, totalSize: UInt64, reclaimableSize: UInt64)"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 31,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerImagesService/Server/ImagesService.swift"
+  ]
+}

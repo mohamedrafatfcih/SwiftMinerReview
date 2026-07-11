@@ -1,0 +1,201 @@
+{
+  "caseID" : "case-6c30f5d94a40cf98b9e302a3",
+  "commitHash" : "822b47b8776e01659f931e4f4206a76349043d98",
+  "commitMessage" : "Fix --format yaml and toml output (#1653)\n\n- Closes #1528.\n- Several commands (`builder status`, `image list`,\n  `stats`, `system df`, `system status`) advertised\n  `--format yaml` and `--format toml` but only handled\n  `json`, and every other format fell through to the\n  table. With this PR, we now route them through one\n  shared renderer with an exhaustive switch over the\n  format enum, so a missing format would now be a\n  compile error, and not just fail silently.\n- Since TOML has no top level array, TOML output\n  now wraps list payloads under an `items` key,\n  because otherwise it was returning nothing for lists.\n- `stats` now prints one static result for machine\n  readable formats instead of opening its live table\n  view.\n- `builder status` now returns an empty list for\n  json/yaml/toml when no builder is running, instead \n  of the unparseable \"builder is not running\" text.\n  The table view keeps the message.\n- with `--quiet` and no builder it now exits 0 with\n  no output, earlier it exited non-zero.",
+  "commitURL" : "https://github.com/apple/container/commit/822b47b8776e01659f931e4f4206a76349043d98",
+  "durationSeconds" : 13.978502988815308,
+  "entityNames" : [
+    "noStream"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : [
+      {
+        "condition_value" : {
+          "comparison" : {
+            "_0" : {
+              "description" : "format != .table || noStream",
+              "left_operand" : "format != .table",
+              "location_info" : {
+                "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+                "location" : {
+                  "end_position" : 1767,
+                  "start_position" : 1738
+                }
+              },
+              "operator_value" : "||",
+              "right_operand" : {
+                "reference" : {
+                  "arguments" : [
+
+                  ],
+                  "name" : "noStream"
+                }
+              }
+            }
+          }
+        },
+        "location_info" : {
+          "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+          "location" : {
+            "end_position" : 1767,
+            "start_position" : 1738
+          }
+        }
+      }
+    ],
+    "current_parent" : {
+      "body" : {
+        "content" : "try await runStatic()"
+      },
+      "conditions" : [
+        {
+          "condition_value" : {
+            "comparison" : {
+              "_0" : {
+                "description" : "format != .table || noStream",
+                "left_operand" : "format != .table",
+                "location_info" : {
+                  "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+                  "location" : {
+                    "end_position" : 1767,
+                    "start_position" : 1738
+                  }
+                },
+                "operator_value" : "||",
+                "right_operand" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "noStream"
+                  }
+                }
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+            "location" : {
+              "end_position" : 1767,
+              "start_position" : 1738
+            }
+          }
+        }
+      ],
+      "description" : "if",
+      "else_stmt" : {
+        "body" : {
+          "content" : "print(\"\\u{001B}[?1049h\\u{001B}[?25l\", terminator: \"\")\n                fflush(stdout)\n\n                defer {\n                    // Exit alternate screen buffer and show cursor again\n                    print(\"\\u{001B}[?25h\\u{001B}[?1049l\", terminator: \"\")\n                    fflush(stdout)\n                }\n\n                let containerIds = containers\n                try await withThrowingTaskGroup(of: Void.self) { group in\n                    defer { group.cancelAll() }\n                    group.addTask {\n                        let handler = AsyncSignalHandler.create(notify: [SIGINT, SIGTERM])\n                        for await _ in handler.signals {\n                            throw CancellationError()\n                        }\n                    }\n                    group.addTask { [containerIds] in\n                        try await Self.runStreaming(containerIds: containerIds)\n                    }\n                    do {\n                        try await group.next()\n                    } catch is CancellationError {\n                        // Normal exit on signal, defer will restore the terminal\n                    }\n                }"
+        },
+        "description" : "else"
+      },
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+        "location" : {
+          "end_position" : 3211,
+          "start_position" : 1722
+        }
+      }
+    },
+    "old_content" : [
+      {
+        "condition_value" : {
+          "comparison" : {
+            "_0" : {
+              "description" : "format == .json || noStream",
+              "left_operand" : "format == .json",
+              "location_info" : {
+                "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+                "location" : {
+                  "end_position" : 1766,
+                  "start_position" : 1738
+                }
+              },
+              "operator_value" : "||",
+              "right_operand" : {
+                "reference" : {
+                  "arguments" : [
+
+                  ],
+                  "name" : "noStream"
+                }
+              }
+            }
+          }
+        },
+        "location_info" : {
+          "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+          "location" : {
+            "end_position" : 1766,
+            "start_position" : 1738
+          }
+        }
+      }
+    ],
+    "old_parent" : {
+      "body" : {
+        "content" : "try await runStatic()"
+      },
+      "conditions" : [
+        {
+          "condition_value" : {
+            "comparison" : {
+              "_0" : {
+                "description" : "format == .json || noStream",
+                "left_operand" : "format == .json",
+                "location_info" : {
+                  "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+                  "location" : {
+                    "end_position" : 1766,
+                    "start_position" : 1738
+                  }
+                },
+                "operator_value" : "||",
+                "right_operand" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "noStream"
+                  }
+                }
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+            "location" : {
+              "end_position" : 1766,
+              "start_position" : 1738
+            }
+          }
+        }
+      ],
+      "description" : "if",
+      "else_stmt" : {
+        "body" : {
+          "content" : "print(\"\\u{001B}[?1049h\\u{001B}[?25l\", terminator: \"\")\n                fflush(stdout)\n\n                defer {\n                    // Exit alternate screen buffer and show cursor again\n                    print(\"\\u{001B}[?25h\\u{001B}[?1049l\", terminator: \"\")\n                    fflush(stdout)\n                }\n\n                let containerIds = containers\n                try await withThrowingTaskGroup(of: Void.self) { group in\n                    defer { group.cancelAll() }\n                    group.addTask {\n                        let handler = AsyncSignalHandler.create(notify: [SIGINT, SIGTERM])\n                        for await _ in handler.signals {\n                            throw CancellationError()\n                        }\n                    }\n                    group.addTask { [containerIds] in\n                        try await Self.runStreaming(containerIds: containerIds)\n                    }\n                    do {\n                        try await group.next()\n                    } catch is CancellationError {\n                        // Normal exit on signal, defer will restore the terminal\n                    }\n                }"
+        },
+        "description" : "else"
+      },
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+        "location" : {
+          "end_position" : 3210,
+          "start_position" : 1722
+        }
+      }
+    },
+    "type" : "Conditions replacement refactoring."
+  },
+  "refactoringIndex" : 10,
+  "refactoringType" : "Conditions replacement refactoring.",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/ContainerCommands/Container/ContainerStats.swift"
+  ]
+}

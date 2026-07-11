@@ -1,0 +1,248 @@
+{
+  "caseID" : "case-189d6fb48c088bab720f2f43",
+  "commitHash" : "c37c405bbd181182732679eb4329f5dbf9accc78",
+  "commitMessage" : "Migrates container machine tests. (#1856)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/c37c405bbd181182732679eb4329f5dbf9accc78",
+  "durationSeconds" : 5.2414770126342773,
+  "entityNames" : [
+    "Bool",
+    "CommandResult",
+    "Data?",
+    "FilePath?",
+    "[String: String]",
+    "[String]",
+    "arguments",
+    "currentDirectory"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "description" : "process.standardInput = FileHandle(fileDescriptor: slaveFd, closeOnDealloc: true)",
+      "left_operand" : "process.standardInput",
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+        "location" : {
+          "end_position" : 7782,
+          "start_position" : 7688
+        }
+      },
+      "operator_value" : "=",
+      "right_operand" : {
+        "function_call" : {
+          "_0" : {
+            "additional_trailing_closures" : [
+
+            ],
+            "arguments" : [
+              {
+                "label" : "fileDescriptor",
+                "value" : "slaveFd"
+              },
+              {
+                "label" : "closeOnDealloc",
+                "value" : "true"
+              }
+            ],
+            "call" : "FileHandle",
+            "has_self_reference" : false,
+            "internal_inline_calls" : [
+
+            ],
+            "location_info" : {
+              "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+              "location" : {
+                "end_position" : 7782,
+                "start_position" : 7725
+              }
+            }
+          }
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let seq = Self.commandSeq.withLock { n in\n            defer { n += 1 }\n            return n\n        }\n        log.info(\n            \"command start\",\n            metadata: [\"seq\": \"\\(seq)\", \"args\": \"\\(arguments.joined(separator: \" \"))\"])\n\n        let process = Process()\n        process.executableURL = try executableURL\n        process.arguments = arguments\n        if let dir = currentDirectory { process.currentDirectoryURL = URL(filePath: dir.string) }\n        if !env.isEmpty {\n            var e = ProcessInfo.processInfo.environment\n            for (k, v) in env { e[k] = v }\n            process.environment = e\n        }\n\n        // When pty is true, allocate a PTY slave for stdin so the child process\n        // sees a real terminal (satisfying isatty checks and tcgetattr calls).\n        // stdout/stderr still go to temp files so output is captured separately.\n        var masterFd: Int32 = -1\n        let inputPipe = Pipe()\n        if pty {\n            var slaveFd: Int32 = -1\n            guard openpty(&masterFd, &slaveFd, nil, nil, nil) == 0 else {\n                throw CommandError.executionFailed(\"openpty failed: errno \\(errno)\")\n            }\n            process.standardInput = FileHandle(fileDescriptor: slaveFd, closeOnDealloc: true)\n        } else {\n            process.standardInput = inputPipe\n        }\n\n        // Write stdout/stderr to temp files to avoid blocking on full pipe buffers.\n        let tmpDir = FilePath(FileManager.default.temporaryDirectory.path)\n            .appending(UUID().uuidString)\n        try FileManager.default.createDirectory(\n            atPath: tmpDir.string, withIntermediateDirectories: true, attributes: nil)\n        defer { try? FileManager.default.removeItem(atPath: tmpDir.string) }\n\n        let stdoutPath = tmpDir.appending(\"stdout\")\n        let stderrPath = tmpDir.appending(\"stderr\")\n        FileManager.default.createFile(atPath: stdoutPath.string, contents: nil)\n        FileManager.default.createFile(atPath: stderrPath.string, contents: nil)\n\n        let stdoutHandle = try FileHandle(forWritingTo: URL(filePath: stdoutPath.string))\n        defer { try? stdoutHandle.close() }\n        let stderrHandle = try FileHandle(forWritingTo: URL(filePath: stderrPath.string))\n        defer { try? stderrHandle.close() }\n\n        process.standardOutput = stdoutHandle\n        process.standardError = stderrHandle\n\n        do {\n            try process.run()\n        } catch {\n            throw CommandError.executionFailed(\"process launch failed: \\(error)\")\n        }\n        if pty {\n            // Master stays open so the slave doesn't receive SIGHUP prematurely.\n            // Close it after the process exits.\n        } else {\n            if let data = stdin { inputPipe.fileHandleForWriting.write(data) }\n            inputPipe.fileHandleForWriting.closeFile()\n        }\n        process.waitUntilExit()\n        if masterFd >= 0 { Darwin.close(masterFd) }\n\n        let outputData = (try? Data(contentsOf: URL(filePath: stdoutPath.string))) ?? Data()\n        let errorData = (try? Data(contentsOf: URL(filePath: stderrPath.string))) ?? Data()\n\n        log.info(\n            \"command end\",\n            metadata: [\"seq\": \"\\(seq)\", \"status\": \"\\(process.terminationStatus)\"])\n\n        return CommandResult(\n            outputData: outputData,\n            errorData: errorData,\n            status: process.terminationStatus)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+        "location" : {
+          "end_position" : 9915,
+          "start_position" : 5958
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "run",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 6353,
+              "start_position" : 6322
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "arguments",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Data?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 6381,
+              "start_position" : 6353
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "stdin",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "FilePath?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 6424,
+              "start_position" : 6381
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "currentDirectory",
+          "order" : 2
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String: String]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[:]"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 6461,
+              "start_position" : 6424
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "env",
+          "order" : 3
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 6487,
+              "start_position" : 6461
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "pty",
+          "order" : 4
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "CommandResult"
+        },
+        "description" : "-> CommandResult"
+      },
+      "specifiers_decl" : {
+        "description" : "throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 27,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Utilities/ContainerFixture.swift"
+  ]
+}

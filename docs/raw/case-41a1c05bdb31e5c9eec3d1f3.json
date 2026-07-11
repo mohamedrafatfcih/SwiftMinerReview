@@ -1,0 +1,448 @@
+{
+  "caseID" : "case-41a1c05bdb31e5c9eec3d1f3",
+  "commitHash" : "69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "commitMessage" : "Migrates container run integration tests. (#1857)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "durationSeconds" : 7.4378420114517212,
+  "entityNames" : [
+    "TestCLINetwork",
+    "testInspectMissingNetworkFails",
+    "testIsolatedNetwork",
+    "testNetworkCreateAndUse",
+    "testNetworkDeleteWithContainer",
+    "testNetworkLabels",
+    "testNetworkListJSONFormat",
+    "testNetworkListTableFormat"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "26"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            },
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            let c = \"\\(f.testID)-c\"\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n\n            try f.doNetworkCreate(net)\n\n            let listResult = try f.run([\"network\", \"ls\", \"--quiet\"]).check()\n            let networkIds = listResult.output\n                .components(separatedBy: .newlines)\n                .map { $0.trimmingCharacters(in: .whitespaces) }\n                .filter { !$0.isEmpty }\n            #expect(networkIds == networkIds.sorted(), \"network IDs should be sorted\")\n\n            let port = UInt16.random(in: 50000..<60000)\n            try f.doLongRun(\n                name: c, image: \"docker.io/library/python:alpine\",\n                args: [\"--network\", net],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(port)\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let container = try f.inspectContainer(c)\n            #expect(container.networks.count > 0)\n            let ip = container.networks[0].ipv4Address.address\n            let url = \"http://\\(ip):\\(port)\"\n\n            let client = f.makeHTTPClient()\n            defer { _ = client.shutdown() }\n            var request = HTTPClientRequest(url: url)\n            request.method = .GET\n\n            // waitForContainerRunning only tells us init is running; the python http\n            // server inside is still starting, so retry until it accepts connections.\n            var lastError: Error?\n            var response: HTTPClientResponse?\n            for attempt in 1...10 {\n                do {\n                    response = try await client.execute(request, timeout: .seconds(3))\n                    break\n                } catch {\n                    lastError = error\n                    print(\"request to \\(url) failed on attempt \\(attempt): \\(error)\")\n                    try await Task.sleep(for: .seconds(1))\n                }\n            }\n            let final = try #require(response, \"request to \\(url) failed after retries: \\(lastError.map(String.init(describing:)) ?? \"no error\")\")\n            #expect(final.status == .ok, \"request to \\(url) returned \\(final.status)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 3395,
+              "start_position" : 904
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNetworkCreateAndUse",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "26"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            },
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            let c = \"\\(f.testID)-c\"\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            f.addCleanup { try? f.doRemove(c, force: true) }\n\n            try f.doNetworkCreate(net)\n            try f.doCreate(name: c, networks: [net])\n\n            let deleteResult = try f.run([\"network\", \"delete\", net])\n            try #require(deleteResult.status != 0, \"network delete should fail while container references it\")\n            #expect(deleteResult.error.contains(\"delete failed\"))\n            #expect(deleteResult.error.contains(\"[\\\"\\(net)\\\"]\"))\n\n            try f.doRemove(c, force: true)\n            try f.doNetworkDelete(net)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 4235,
+              "start_position" : 3395
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNetworkDeleteWithContainer",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "26"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            },
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n\n            try f.doNetworkCreate(net, args: [\"--label\", \"foo=bar\", \"--label\", \"baz=qux\"])\n\n            let network = try f.inspectNetwork(net)\n            let expectedLabels = [\"foo\": \"bar\", \"baz\": \"qux\"]\n            #expect(expectedLabels == network.configuration.labels.dictionary)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 4763,
+              "start_position" : 4235
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNetworkLabels",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let c = \"\\(f.testID)-c\"\n            try f.doLongRun(name: c, image: image, args: [\"--network\", \"default,mtu=1500\"], autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n            let output = try f.doExec(c, cmd: [\"ip\", \"link\", \"show\", \"eth0\"])\n            #expect(output.contains(\"mtu 1500\"), \"expected mtu 1500 in ip link output: \\(output)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 5438,
+              "start_position" : 4763
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNetworkMTU",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "26"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            },
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            let server = \"\\(f.testID)-server\"\n            let pythonImage = \"docker.io/library/python:alpine\"\n            let curlImage = \"docker.io/curlimages/curl:8.6.0\"\n\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            f.addCleanup {\n                try? f.doStop(server)\n                try? f.doRemove(server)\n            }\n\n            try f.doNetworkCreate(net, args: [\"--internal\"])\n\n            let port = UInt16.random(in: 50000..<60000)\n            try f.doLongRun(\n                name: server, image: pythonImage,\n                args: [\"--network\", net],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(port)\"],\n                autoRemove: false)\n            try await f.waitForContainerRunning(server)\n\n            let container = try f.inspectContainer(server)\n            #expect(container.networks.count > 0)\n            let ip = container.networks[0].ipv4Address.address\n            let serverURL = \"http://\\(ip):\\(port)\"\n\n            // Internal connection should succeed. `waitForContainerRunning` only\n            // proves the container's init is up; the python http.server inside\n            // may still be starting, so let curl retry on connection refused.\n            // FIXME: Task.sleep here is a kludge, figure out why curl fails with error 7 without it.\n            try await Task.sleep(for: .seconds(1))\n            let internalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--retry\", \"10\", \"--retry-connrefused\", \"--retry-delay\", \"1\", serverURL,\n            ])\n            #expect(\n                internalResult.status == 0,\n                \"connection within isolated network should succeed, got exit \\(internalResult.status): \\(internalResult.error)\"\n            )\n\n            // External connection should be blocked — the isolated network has no gateway.\n            let externalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--connect-timeout\", \"5\", \"http://google.com\",\n            ])\n            let hostOnlyBlockedCodes: Set<Int32> = [6, 7, 28]\n            #expect(\n                hostOnlyBlockedCodes.contains(externalResult.status),\n                \"external connection from isolated network should be blocked, got exit \\(externalResult.status)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 7998,
+              "start_position" : 5438
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testIsolatedNetwork",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            try f.doNetworkCreate(net)\n\n            let result = try f.run([\"network\", \"list\"]).check()\n            #expect([\"NETWORK\", \"SUBNET\"].allSatisfy { result.output.contains($0) })\n            #expect(result.output.contains(net))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 8459,
+              "start_position" : 7998
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNetworkListTableFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            try f.doNetworkCreate(net)\n\n            let result = try f.run([\"network\", \"list\", \"--format\", \"json\"]).check()\n            guard let json = try JSONSerialization.jsonObject(with: result.outputData) as? [[String: Any]] else {\n                Issue.record(\"JSON output should be an array of objects\")\n                return\n            }\n            #expect(json.contains { ($0[\"id\"] as? String) == net })\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 9098,
+              "start_position" : 8459
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testNetworkListJSONFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"network\", \"inspect\", \"definitely-missing-\\(f.testID)\"])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"network not found\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+            "location" : {
+              "end_position" : 9422,
+              "start_position" : 9098
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testInspectMissingNetworkFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+        "location" : {
+          "end_position" : 9424,
+          "start_position" : 872
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLINetwork",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 41,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Network/TestCLINetwork.swift"
+  ]
+}

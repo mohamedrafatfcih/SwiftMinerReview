@@ -1,0 +1,90 @@
+{
+  "caseID" : "case-b83d9348fe50605cd3da20d8",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "XPCMessage",
+    "message",
+    "stop"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        return try await self.lock.withLock { _ in\n            switch await self.state {\n            case .running, .booted:\n                await self.setState(.stopping)\n\n                let ctr = try await self.getContainer()\n                let stopOptions = try message.stopOptions()\n                let exitStatus = try await self.gracefulStopContainer(\n                    ctr.container,\n                    stopOpts: stopOptions\n                )\n\n                do {\n                    if case .stopped = await self.state {\n                        return message.reply()\n                    }\n                    try await self.cleanUpContainer(containerInfo: ctr, exitStatus: exitStatus)\n                } catch {\n                    self.log.error(\"failed to clean up container\", metadata: [\"error\": \"\\(error)\"])\n                }\n                await self.setState(.stopped)\n            default:\n                break\n            }\n            return message.reply()\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location" : {
+          "end_position" : 21441,
+          "start_position" : 19834
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "stop",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCMessage"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 20267,
+              "start_position" : 20246
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "message",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "XPCMessage"
+        },
+        "description" : "-> XPCMessage"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 185,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
+  ]
+}

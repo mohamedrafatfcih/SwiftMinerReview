@@ -1,0 +1,137 @@
+{
+  "caseID" : "case-ad0b23cc2964d3d6f2360e32",
+  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds" : 16.732138991355896,
+  "entityNames" : [
+    "NetworkConfiguration",
+    "NetworkResource",
+    "NetworkState",
+    "configuration",
+    "create"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "log.debug(\n            \"NetworksService: enter\",\n            metadata: [\n                \"func\": \"\\(#function)\",\n                \"id\": \"\\(configuration.id)\",\n            ]\n        )\n        defer {\n            log.debug(\n                \"NetworksService: exit\",\n                metadata: [\n                    \"func\": \"\\(#function)\",\n                    \"id\": \"\\(configuration.id)\",\n                ]\n            )\n        }\n\n        //Ensure that the network is not named \"none\"\n        if configuration.id == NetworkClient.noNetworkName {\n            throw ContainerizationError(.unsupported, message: \"network \\(configuration.id) is not a valid name\")\n        }\n\n        // Ensure nobody is manipulating the network already.\n        guard !busyNetworks.contains(configuration.id) else {\n            throw ContainerizationError(.exists, message: \"network \\(configuration.id) has a pending operation\")\n        }\n\n        busyNetworks.insert(configuration.id)\n        defer { busyNetworks.remove(configuration.id) }\n\n        // Ensure the network doesn't already exist.\n        return try await self.stateLock.withLock { _ in\n            guard await self.serviceStates[configuration.id] == nil else {\n                throw ContainerizationError(.exists, message: \"network \\(configuration.id) already exists\")\n            }\n\n            // Create and start the network.\n            try await self.registerService(configuration: configuration)\n            let client = try Self.getClient(configuration: configuration)\n\n            // Ensure the network is running\n            let networkStatus = try await client.status()\n\n            let finalConfiguration = try NetworkConfiguration(\n                id: configuration.id,\n                mode: configuration.mode,\n                ipv4Subnet: configuration.ipv4Subnet,\n                ipv6Subnet: configuration.ipv6Subnet,\n                labels: configuration.labels,\n                plugin: configuration.plugin,\n                options: configuration.options\n            )\n\n            let entry = NetworkEntry(configuration: finalConfiguration, status: networkStatus, client: client)\n            await self.setServiceState(key: finalConfiguration.id, value: entry)\n\n            // Persist the configuration data.\n            do {\n                try await self.store.create(finalConfiguration)\n                return NetworkResource(configuration: finalConfiguration, status: networkStatus)\n            } catch {\n                await self.removeServiceState(key: finalConfiguration.id)\n                do {\n                    try await self.deregisterService(configuration: finalConfiguration)\n                } catch {\n                    self.log.error(\n                        \"failed to deregister network service after failed creation\",\n                        metadata: [\n                            \"id\": \"\\(finalConfiguration.id)\",\n                            \"error\": \"\\(error.localizedDescription)\",\n                        ])\n                }\n                throw error\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+        "location" : {
+          "end_position" : 9366,
+          "start_position" : 6133
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "create",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NetworkConfiguration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+            "location" : {
+              "end_position" : 6255,
+              "start_position" : 6220
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "configuration",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "NetworkResource"
+        },
+        "description" : "-> NetworkResource"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "log.debug(\n            \"NetworksService: enter\",\n            metadata: [\n                \"func\": \"\\(#function)\",\n                \"id\": \"\\(configuration.id)\",\n            ]\n        )\n        defer {\n            log.debug(\n                \"NetworksService: exit\",\n                metadata: [\n                    \"func\": \"\\(#function)\",\n                    \"id\": \"\\(configuration.id)\",\n                ]\n            )\n        }\n\n        //Ensure that the network is not named \"none\"\n        if configuration.id == NetworkClient.noNetworkName {\n            throw ContainerizationError(.unsupported, message: \"network \\(configuration.id) is not a valid name\")\n        }\n\n        // Ensure nobody is manipulating the network already.\n        guard !busyNetworks.contains(configuration.id) else {\n            throw ContainerizationError(.exists, message: \"network \\(configuration.id) has a pending operation\")\n        }\n\n        busyNetworks.insert(configuration.id)\n        defer { busyNetworks.remove(configuration.id) }\n\n        // Ensure the network doesn't already exist.\n        return try await self.stateLock.withLock { _ in\n            guard await self.serviceStates[configuration.id] == nil else {\n                throw ContainerizationError(.exists, message: \"network \\(configuration.id) already exists\")\n            }\n\n            // Create and start the network.\n            try await self.registerService(configuration: configuration)\n            let client = try Self.getClient(configuration: configuration)\n\n            // Ensure the network is running, and set up the persistent network state\n            // using our configuration data\n            guard case .running(let helperConfig, let status) = try await client.state() else {\n                throw ContainerizationError(.invalidState, message: \"network \\(configuration.id) failed to start\")\n            }\n\n            let finalConfiguration = try NetworkConfiguration(\n                id: configuration.id,\n                mode: configuration.mode,\n                ipv4Subnet: configuration.ipv4Subnet,\n                ipv6Subnet: configuration.ipv6Subnet,\n                labels: configuration.labels,\n                pluginInfo: helperConfig.pluginInfo\n            )\n\n            let networkState: NetworkState = .running(finalConfiguration, status)\n            let serviceState = NetworkServiceState(networkState: networkState, client: client)\n            await self.setServiceState(key: finalConfiguration.id, value: serviceState)\n\n            // Persist the configuration data.\n            do {\n                try await self.store.create(finalConfiguration)\n                return networkState\n            } catch {\n                await self.removeServiceState(key: finalConfiguration.id)\n                do {\n                    try await self.deregisterService(configuration: finalConfiguration)\n                } catch {\n                    self.log.error(\n                        \"failed to deregister network service after failed creation\",\n                        metadata: [\n                            \"id\": \"\\(finalConfiguration.id)\",\n                            \"error\": \"\\(error.localizedDescription)\",\n                        ])\n                }\n                throw error\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+        "location" : {
+          "end_position" : 11167,
+          "start_position" : 7714
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "create",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NetworkConfiguration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+            "location" : {
+              "end_position" : 7836,
+              "start_position" : 7801
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "configuration",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "NetworkState"
+        },
+        "description" : "-> NetworkState"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Change Return Type Refactoring"
+  },
+  "refactoringIndex" : 109,
+  "refactoringType" : "Change Return Type Refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift"
+  ]
+}

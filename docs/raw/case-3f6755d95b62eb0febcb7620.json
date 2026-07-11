@@ -1,0 +1,91 @@
+{
+  "caseID" : "case-3f6755d95b62eb0febcb7620",
+  "commitHash" : "986a8d9118fb8a3394b9271e3d65cecdda35eb9f",
+  "commitMessage" : "fix: moved to the new way to draw the battery dot in the battery widget to prevent a small bug that caused the .destinationOut to be visible\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/986a8d9118fb8a3394b9271e3d65cecdda35eb9f",
+  "durationSeconds" : 1.6548449993133545,
+  "entityNames" : [
+    "NSRect",
+    "borderWidth",
+    "dirtyRect",
+    "draw"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "description" : "batteryPointSeparator.lineWidth = borderWidth",
+      "left_operand" : "batteryPointSeparator.lineWidth",
+      "location_info" : {
+        "file_path" : "Kit/Widgets/Battery.swift",
+        "location" : {
+          "end_position" : 7426,
+          "start_position" : 7372
+        }
+      },
+      "operator_value" : "=",
+      "right_operand" : {
+        "reference" : {
+          "arguments" : [
+
+          ],
+          "name" : "borderWidth"
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "super.draw(dirtyRect)\n        \n        guard let ctx = NSGraphicsContext.current?.cgContext else { return }\n        \n        var percentage: Double? = nil\n        var time: Int = 0\n        var charging: Bool = false\n        var ACStatus: Bool = false\n        var optimizedCharging: Bool = false\n        self.queue.sync {\n            percentage = self._percentage\n            time = self._time\n            charging = self._charging\n            ACStatus = self._ACStatus\n            optimizedCharging = self._optimizedCharging\n        }\n        \n        var width: CGFloat = 0\n        var x: CGFloat = 0\n        let isShortTimeFormat: Bool = self.timeFormat == \"short\"\n        \n        if !self.hideAdditionalWhenFull || (self.hideAdditionalWhenFull && percentage != 1 && !optimizedCharging) {\n            switch self.additional {\n            case \"percentage\":\n                var value = \"n/a\"\n                if let percentage {\n                    value = \"\\(Int((percentage.rounded(toPlaces: 2)) * 100))%\"\n                }\n                let rowWidth = self.drawOneRow(value: value, x: x).rounded(.up)\n                width += rowWidth\n                x += rowWidth + Constants.Widget.spacing\n            case \"time\":\n                let rowWidth = self.drawOneRow(\n                    value: Double(time*60).printSecondsToHoursMinutesSeconds(short: isShortTimeFormat),\n                    x: x\n                ).rounded(.up)\n                width += rowWidth\n                x += rowWidth + Constants.Widget.spacing\n            case \"percentageAndTime\":\n                var value = \"n/a\"\n                if let percentage {\n                    value = \"\\(Int((percentage.rounded(toPlaces: 2)) * 100))%\"\n                }\n                let rowWidth = self.drawTwoRows(\n                    first: value,\n                    second: Double(time*60).printSecondsToHoursMinutesSeconds(short: isShortTimeFormat),\n                    x: x\n                ).rounded(.up)\n                width += rowWidth\n                x += rowWidth + Constants.Widget.spacing\n            case \"timeAndPercentage\":\n                var value = \"n/a\"\n                if let percentage {\n                    value = \"\\(Int((percentage.rounded(toPlaces: 2)) * 100))%\"\n                }\n                let rowWidth = self.drawTwoRows(\n                    first: Double(time*60).printSecondsToHoursMinutesSeconds(short: isShortTimeFormat),\n                    second: value,\n                    x: x\n                ).rounded(.up)\n                width += rowWidth\n                x += rowWidth + Constants.Widget.spacing\n            default: break\n            }\n        }\n        \n        let batterySize: CGSize = self.xlSizeState ? CGSize(width: 26, height: 14) : CGSize(width: 22, height: 12)\n        \n        if ACStatus && !self.chargerIconInside {\n            if x != 0 {\n                width += Constants.Widget.spacing\n                x += Constants.Widget.spacing\n            }\n            self.drawACIcon(\n                ctx: ctx,\n                center: CGPoint(x: x+3, y: self.frame.size.height/2),\n                height: 12,\n                charging: charging\n            )\n            width += 6\n            x += 6 + Constants.Widget.spacing\n        }\n        \n        let borderWidth: CGFloat = 1\n        let batteryRadius: CGFloat = self.xlSizeState ? 3 : 2\n        let offset: CGFloat = 0.5 // contant!\n        width += batterySize.width + borderWidth*2 // add battery width\n        if x != 0 {\n            width += Constants.Widget.spacing\n            x += Constants.Widget.spacing\n        }\n        \n        let batteryFrame = NSBezierPath(roundedRect: NSRect(\n            x: x + borderWidth + offset,\n            y: ((self.frame.size.height - batterySize.height)/2) + offset,\n            width: batterySize.width - borderWidth,\n            height: batterySize.height - borderWidth\n        ), xRadius: batteryRadius, yRadius: batteryRadius)\n        \n        NSColor.textColor.withAlphaComponent(0.5).set()\n        batteryFrame.lineWidth = borderWidth\n        batteryFrame.stroke()\n        \n        let bPX: CGFloat = batteryFrame.bounds.origin.x + batteryFrame.bounds.width + 1\n        let bPY: CGFloat = batteryFrame.bounds.origin.y + batteryFrame.bounds.height/2 - 2\n        let batteryPoint = NSBezierPath(roundedRect: NSRect(x: bPX - 1, y: bPY, width: 3, height: 4), xRadius: 2, yRadius: 2)\n        batteryPoint.fill()\n        \n        let batteryPointSeparator = NSBezierPath()\n        batteryPointSeparator.move(to: CGPoint(x: bPX, y: batteryFrame.bounds.origin.y))\n        batteryPointSeparator.line(to: CGPoint(x: bPX, y: batteryFrame.bounds.origin.y + batteryFrame.bounds.height))\n        ctx.saveGState()\n        ctx.setBlendMode(.destinationOut)\n        NSColor.white.set()\n        batteryPointSeparator.lineWidth = borderWidth\n        batteryPointSeparator.stroke()\n        ctx.restoreGState()\n        width += 2 // add battery point width\n        \n        if let percentage {\n            let maxWidth = batterySize.width - offset*2 - borderWidth*2 - 1\n            let innerWidth: CGFloat = max(1, maxWidth * CGFloat(percentage))\n            let innerOffset: CGFloat = -offset + borderWidth + 1\n            let innerRadius: CGFloat = self.xlSizeState ? 2 : 1\n            var colorState = self.colorState\n            let color = percentage.batteryColor(color: colorState)\n            let innerPercentage = self.additional == \"innerPercentage\" && (!ACStatus || !self.chargerIconInside)\n            \n            if innerPercentage {\n                colorState = false\n                let innerUnderground = NSBezierPath(roundedRect: NSRect(\n                    x: batteryFrame.bounds.origin.x + innerOffset,\n                    y: batteryFrame.bounds.origin.y + innerOffset,\n                    width: maxWidth,\n                    height: batterySize.height - offset*2 - borderWidth*2 - 1\n                ), xRadius: innerRadius, yRadius: innerRadius)\n                (self.colorState ? color : NSColor.textColor).withAlphaComponent(0.5).set()\n                innerUnderground.fill()\n            }\n            \n            let inner = NSBezierPath(roundedRect: NSRect(\n                x: batteryFrame.bounds.origin.x + innerOffset,\n                y: batteryFrame.bounds.origin.y + innerOffset,\n                width: innerWidth,\n                height: batterySize.height - offset*2 - borderWidth*2 - 1\n            ), xRadius: innerRadius, yRadius: innerRadius)\n            \n            color.set()\n            inner.fill()\n            \n            if innerPercentage {\n                let fontSize: CGFloat = self.xlSizeState ? 9 : 8\n                let style = NSMutableParagraphStyle()\n                style.alignment = .center\n                let attributes = [\n                    NSAttributedString.Key.font: NSFont.systemFont(ofSize: fontSize, weight: .bold),\n                    NSAttributedString.Key.foregroundColor: NSColor.clear,\n                    NSAttributedString.Key.paragraphStyle: style\n                ]\n                \n                let value = \"\\(Int((percentage.rounded(toPlaces: 2)) * 100))\"\n                let rect = CGRect(x: inner.bounds.origin.x, y: (Constants.Widget.height-(fontSize+2))/2, width: maxWidth, height: fontSize)\n                let str = NSAttributedString.init(string: value, attributes: attributes)\n                \n                ctx.saveGState()\n                ctx.setBlendMode(.destinationIn)\n                str.draw(with: rect)\n                ctx.restoreGState()\n            }\n        } else {\n            let attributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 11, weight: .regular),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: NSMutableParagraphStyle()\n            ]\n            \n            let batteryCenter: CGPoint = CGPoint(\n                x: batteryFrame.bounds.origin.x + (batteryFrame.bounds.width/2),\n                y: batteryFrame.bounds.origin.y + (batteryFrame.bounds.height/2)\n            )\n            \n            let rect = CGRect(x: batteryCenter.x-3, y: batteryCenter.y-4, width: 8, height: 12)\n            NSAttributedString.init(string: \"?\", attributes: attributes).draw(with: rect)\n        }\n        \n        if ACStatus && self.chargerIconInside {\n            let batteryCenter: CGPoint = CGPoint(\n                x: batteryFrame.bounds.origin.x + (batteryFrame.bounds.width/2),\n                y: batteryFrame.bounds.origin.y + (batteryFrame.bounds.height/2)\n            )\n            self.drawACIcon(\n                ctx: ctx,\n                center: batteryCenter,\n                height: 12,\n                charging: charging\n            )\n        }\n        \n        self.setWidth(width)"
+      },
+      "location_info" : {
+        "file_path" : "Kit/Widgets/Battery.swift",
+        "location" : {
+          "end_position" : 11430,
+          "start_position" : 2518
+        }
+      },
+      "modifiers" : [
+        "public",
+        "override"
+      ],
+      "name" : "draw",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSRect"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Kit/Widgets/Battery.swift",
+            "location" : {
+              "end_position" : 2573,
+              "start_position" : 2554
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "dirtyRect",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 11,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/Widgets/Battery.swift"
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "caseID" : "case-0d875ac6ad9471bcb0ed034e",
+  "commitHash" : "22e4f41a3f8b61ba72284ec5f924de779910fde1",
+  "commitMessage" : "Revert \"ui: fix osc constraints before/after pip or music mode\"\n\nThis reverts commit a8a7d557de527d792f97d72353ebd8e9e7edf056.\n",
+  "commitURL" : "https://github.com/iina/iina/commit/22e4f41a3f8b61ba72284ec5f924de779910fde1",
+  "durationSeconds" : 18.322005987167358,
+  "entityNames" : [
+    "Bool",
+    "automatically",
+    "showMiniPlayer",
+    "switchToMiniPlayer"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+
+      ],
+      "call" : "setupConstraints",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "iina/PlayerCore.swift",
+        "location" : {
+          "end_position" : 34416,
+          "start_position" : 34366
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "log(\"Switch to mini player, automatically=\\(automatically)\")\n    if !automatically {\n      // Toggle manual override\n      overrideAutoSwitchToMusicMode = !overrideAutoSwitchToMusicMode\n      Logger.log(\"Changed overrideAutoSwitchToMusicMode to \\(overrideAutoSwitchToMusicMode)\",\n                 level: .verbose, subsystem: subsystem)\n    }\n\n    // The call to orderOut handles being in full screen mode if using the AppKit supplied full\n    // screen mode, but if legacy full screen mode is being used then IINA needs to handle it.\n    if mainWindow.fsState.isFullscreen, Preference.bool(for: .useLegacyFullScreen) {\n      mainWindow.toggleWindowFullScreen()\n    }\n    // hide main window\n    mainWindow.window?.orderOut(self)\n\n    let needRestoreLayout = !miniPlayer.loaded\n    let _ = miniPlayer.window\n\n    miniPlayer.updateTitle()\n    refreshSyncUITimer()\n    let playlistView = mainWindow.sidebars.playlistView\n    // force initialize the view\n    let _ = playlistView.view\n    let videoView = mainWindow.videoView\n    // reset down shift for playlistView\n    mainWindow.sidebars.playlistView.downShift = 0\n    // hide sidebar\n    if mainWindow.sidebars.isAnyVisible {\n      mainWindow.sidebars.hideAllSideBars(animate: false)\n    }\n\n    // move playlist view\n    playlistView.view.removeFromSuperview()\n//    playlistView.isInMiniPlayer = true\n    miniPlayer.playlistWrapperView.addSubview(playlistView.view)\n    playlistView.view.padding(.all)\n    // move video view\n    videoView.removeFromSuperview()\n    miniPlayer.videoWrapperView.addSubview(videoView, positioned: .below, relativeTo: nil)\n    Utility.quickConstraints([\"H:|[v]|\", \"V:|[v]|\"], [\"v\": videoView])\n\n    miniPlayer.refreshArtworkVisibility()\n    let (width, height) = miniPlayer.videoSizeForDisplayInMusicMode()\n    let aspect = CGFloat(width) / CGFloat(height)\n    miniPlayer.updateVideoViewAspectConstraint(withAspect: aspect)\n    miniPlayer.window?.layoutIfNeeded()\n\n    // in case of video size changed, reset mini player window size if playlist is folded\n    if !miniPlayer.isPlaylistVisible {\n      miniPlayer.setToInitialWindowSize(display: true, animate: false)\n    }\n\n    isInMiniPlayer = true\n\n    // restore layout\n    if needRestoreLayout {\n      if !Preference.bool(for: .musicModeShowAlbumArt) {\n        miniPlayer.toggleVideoView(self)\n        if let origin = miniPlayer.window?.frame.origin {\n          miniPlayer.window?.setFrameOrigin(.init(x: origin.x, y: origin.y + miniPlayer.videoView.frame.height))\n        }\n      }\n      if Preference.bool(for: .musicModeShowPlaylist) {\n        miniPlayer.togglePlaylist(self)\n      }\n    }\n\n    currentController.setupUI()\n    mainWindow.oscFloatingView.setupConstraints()\n    mainWindow.oscFloatingView.updatePosition()\n\n    miniPlayer.pendingShow = true\n    if showMiniPlayer {\n      notifyWindowVideoSizeChanged()\n    }\n    mainWindow.forceDraw(\"entered music mode\")\n    postNotification(.iinaMusicModeChanged)\n    events.emit(.musicModeChanged, data: true)"
+      },
+      "location_info" : {
+        "file_path" : "iina/PlayerCore.swift",
+        "location" : {
+          "end_position" : 34708,
+          "start_position" : 31105
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "switchToMiniPlayer",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "iina/PlayerCore.swift",
+            "location" : {
+              "end_position" : 31674,
+              "start_position" : 31645
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "automatically",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "true"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "iina/PlayerCore.swift",
+            "location" : {
+              "end_position" : 31701,
+              "start_position" : 31674
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "showMiniPlayer",
+          "order" : 1
+        }
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 18,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "iina-iina",
+  "repoName" : "iina/iina",
+  "repoURL" : "https://github.com/iina/iina.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "iina/PlayerCore.swift"
+  ]
+}

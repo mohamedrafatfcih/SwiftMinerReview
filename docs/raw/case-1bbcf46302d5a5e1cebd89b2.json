@@ -1,0 +1,51 @@
+{
+  "caseID" : "case-1bbcf46302d5a5e1cebd89b2",
+  "commitHash" : "685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "commitMessage" : "feat: moved ANE utilization from read to calculation from power usage\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "durationSeconds" : 0.67345595359802246,
+  "entityNames" : [
+    "setup"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "depth" : 0,
+      "description" : "#if arch(arm64)\n        self.setupANE()\n        self.setupFrames()\n        #endif",
+      "index" : 3
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "if let list = SystemKit.shared.device.info.gpu {\n            self.displays = list\n        }\n        \n        guard let PCIdevices = fetchIOService(\"IOPCIDevice\") else {\n            return\n        }\n        let devices = PCIdevices.filter{ $0.object(forKey: \"IOName\") as? String == \"display\" }\n        \n        #if arch(arm64)\n        self.setupANE()\n        self.setupFrames()\n        #endif\n\n        devices.forEach { (dict: NSDictionary) in\n            guard let deviceID = dict[\"device-id\"] as? Data, let vendorID = dict[\"vendor-id\"] as? Data else {\n                error(\"device-id or vendor-id not found\", log: self.log)\n                return\n            }\n            let pci = \"0x\" + Data([deviceID[1], deviceID[0], vendorID[1], vendorID[0]]).map { String(format: \"%02hhX\", $0) }.joined().lowercased()\n            \n            guard let modelData = dict[\"model\"] as? Data, let modelName = String(data: modelData, encoding: .ascii) else {\n                error(\"GPU model not found\", log: self.log)\n                return\n            }\n            let model = modelName.replacingOccurrences(of: \"\\0\", with: \"\")\n            \n            var vendor: String? = nil\n            if let v = vendors.first(where: { $0.key == vendorID }) {\n                vendor = v.value\n            }\n            \n            self.devices.append(device(\n                vendor: vendor,\n                model: model,\n                pci: pci,\n                used: false\n            ))\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Modules/GPU/reader.swift",
+        "location" : {
+          "end_position" : 2605,
+          "start_position" : 1071
+        }
+      },
+      "modifiers" : [
+        "public",
+        "override"
+      ],
+      "name" : "setup",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 0,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/GPU/reader.swift"
+  ]
+}

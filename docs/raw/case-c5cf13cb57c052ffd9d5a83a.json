@@ -1,0 +1,2144 @@
+{
+  "caseID" : "case-c5cf13cb57c052ffd9d5a83a",
+  "commitHash" : "613e6315d3fbfca1722a8fb1bd197a8f31b8844c",
+  "commitMessage" : "feat: improved LineChart rendering by showing gaps when data is unavailable instead of drawing a misleading continuous line\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/613e6315d3fbfca1722a8fb1bd197a8f31b8844c",
+  "durationSeconds" : 3.568835973739624,
+  "entityNames" : [
+    "((DoubleValue) -> String)?",
+    "(lastTs: Date, typical: TimeInterval)?",
+    "Bool",
+    "ChartView",
+    "Double",
+    "DoubleValue",
+    "Int",
+    "LineChartView"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "label" : "usingFont",
+                  "value" : "xLegendFont"
+                }
+              ],
+              "call" : "widthOfString",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 4732,
+                  "start_position" : 4684
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 4732,
+          "start_position" : 4663
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "xLegendSampleWidth"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "ChartView"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "super.draw(dirtyRect)\n        \n        var originalPoints: [DoubleValue?] = []\n        var shadowPoints: [DoubleValue?] = []\n        var transparent: Bool = true\n        var flipY: Bool = false\n        var minMax: Bool = false\n        var color: NSColor = .controlAccentColor\n        var suffix: String = \"%\"\n        var toolTipFunc: ((DoubleValue) -> String)?\n        var isTooltipEnabled: Bool = true\n        var xLegend: Bool = false\n        var yLegend: Bool = false\n        var scale: Scale = .none\n        var fixedScale: Double = 1\n        var zeroValue: Double = 0.01\n        self.read {\n            originalPoints = self.orderedPointsLocked()\n            shadowPoints = self.shadowPoints\n            transparent = self.transparent\n            flipY = self.flipY\n            minMax = self.minMax\n            color = self.color\n            suffix = self.suffix\n            toolTipFunc = self.toolTipFunc\n            isTooltipEnabled = self.isTooltipEnabled\n            xLegend = self.xLegend\n            yLegend = self.yLegend\n            scale = self.scale\n            fixedScale = self.fixedScale\n            zeroValue = self.zeroValue\n        }\n        \n        let points = stop ? shadowPoints : originalPoints\n        guard let context = NSGraphicsContext.current?.cgContext, !points.isEmpty else { return }\n        context.setShouldAntialias(true)\n        var maxValue: Double = 0\n        for opt in points {\n            if let p = opt, p.value > maxValue { maxValue = p.value }\n        }\n        \n        let lineColor: NSColor = color\n        var gradientColor: NSColor = color.withAlphaComponent(0.5)\n        if !transparent {\n            gradientColor = color.withAlphaComponent(0.8)\n        }\n        let gradient = NSGradient(colors: [\n            gradientColor.withAlphaComponent(0.5),\n            gradientColor.withAlphaComponent(1.0)\n        ])\n        \n        let offset: CGFloat = 1 / (NSScreen.main?.backingScaleFactor ?? 1)\n        let xLegendHeight: CGFloat = xLegend ? 14 : 0\n        let yLegendWidth: CGFloat = yLegend ? 30 : 0\n        let height: CGFloat = self.frame.height - offset - xLegendHeight\n        let chartWidth: CGFloat = self.frame.width - yLegendWidth\n        let xRatio: CGFloat = chartWidth / CGFloat(points.count-1)\n        let zero: CGFloat = flipY ? self.frame.height : xLegendHeight\n        \n        var lines: [[CGPoint]] = []\n        var line: [CGPoint] = []\n        var list: [(value: DoubleValue, point: CGPoint)] = []\n        \n        for (i, v) in points.enumerated() {\n            guard let v else {\n                if !line.isEmpty {\n                    lines.append(line)\n                    line = []\n                }\n                continue\n            }\n            \n            var y = scaleValue(scale: scale, value: v.value, maxValue: maxValue, zeroValue: zeroValue, maxHeight: height, limit: fixedScale)\n            if flipY {\n                y = height - y\n            }\n            \n            let point = CGPoint(\n                x: yLegendWidth + CGFloat(i) * xRatio,\n                y: y + xLegendHeight\n            )\n            line.append(point)\n            list.append((value: v, point: point))\n        }\n        if !line.isEmpty {\n            lines.append(line)\n        }\n        \n        var path = NSBezierPath()\n        for linePoints in lines {\n            if linePoints.count == 1 {\n                path = NSBezierPath(ovalIn: CGRect(x: linePoints[0].x-offset, y: linePoints[0].y-offset, width: 1, height: 1))\n                lineColor.set()\n                path.stroke()\n                gradientColor.set()\n                path.fill()\n                continue\n            }\n\n            path = NSBezierPath()\n            path.move(to: linePoints[0])\n            for i in 1..<linePoints.count {\n                path.line(to: linePoints[i])\n            }\n            lineColor.set()\n            path.lineWidth = offset\n            path.stroke()\n\n            path = path.copy() as! NSBezierPath\n            path.line(to: CGPoint(x: linePoints[linePoints.count-1].x, y: zero))\n            path.line(to: CGPoint(x: linePoints[0].x, y: zero))\n            path.close()\n            if let gradient {\n                gradient.draw(in: path, angle: 90)\n            } else {\n                gradientColor.set()\n                path.fill()\n            }\n        }\n        \n        if minMax {\n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 9, weight: .light),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: NSMutableParagraphStyle()\n            ]\n            \n            var str: String = \"\"\n            let flatList = originalPoints.map{ $0?.value ?? 0 }\n            if let value = flatList.max() {\n                str = toolTipFunc != nil ? toolTipFunc!(DoubleValue(value)) : \"\\(Int(value.rounded(toPlaces: 2) * 100))\\(suffix)\"\n            }\n            let textWidth = str.widthOfString(usingFont: stringAttributes[NSAttributedString.Key.font] as! NSFont)\n            let y = flipY ? xLegendHeight + 1 : height + xLegendHeight - 9\n            let rect = CGRect(x: 1, y: y, width: textWidth, height: 8)\n            NSAttributedString.init(string: str, attributes: stringAttributes).draw(with: rect)\n        }\n        \n        if xLegend, list.count >= 2 {\n            let legendFont = LineChartView.xLegendFont\n            let legendAttributes: [NSAttributedString.Key: Any] = [\n                .font: legendFont,\n                .foregroundColor: (isDarkMode ? NSColor.white : NSColor.textColor).withAlphaComponent(0.5)\n            ]\n            \n            let sampleWidth = LineChartView.xLegendSampleWidth\n            let spacing: CGFloat = 8\n            let maxLabels = max(2, Int(self.frame.width / (sampleWidth + spacing)))\n            let count = min(maxLabels, 5)\n            let step = max(1, (list.count - 1) / (count - 1))\n            var indices: [Int] = []\n            for i in stride(from: 0, to: list.count - 1, by: step) {\n                indices.append(i)\n            }\n            if indices.last != list.count - 1 {\n                indices.append(list.count - 1)\n            }\n            \n            var lastMaxX: CGFloat = -.greatestFiniteMagnitude\n            for idx in indices {\n                let item = list[idx]\n                let str = self.legendDateFormatter.string(from: item.value.ts)\n                let textWidth = str.widthOfString(usingFont: legendFont)\n                var x = item.point.x - textWidth / 2\n                x = max(0, min(x, self.frame.width - textWidth))\n                guard x >= lastMaxX else { continue }\n                let attrStr = NSAttributedString(string: str, attributes: legendAttributes)\n                attrStr.draw(with: CGRect(x: x, y: 0, width: textWidth, height: 12))\n                lastMaxX = x + textWidth + spacing\n            }\n        }\n        \n        if yLegend {\n            let legendFont = NSFont.systemFont(ofSize: 9, weight: .light)\n            let legendAttributes: [NSAttributedString.Key: Any] = [\n                .font: legendFont,\n                .foregroundColor: (isDarkMode ? NSColor.white : NSColor.textColor).withAlphaComponent(0.5)\n            ]\n            \n            let textHeight = legendFont.ascender - legendFont.descender\n            let steps = [0, 25, 50, 75, 100]\n            let spacing = (height - textHeight) / CGFloat(steps.count - 1)\n            for (i, step) in steps.enumerated() {\n                let textY = xLegendHeight + CGFloat(i) * spacing\n                let lineY = xLegendHeight + height * CGFloat(step) / 100\n                \n                if xLegend {\n                    let gridColor = (isDarkMode ? NSColor.white : NSColor.black).withAlphaComponent(0.06)\n                    gridColor.setStroke()\n                    let line = NSBezierPath()\n                    line.move(to: CGPoint(x: yLegendWidth, y: lineY))\n                    line.line(to: CGPoint(x: self.frame.width, y: lineY))\n                    line.lineWidth = 1 / (NSScreen.main?.backingScaleFactor ?? 1)\n                    line.stroke()\n                }\n                \n                let label = \"\\(step)\\(suffix)\"\n                let attrStr = NSAttributedString(string: label, attributes: legendAttributes)\n                attrStr.draw(at: CGPoint(x: 0, y: textY))\n            }\n        }\n        \n        if isTooltipEnabled, let p = self.cursor, !list.isEmpty {\n            guard p.y <= height + xLegendHeight else { return }\n            \n            var over: (value: DoubleValue, point: CGPoint)?\n            var overDist: CGFloat = .greatestFiniteMagnitude\n            var under: (value: DoubleValue, point: CGPoint)?\n            var underDist: CGFloat = .greatestFiniteMagnitude\n            for item in list {\n                let d = item.point.x - p.x\n                if d >= 0, d < overDist { over = item; overDist = d }\n                if d <= 0, -d < underDist { under = item; underDist = -d }\n            }\n            \n            if let over, let under {\n                let nearest = (overDist < underDist) ? over : under\n                let vLine = NSBezierPath()\n                let hLine = NSBezierPath()\n                \n                vLine.setLineDash([4, 4], count: 2, phase: 0)\n                hLine.setLineDash([6, 6], count: 2, phase: 0)\n                \n                vLine.move(to: CGPoint(x: p.x, y: xLegendHeight))\n                vLine.line(to: CGPoint(x: p.x, y: height + xLegendHeight))\n                vLine.close()\n                \n                hLine.move(to: CGPoint(x: 0, y: p.y))\n                hLine.line(to: CGPoint(x: self.frame.size.width, y: p.y))\n                hLine.close()\n                \n                NSColor.tertiaryLabelColor.set()\n                \n                vLine.lineWidth = offset\n                hLine.lineWidth = offset\n                \n                vLine.stroke()\n                hLine.stroke()\n                \n                let dotSize: CGFloat = 4\n                let path = NSBezierPath(ovalIn: CGRect(\n                    x: nearest.point.x-(dotSize/2),\n                    y: nearest.point.y-(dotSize/2),\n                    width: dotSize,\n                    height: dotSize\n                ))\n                NSColor.red.set()\n                path.stroke()\n                \n                let date = self.dateFormatter.string(from: nearest.value.ts)\n                let roundedValue = Int(nearest.value.value.rounded(toPlaces: 2) * 100)\n                let strValue = \"\\(roundedValue)\\(suffix)\"\n                let value = toolTipFunc != nil ? toolTipFunc!(nearest.value) : strValue\n                let tooltipWidth: CGFloat = 78\n                let tooltipX = nearest.point.x + 4 + tooltipWidth > self.frame.size.width\n                    ? nearest.point.x - tooltipWidth - 4\n                    : nearest.point.x + 4\n                drawToolTip(self.frame, CGPoint(x: tooltipX, y: nearest.point.y+4), CGSize(width: tooltipWidth, height: height), value: value, subtitle: date)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 17914,
+              "start_position" : 6694
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "draw",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSRect"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 6749,
+                  "start_position" : 6730
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dirtyRect",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.trackingAreas.forEach({ self.removeTrackingArea($0) })\n        self.addTrackingArea(NSTrackingArea(\n            rect: .zero,\n            options: [\n                .activeAlways,\n                .mouseEnteredAndExited,\n                .mouseMoved,\n                .inVisibleRect\n            ],\n            owner: self, userInfo: nil\n        ))\n        super.updateTrackingAreas()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 18367,
+              "start_position" : 17914
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "updateTrackingAreas",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write {\n            let n = self.points.count\n            guard n > 0 else { return }\n            \n            if let stats = self.intervalStatsLocked() {\n                let gap = value.ts.timeIntervalSince(stats.lastTs)\n                if gap >= 2.0, gap > stats.typical * 1.5 {\n                    let missing = min(Int((gap / stats.typical).rounded()) - 1, n - 1)\n                    for _ in 0..<max(0, missing) {\n                        self.points[self.head] = nil\n                        self.head = (self.head + 1) % n\n                    }\n                }\n            }\n            \n            self.points[self.head] = value\n            self.head = (self.head + 1) % n\n        }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 19164,
+              "start_position" : 18367
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "addValue",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DoubleValue"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 18418,
+                  "start_position" : 18398
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let n = self.points.count\n        guard n > 0 else { return [] }\n        var result: [DoubleValue?] = []\n        result.reserveCapacity(n)\n        for i in 0..<n {\n            result.append(self.points[(self.head + i) % n])\n        }\n        return result"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 19498,
+              "start_position" : 19164
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "orderedPointsLocked",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[DoubleValue?]"
+            },
+            "description" : "-> [DoubleValue?]"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var deltas: [TimeInterval] = []\n        var prev: Date?\n        var lastTs: Date?\n        let n = self.points.count\n        for i in 0..<n {\n            let p = self.points[(self.head + i) % n]\n            if let p {\n                if let prev {\n                    let d = p.ts.timeIntervalSince(prev)\n                    if d > 0 { deltas.append(d) }\n                }\n                prev = p.ts\n                lastTs = p.ts\n            } else {\n                prev = nil\n            }\n        }\n        guard let lastTs, deltas.count >= 2 else { return nil }\n        deltas.sort()\n        return (lastTs, deltas[deltas.count / 2])"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 20238,
+              "start_position" : 19498
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "intervalStatsLocked",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "(lastTs: Date, typical: TimeInterval)?"
+            },
+            "description" : "-> (lastTs: Date, typical: TimeInterval)?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.addValue(DoubleValue(value))"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 20335,
+              "start_position" : 20238
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "addValue",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Double"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 20284,
+                  "start_position" : 20269
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write {\n            guard self.points.count != num else { return }\n            let ordered = self.orderedPointsLocked()\n            if num < ordered.count {\n                self.points = Array(ordered.suffix(num))\n            } else {\n                var arr: [DoubleValue?] = Array(repeating: nil, count: num)\n                arr.replaceSubrange((num-ordered.count)..<num, with: ordered)\n                self.points = arr\n            }\n            self.head = 0\n        }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 20906,
+              "start_position" : 20335
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "reinit",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "60"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 20379,
+                  "start_position" : 20364
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "num",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write {\n            self.scale = newScale\n            self.fixedScale = fixedScale\n        }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 21125,
+              "start_position" : 20906
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setScale",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Scale"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 20956,
+                  "start_position" : 20937
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newScale",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Double"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "1"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 20978,
+                  "start_position" : 20956
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "fixedScale",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write {\n            self.points = newPoints.map { Optional($0) }\n            self.head = 0\n        }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 21338,
+              "start_position" : 21125
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setPoints",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[DoubleValue]"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 21183,
+                  "start_position" : 21157
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newPoints",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write { self.color = newColor }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 21474,
+              "start_position" : 21338
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setColor",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSColor"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 21388,
+                  "start_position" : 21369
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newColor",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write { self.suffix = newSuffix }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 21613,
+              "start_position" : 21474
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setSuffix",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 21525,
+                  "start_position" : 21506
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newSuffix",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write { self.transparent = newValue }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 21758,
+              "start_position" : 21613
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setTransparent",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 21666,
+                  "start_position" : 21650
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newValue",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write { self.flipY = newValue }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 21891,
+              "start_position" : 21758
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setFlipY",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 21805,
+                  "start_position" : 21789
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newValue",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write { self.minMax = newValue }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 22026,
+              "start_position" : 21891
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setMinMax",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 21939,
+                  "start_position" : 21923
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newValue",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write { self.toolTipFunc = newValue }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 22161,
+              "start_position" : 22026
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setToolTipFunc",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "((DoubleValue) -> String)?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 22101,
+                  "start_position" : 22063
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newValue",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write { self.isTooltipEnabled = newValue }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 22282,
+              "start_position" : 22161
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setTooltipEnabled",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 22217,
+                  "start_position" : 22201
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "newValue",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.write {\n            self.xLegend = x\n            self.yLegend = y\n        }\n        self.displayIfVisible()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 22460,
+              "start_position" : 22282
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setLegend",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 22323,
+                  "start_position" : 22314
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "x",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 22330,
+                  "start_position" : 22323
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "y",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.tooltipEnabledSnapshot else { return }\n        self.cursor = convert(event.locationInWindow, from: nil)\n        self.needsDisplay = true"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 22688,
+              "start_position" : 22460
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "mouseEntered",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 22523,
+                  "start_position" : 22504
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.tooltipEnabledSnapshot else { return }\n        self.cursor = convert(event.locationInWindow, from: nil)\n        self.needsDisplay = true"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 22914,
+              "start_position" : 22688
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "mouseMoved",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 22749,
+                  "start_position" : 22730
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.tooltipEnabledSnapshot else { return }\n        self.cursor = convert(event.locationInWindow, from: nil)\n        self.needsDisplay = true"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 23142,
+              "start_position" : 22914
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "mouseDragged",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 22977,
+                  "start_position" : 22958
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.tooltipEnabledSnapshot else { return }\n        self.cursor = nil\n        self.needsDisplay = true"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 23330,
+              "start_position" : 23142
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "mouseExited",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 23204,
+                  "start_position" : 23185
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.tooltipEnabledSnapshot else { return }\n        self.write { self.shadowPoints = self.orderedPointsLocked() }\n        self.stop = true"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 23546,
+              "start_position" : 23330
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "mouseDown",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 23384,
+                  "start_position" : 23371
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "with",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.tooltipEnabledSnapshot else { return }\n        self.stop = false"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 23691,
+              "start_position" : 23546
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "mouseUp",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSEvent"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 23598,
+                  "start_position" : 23585
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "with",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 6586,
+              "start_position" : 5601
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSRect"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "zero"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 5646,
+                  "start_position" : 5623
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "frame",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 5656,
+                  "start_position" : 5646
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "num",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "%"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 5678,
+                  "start_position" : 5656
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "suffix",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSColor"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "controlAccentColor"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 5716,
+                  "start_position" : 5678
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "color",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Scale"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "none"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 5738,
+                  "start_position" : 5716
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "scale",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Double"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "1"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 5762,
+                  "start_position" : 5738
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "fixedScale",
+              "order" : 5
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Double"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "0.01"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 5786,
+                  "start_position" : 5762
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "zeroValue",
+              "order" : 6
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 6694,
+              "start_position" : 6586
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 6625,
+                  "start_position" : 6611
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 23693,
+          "start_position" : 4516
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "LineChartView",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "ofSize",
+                      "value" : "9"
+                    },
+                    {
+                      "label" : "weight",
+                      "value" : ".light"
+                    }
+                  ],
+                  "call" : "systemFont",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Charts.swift",
+                    "location" : {
+                      "end_position" : 4639,
+                      "start_position" : 4595
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4639,
+              "start_position" : 4581
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "xLegendFont"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "usingFont",
+                      "value" : "xLegendFont"
+                    }
+                  ],
+                  "call" : "widthOfString",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Charts.swift",
+                    "location" : {
+                      "end_position" : 4732,
+                      "start_position" : 4684
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4732,
+              "start_position" : 4663
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "xLegendSampleWidth"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "DateFormatter",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Charts.swift",
+                    "location" : {
+                      "end_position" : 4785,
+                      "start_position" : 4770
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4785,
+              "start_position" : 4754
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "dateFormatter"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[DoubleValue?]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4829,
+              "start_position" : 4807
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "points"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4859,
+              "start_position" : 4846
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "head"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[DoubleValue?]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4909,
+              "start_position" : 4876
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "shadowPoints"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "true"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4950,
+              "start_position" : 4926
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "transparent"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 4986,
+              "start_position" : 4967
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "flipY"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5023,
+              "start_position" : 5003
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "minMax"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5054,
+              "start_position" : 5040
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "color"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5085,
+              "start_position" : 5071
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "suffix"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "((DoubleValue) -> String)?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5141,
+              "start_position" : 5102
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toolTipFunc"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "true"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5187,
+              "start_position" : 5158
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isTooltipEnabled"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5225,
+              "start_position" : 5204
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "xLegend"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5263,
+              "start_position" : 5242
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "yLegend"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Scale"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5297,
+              "start_position" : 5285
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "scale"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Double"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5332,
+              "start_position" : 5314
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "fixedScale"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Double"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5366,
+              "start_position" : 5349
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "zeroValue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "DateFormatter",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Charts.swift",
+                    "location" : {
+                      "end_position" : 5420,
+                      "start_position" : 5405
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5420,
+              "start_position" : 5383
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "legendDateFormatter"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSPoint?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5464,
+              "start_position" : 5442
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "cursor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5499,
+              "start_position" : 5481
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stop"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.read { self.isTooltipEnabled }"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 5601,
+              "start_position" : 5521
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "tooltipEnabledSnapshot"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 43,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Charts.swift"
+  ]
+}

@@ -1,0 +1,341 @@
+{
+  "caseID" : "case-bb86ea6a0575c0f801d9a393",
+  "commitHash" : "6317a832d400b39786b5fe750bdf49f99950511f",
+  "commitMessage" : "Adds build fixture and migrates build CLI tests. (#1848)\n\n- Part of #1833.\n- Also changes test directory names to include test ID so that they are\neasily identifiable.",
+  "commitURL" : "https://github.com/apple/container/commit/6317a832d400b39786b5fe750bdf49f99950511f",
+  "durationSeconds" : 7.3106390237808228,
+  "entityNames" : [
+    "CLIBuilderEnvOnlyTest",
+    "TestCLIBuildBase",
+    "deinit",
+    "init",
+    "testBuildEnvironmentOnlyImageFromAlpine",
+    "testBuildEnvironmentOnlyImageFromScratch",
+    "testComplexArgAndEnvCombinations",
+    "testLabelOnlyDockerfile"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "TestCLIBuildBase"
+            }
+          ],
+          "deinitializer" : {
+            "attributes" : [
+
+            ],
+            "body" : {
+              "content" : "try? builderDelete(force: true)"
+            },
+            "has_async_specifier" : false,
+            "location_info" : {
+              "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+              "location" : {
+                "end_position" : 1050,
+                "start_position" : 978
+              }
+            },
+            "modifiers" : [
+
+            ],
+            "name" : "deinit"
+          },
+          "enums" : [
+
+          ],
+          "functions" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM scratch\n\n                ARG BUILD_DATE\n                ARG VERSION=1.0.0\n\n                ENV TERM=xterm \\\\\n                    BUILD_DATE=${BUILD_DATE} \\\\\n                    APP_VERSION=${VERSION} \\\\\n                    PATH=/usr/local/bin:/usr/bin:/bin\n\n                LABEL maintainer=\"test@example.com\" \\\\\n                      version=\"${VERSION}\"\n                \"\"\"\n\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            let imageName = \"test-env-only:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir, buildArgs: [\"BUILD_DATE=2025-01-01\", \"VERSION=2.0.0\"])\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+                "location" : {
+                  "end_position" : 2002,
+                  "start_position" : 1050
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildEnvironmentOnlyImageFromScratch",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                ENV APP_NAME=myapp \\\\\n                    APP_VERSION=1.0.0 \\\\\n                    APP_ENV=production\n\n                LABEL maintainer=\"test@example.com\" \\\\\n                      version=\"1.0.0\" \\\\\n                      description=\"Test environment-only image\"\n                \"\"\"\n\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            let imageName = \"test-alpine-env:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+                "location" : {
+                  "end_position" : 2860,
+                  "start_position" : 2002
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildEnvironmentOnlyImageFromAlpine",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let baseImageName = \"test-env-base:\\(UUID().uuidString)\"\n\n            // First, create an environment-only base image\n            let baseDockerfile =\n                \"\"\"\n                FROM scratch\n\n                ARG JOBS=6\n                ARG ARCH=amd64\n\n                ENV MAKEOPTS=\"-j${JOBS}\" \\\\\n                    ARCH=\"${ARCH}\" \\\\\n                    PATH=/usr/local/bin:/usr/bin\n                \"\"\"\n\n            try createContext(tempDir: tempDir, dockerfile: baseDockerfile)\n            try self.build(tag: baseImageName, tempDir: tempDir, buildArgs: [\"JOBS=8\", \"ARCH=arm64\"])\n            #expect(try self.inspectImage(baseImageName) == baseImageName, \"expected base image to build successfully\")\n\n            // Now create a downstream image that uses it\n            let downstreamTempDir: URL = try createTempDir()\n            let downstreamDockerfile =\n                \"\"\"\n                FROM \\(baseImageName)\n\n                # Verify environment is inherited - note: can't use RUN with scratch base\n                LABEL test=\"env-inherited\"\n                \"\"\"\n\n            try createContext(tempDir: downstreamTempDir, dockerfile: downstreamDockerfile)\n            let downstreamImageName = \"test-env-child:\\(UUID().uuidString)\"\n            try self.build(tag: downstreamImageName, tempDir: downstreamTempDir)\n            #expect(\n                try self.inspectImage(downstreamImageName) == downstreamImageName,\n                \"expected downstream image to build successfully\"\n            )"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+                "location" : {
+                  "end_position" : 4514,
+                  "start_position" : 2860
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testMultiStageBuildWithEnvOnlyBase",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM scratch\n\n                ARG JOBS=6\n                ARG MAXLOAD=7.00\n                ARG ARCH=amd64\n                ARG PROFILE_PATH=23.0/split-usr/no-multilib\n                ARG CHOST=x86_64-pc-linux-gnu\n                ARG CFLAGS=-O2 -pipe\n\n                ENV JOBS=\"${JOBS}\" \\\\\n                    MAXLOAD=\"${MAXLOAD}\" \\\\\n                    GENTOO_PROFILE=\"default/linux/${ARCH}/${PROFILE_PATH}\" \\\\\n                    CHOST=\"${CHOST}\" \\\\\n                    MAKEOPTS=\"-j${JOBS}\" \\\\\n                    CFLAGS=\"${CFLAGS}\" \\\\\n                    CXXFLAGS=\"${CFLAGS}\"\n\n                LABEL maintainer=\"test@example.com\"\n                \"\"\"\n\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            let imageName = \"test-complex-env:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir, buildArgs: [\"JOBS=12\", \"ARCH=arm64\"])\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+                "location" : {
+                  "end_position" : 5712,
+                  "start_position" : 4514
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testComplexArgAndEnvCombinations",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM scratch\n\n                LABEL maintainer=\"test@example.com\" \\\\\n                      version=\"1.0.0\" \\\\\n                      description=\"Test image with only labels\" \\\\\n                      org.opencontainers.image.title=\"Test Image\"\n                \"\"\"\n\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            let imageName = \"test-label-only:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+                "location" : {
+                  "end_position" : 6476,
+                  "start_position" : 5712
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testLabelOnlyDockerfile",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            }
+          ],
+          "initializers" : [
+            {
+              "attributes" : [
+
+              ],
+              "functions" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+                "location" : {
+                  "end_position" : 978,
+                  "start_position" : 906
+                }
+              },
+              "modifiers" : [
+                "override"
+              ],
+              "name" : "init",
+              "parameters" : [
+
+              ]
+            }
+          ],
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+            "location" : {
+              "end_position" : 6482,
+              "start_position" : 854
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "CLIBuilderEnvOnlyTest",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "TestCLIBuildBase"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift",
+        "location" : {
+          "end_position" : 6484,
+          "start_position" : 824
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove Extension refactoring"
+  },
+  "refactoringIndex" : 6,
+  "refactoringType" : "Remove Extension refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Build/CLIBuilderEnvOnlyTest.swift"
+  ]
+}

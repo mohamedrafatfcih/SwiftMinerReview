@@ -1,0 +1,299 @@
+{
+  "caseID" : "case-561a191c33e0ef04e9c2842c",
+  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds" : 14.10075306892395,
+  "entityNames" : [
+    "TestCLIRunLifecycle",
+    "testExecInvalidExecutable",
+    "testRunFailureCleanup",
+    "testRunInvalidExecutable",
+    "testSSHForwarding",
+    "testStartIdempotent",
+    "testStartIdempotentAttachFails"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n\n            // First attempt with an invalid user — must fail.\n            let failResult = try f.run([\n                \"run\", \"--rm\", \"--name\", name, \"-d\",\n                \"--user\", f.testID,  // f.testID won't exist in /etc/passwd\n                image, \"sleep\", \"infinity\",\n            ])\n            #expect(failResult.status != 0, \"expected run to fail with invalid user\")\n\n            // Second attempt with the same name and no user — must succeed.\n            try await f.withContainer(image: image) { containerName in\n                _ = try f.doExec(containerName, cmd: [\"date\"])\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 1772,
+              "start_position" : 927
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunFailureCleanup",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image) { name in\n                let result = try f.run([\"start\", name])\n                #expect(result.status == 0, \"expected start to succeed on already running container\")\n                #expect(\n                    result.output.trimmingCharacters(in: .whitespacesAndNewlines) == name,\n                    \"expected output to be container name\")\n                _ = try f.inspectContainer(name)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 2427,
+              "start_position" : 1772
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStartIdempotent",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image) { name in\n                let result = try f.run([\"start\", \"-a\", name])\n                #expect(\n                    result.status != 0,\n                    \"expected start with attach to fail on already running container\")\n                #expect(result.error.contains(\"attach is currently unsupported on already running containers\"))\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 3036,
+              "start_position" : 2427
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStartIdempotentAttachFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            f.addCleanup { try f.doRemoveIfExists(name, force: true, ignoreFailure: true) }\n            let result = try f.run([\"run\", \"--rm\", \"--name\", name, \"-d\", image, \"foobarbaz\"])\n            #expect(result.status != 0, \"running invalid executable must fail, not hang\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 3552,
+              "start_position" : 3036
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRunInvalidExecutable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image) { name in\n                let result = try f.run([\"exec\", name, \"foobarbaz\"])\n                #expect(result.status != 0, \"executing invalid executable must fail, not hang\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 3994,
+              "start_position" : 3552
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testExecInvalidExecutable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n\n            let socketPath = try f.makeFakeSSHAgentSocket()\n\n            // Run container with --ssh; SSH_AUTH_SOCK must be in the CLI process environment.\n            let name = \"\\(f.testID)-c\"\n            f.addCleanup { try? f.doStop(name) }\n            try f.run(\n                [\"run\", \"--rm\", \"--name\", name, \"-d\", \"--ssh\", image, \"sleep\", \"infinity\"],\n                env: [\"SSH_AUTH_SOCK\": socketPath]\n            ).check()\n            try await f.waitForContainerRunning(name)\n\n            let sshSockValue = try f.doExec(name, cmd: [\"sh\", \"-c\", \"echo $SSH_AUTH_SOCK\"])\n            #expect(\n                sshSockValue.trimmingCharacters(in: .whitespacesAndNewlines)\n                    == \"/var/host-services/ssh-auth.sock\",\n                \"expected SSH_AUTH_SOCK to point to guest socket path\")\n\n            let socketCheck = try f.doExec(\n                name, cmd: [\"sh\", \"-c\", \"[ -S /var/host-services/ssh-auth.sock ] && echo exists || echo missing\"])\n            #expect(\n                socketCheck.trimmingCharacters(in: .whitespacesAndNewlines) == \"exists\",\n                \"expected forwarded SSH socket to exist in container\")\n\n            try f.doStop(name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift",
+            "location" : {
+              "end_position" : 5370,
+              "start_position" : 3994
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testSSHForwarding",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift",
+        "location" : {
+          "end_position" : 5372,
+          "start_position" : 819
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIRunLifecycle",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 58,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Run/TestCLIRunLifecycle.swift"
+  ]
+}

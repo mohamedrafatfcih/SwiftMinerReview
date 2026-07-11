@@ -1,0 +1,1936 @@
+{
+  "caseID" : "case-1807c2b27378fdae736a3fd7",
+  "commitHash" : "bd8826b20f3214fd56f086bdac0b018555c84cf0",
+  "commitMessage" : "feat: added few new commands for System Stats and small improvements in the Remote popup view\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/bd8826b20f3214fd56f086bdac0b018555c84cf0",
+  "durationSeconds" : 9.9556030035018921,
+  "entityNames" : [
+    "AccountPlan?",
+    "Any",
+    "Bool",
+    "Client",
+    "Codable",
+    "Data?",
+    "Date?",
+    "Details"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+        {
+          "body" : {
+            "content" : "Store.shared.bool(key: \"remote_update\", defaultValue: false)"
+          },
+          "modifier" : "get"
+        },
+        {
+          "body" : {
+            "content" : "Store.shared.set(key: \"remote_update\", value: newValue)\n            if newValue {\n                self.start()\n                self.registerDevice(omitCooldown: true)\n            } else if !self.monitoring && !self.control {\n                self.stop()\n            }"
+          },
+          "modifier" : "set"
+        }
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Bool"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemStats.swift",
+        "location" : {
+          "end_position" : 2067,
+          "start_position" : 1667
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "update"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "self.mqtt.disconnect()\n        NotificationCenter.default.removeObserver(self, name: .remoteLoginSuccess, object: nil)"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Kit/plugins/SystemStats.swift",
+          "location" : {
+            "end_position" : 5136,
+            "start_position" : 4985
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.auth.login { url in\n            guard let url else {\n                error(\"Empty url when try to login\", log: self.log)\n                return\n            }\n            debug(\"Open \\(url) to login to Stats Remote\", log: self.log)\n            NSWorkspace.shared.open(url)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 5468,
+              "start_position" : 5136
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "login",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.mqtt.disconnect()\n        self.auth.logout()\n        self.isAuthorized = false\n        debug(\"Logout successfully from Stats Remote\", log: self.log)\n        NotificationCenter.default.post(name: .remoteState, object: nil, userInfo: [\"auth\": self.isAuthorized])"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 5780,
+              "start_position" : 5468
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "logout",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.monitoring && self.isAuthorized, let v = value as? RemoteType, let data = v.remote() else { return }\n        let topic = \"stats/\\(self.id.uuidString)/metrics/\\(key)\"\n        self.mqtt.publish(topic: topic, data: data)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 6076,
+              "start_position" : 5780
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "send",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 5820,
+                  "start_position" : 5807
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "key",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Any"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 5830,
+                  "start_position" : 5820
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "self.isAuthorized = true\n        NotificationCenter.default.post(name: .remoteState, object: nil, userInfo: [\"auth\": self.isAuthorized])\n        self.mqtt.connect()\n        debug(\"Login successfully on Stats Remote\", log: self.log)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 6367,
+              "start_position" : 6076
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "successLogin",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.auth.isAuthorized { [weak self] status in\n            guard let self else { return }\n            \n            self.isAuthorized = status\n            NotificationCenter.default.post(name: .remoteState, object: nil, userInfo: [\"auth\": self.isAuthorized])\n            \n            if status {\n                self.mqtt.connect()\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 6767,
+              "start_position" : 6367
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "start",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.mqtt.disconnect()\n        NotificationCenter.default.post(name: .remoteState, object: nil, userInfo: [\"auth\": self.isAuthorized])"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 6947,
+              "start_position" : 6767
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stop",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.mqtt.disconnect()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 7019,
+              "start_position" : 6947
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "terminate",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let oneHour: TimeInterval = 3600\n        let now = Date()\n        self.cooldownLock.lock()\n        if let lastTime = self.lastRegisterTime, !omitCooldown && now.timeIntervalSince(lastTime) < oneHour {\n            self.cooldownLock.unlock()\n            debug(\"Device registration skipped: cooldown period not met\", log: self.log)\n            return\n        }\n        self.lastRegisterTime = now\n        self.cooldownLock.unlock()\n        \n        guard let url = URL(string: \"\\(SystemStats.host)/machine\") else { return }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/json\", forHTTPHeaderField: \"Content-Type\")\n        request.setValue(\"Bearer \\(SystemStats.shared.auth.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        \n        struct RegisterPayload: Codable {\n            let id: String\n            let details: SystemStats.Details\n        }\n        \n        let payload = RegisterPayload(\n            id: SystemStats.shared.id.uuidString,\n            details: SystemStats.Details(\n                client: Client(\n                    version: Bundle.main.infoDictionary?[\"CFBundleShortVersionString\"] as? String ?? \"Unknown\",\n                    control: SystemStats.shared.control,\n                    update: SystemStats.shared.update,\n                ),\n                system: SystemStats.System(\n                    platform: \"macOS\",\n                    vendor: \"Apple\",\n                    model: SystemKit.shared.device.model.name,\n                    modelID: SystemKit.shared.device.model.id,\n                    os: SystemStats.OS(\n                        name: SystemKit.shared.device.os?.name,\n                        version: SystemKit.shared.device.os?.version.getFullVersion(),\n                        build: SystemKit.shared.device.os?.build\n                    ),\n                    arch: SystemKit.shared.device.arch\n                ),\n                hardware: SystemStats.Hardware(\n                    cpu: SystemKit.shared.device.info.cpu,\n                    gpu: SystemKit.shared.device.info.gpu,\n                    ram: SystemKit.shared.device.info.ram?.dimms,\n                    disk: SystemKit.shared.device.info.disk\n                )\n            )\n        )\n        \n        guard let body = try? JSONEncoder().encode(payload) else { return }\n        request.httpBody = body\n        \n        self.session.dataTask(with: request) { [weak self] data, response, _ in\n            guard let self, let httpResponse = response as? HTTPURLResponse else { return }\n            if httpResponse.statusCode == 200 {\n                debug(\"Registered device: \\(SystemStats.shared.id.uuidString)\", log: self.log)\n                self.fetchAccount()\n            } else {\n                let bodyString = data.flatMap { String(data: $0, encoding: .utf8) } ?? \"\"\n                debug(\"Register remote failed (\\(httpResponse.statusCode)): \\(bodyString)\", log: self.log)\n            }\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 10110,
+              "start_position" : 7019
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "registerDevice",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 7083,
+                  "start_position" : 7057
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "omitCooldown",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let url = URL(string: \"\\(SystemStats.host)/account\") else { return }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"GET\"\n        request.setValue(\"Bearer \\(SystemStats.shared.auth.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        \n        struct AccountResponse: Codable {\n            let plan: AccountPlan\n        }\n        \n        self.session.dataTask(with: request) { [weak self] data, response, _ in\n            guard let self, let httpResponse = response as? HTTPURLResponse else { return }\n            if httpResponse.statusCode == 200, let data,\n               let account = try? JSONDecoder().decode(AccountResponse.self, from: data) {\n                SystemStats.shared.plan = account.plan\n                debug(\"Remote plan: \\(account.plan.rawValue)\", log: self.log)\n                NotificationCenter.default.post(name: .remoteAuthenticated, object: nil)\n            } else {\n                let bodyString = data.flatMap { String(data: $0, encoding: .utf8) } ?? \"\"\n                debug(\"Fetch account failed (\\(httpResponse.statusCode)): \\(bodyString)\", log: self.log)\n            }\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 11331,
+              "start_position" : 10110
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "fetchAccount",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if cmd == \"update\" {\n            guard self.update else { return }\n            debug(\"received update command\", log: self.log)\n            self.triggerUpdate()\n            self.mqtt.controlAck(cmd)\n            return\n        }\n        \n        guard self.control else { return }\n        \n        debug(\"received command '\\(cmd)' with payload: \\(String(data: payload ?? Data(), encoding: .utf8) ?? \"\")\", log: self.log)\n        \n        switch cmd {\n        case \"disable\":\n            self.disableControl()\n        case \"sleep\":\n            self.sleep()\n        case \"restart-client\":\n            self.mqtt.controlAck(cmd)\n            restartApp(self)\n        case \"volume\":\n            guard let payload else { return }\n            let value = String(data: payload, encoding: .utf8)\n            let step: Float32 = 0.0625\n            switch value {\n            case \"up\":\n                if let current = self.getSystemVolume() {\n                    if self.isSystemMuted() {\n                        self.setSystemMute(false)\n                    } else {\n                        self.setSystemVolume(min(current + step, 1.0))\n                    }\n                }\n            case \"down\":\n                if let current = self.getSystemVolume() {\n                    if self.isSystemMuted() {\n                        self.setSystemMute(false)\n                    } else {\n                        self.setSystemVolume(max(current - step, 0.0))\n                    }\n                }\n            case \"mute\":\n                self.setSystemMute(true)\n            case \"unmute\":\n                self.setSystemMute(false)\n            default: return\n            }\n        default: return\n        }\n        \n        self.mqtt.controlAck(cmd)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 13145,
+              "start_position" : 11331
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "command",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 11375,
+                  "start_position" : 11362
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cmd",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Data?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 11389,
+                  "start_position" : 11375
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "payload",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 4985,
+              "start_position" : 3327
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemStats.swift",
+        "location" : {
+          "end_position" : 13147,
+          "start_position" : 409
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "SystemStats",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2745,
+              "start_position" : 2619
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Details",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Client"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2681,
+                  "start_position" : 2667
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "client"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "System"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2708,
+                  "start_position" : 2694
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "system"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Hardware"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2739,
+                  "start_position" : 2721
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "hardware"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2864,
+              "start_position" : 2745
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Client",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2807,
+                  "start_position" : 2792
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "version"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2833,
+                  "start_position" : 2820
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "control"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2858,
+                  "start_position" : 2846
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "update"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2982,
+              "start_position" : 2864
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "OS",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2920,
+                  "start_position" : 2907
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2949,
+                  "start_position" : 2933
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "version"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 2976,
+                  "start_position" : 2962
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "build"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 3180,
+              "start_position" : 2982
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "System",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3045,
+                  "start_position" : 3029
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "platform"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3073,
+                  "start_position" : 3058
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "vendor"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3100,
+                  "start_position" : 3086
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "model"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3129,
+                  "start_position" : 3113
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "modelID"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "OS"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3148,
+                  "start_position" : 3142
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "os"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3174,
+                  "start_position" : 3161
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "arch"
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 3327,
+              "start_position" : 3180
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Hardware",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "cpu_s?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3240,
+                  "start_position" : 3229
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cpu"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "[gpu_s]?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3266,
+                  "start_position" : 3253
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "gpu"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "[dimm_s]?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3293,
+                  "start_position" : 3279
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "ram"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "[disk_s]?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 3321,
+                  "start_position" : 3306
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "disk"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "SystemStats",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 482,
+                      "start_position" : 469
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 482,
+              "start_position" : 460
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "shared"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "string",
+                      "value" : "\"https://api.system-stats.com\""
+                    }
+                  ],
+                  "call" : "URL",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 555,
+                      "start_position" : 512
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 556,
+              "start_position" : 505
+            }
+          },
+          "modifiers" : [
+            "static",
+            "public"
+          ],
+          "name" : "host"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "string",
+                      "value" : "\"https://oauth.system-stats.com\""
+                    }
+                  ],
+                  "call" : "URL",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 635,
+                      "start_position" : 590
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 636,
+              "start_position" : 579
+            }
+          },
+          "modifiers" : [
+            "static",
+            "public"
+          ],
+          "name" : "authHost"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "string",
+                      "value" : "\"wss://broker.system-stats.com:8084/mqtt\""
+                    }
+                  ],
+                  "call" : "URL",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 726,
+                      "start_position" : 672
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 727,
+              "start_position" : 659
+            }
+          },
+          "modifiers" : [
+            "static",
+            "public"
+          ],
+          "name" : "brokerHost"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "string",
+                      "value" : "\"https://app.system-stats.com\""
+                    }
+                  ],
+                  "call" : "URL",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 803,
+                      "start_position" : 760
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 804,
+              "start_position" : 750
+            }
+          },
+          "modifiers" : [
+            "static",
+            "public"
+          ],
+          "name" : "appHost"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.bool(key: \"remote_monitoring\", defaultValue: false)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "Store.shared.set(key: \"remote_monitoring\", value: newValue)\n            if newValue {\n                self.start()\n                self.registerDevice(omitCooldown: true)\n            } else if !self.control && !self.update {\n                self.stop()\n            }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 1233,
+              "start_position" : 825
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "monitoring"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.bool(key: \"remote_control\", defaultValue: false)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "Store.shared.set(key: \"remote_control\", value: newValue)\n            if newValue {\n                self.start()\n                self.registerDevice(omitCooldown: true)\n            } else if !self.monitoring && !self.update {\n                self.stop()\n            }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 1651,
+              "start_position" : 1249
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "control"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.bool(key: \"remote_update\", defaultValue: false)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "Store.shared.set(key: \"remote_update\", value: newValue)\n            if newValue {\n                self.start()\n                self.registerDevice(omitCooldown: true)\n            } else if !self.monitoring && !self.control {\n                self.stop()\n            }"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2067,
+              "start_position" : 1667
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "update"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "UUID"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2091,
+              "start_position" : 2083
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "id"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2133,
+              "start_position" : 2107
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isAuthorized"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "RemoteAuth"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "RemoteAuth",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 2180,
+                      "start_position" : 2168
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2180,
+              "start_position" : 2149
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "auth"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "AccountPlan?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2214,
+              "start_position" : 2196
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "plan"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NextLog"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2248,
+              "start_position" : 2236
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "log"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "MQTTManager"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "MQTTManager",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 2298,
+                      "start_position" : 2285
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2298,
+              "start_position" : 2265
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "mqtt"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLSession"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "{\n        let config = URLSessionConfiguration.default\n        config.timeoutIntervalForRequest = 30\n        return URLSession(configuration: config)\n    }",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+                    {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+                        {
+                          "label" : "configuration",
+                          "value" : "config"
+                        }
+                      ],
+                      "call" : "URLSession",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Kit/plugins/SystemStats.swift",
+                        "location" : {
+                          "end_position" : 2485,
+                          "start_position" : 2452
+                        }
+                      }
+                    }
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 2493,
+                      "start_position" : 2336
+                    }
+                  },
+                  "trailing_closure" : {
+                    "attributes" : [
+
+                    ],
+                    "body" : {
+                      "content" : "let config = URLSessionConfiguration.default\n        config.timeoutIntervalForRequest = 30\n        return URLSession(configuration: config)"
+                    },
+                    "captures" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Kit/plugins/SystemStats.swift",
+                      "location" : {
+                        "end_position" : 2491,
+                        "start_position" : 2336
+                      }
+                    },
+                    "parameters" : [
+
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2493,
+              "start_position" : 2314
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "session"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Date?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2535,
+              "start_position" : 2515
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lastSleepTime"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Date?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2575,
+              "start_position" : 2552
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lastRegisterTime"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "NSLock",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 2619,
+                      "start_position" : 2611
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 2619,
+              "start_position" : 2596
+            }
+          },
+          "modifiers" : [
+            "fileprivate"
+          ],
+          "name" : "cooldownLock"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 17,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/SystemStats.swift"
+  ]
+}

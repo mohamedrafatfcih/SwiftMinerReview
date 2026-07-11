@@ -1,0 +1,319 @@
+{
+  "caseID" : "case-7fa2d3ea13071560b5c414ac",
+  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds" : 31.880328059196472,
+  "entityNames" : [
+    "BaseTestCase",
+    "StaticAccessorTests",
+    "any RequestAdapter",
+    "any RequestInterceptor",
+    "any RequestRetrier",
+    "consumeRequestAdapter",
+    "consumeRequestInterceptor",
+    "consumeRequestRetrier"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "BaseTestCase"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "_ = requestAdapter"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 19660,
+              "start_position" : 19556
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "consumeRequestAdapter",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any RequestAdapter"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/RequestInterceptorTests.swift",
+                "location" : {
+                  "end_position" : 19624,
+                  "start_position" : 19588
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "requestAdapter",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "_ = requestRetrier"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 19765,
+              "start_position" : 19660
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "consumeRequestRetrier",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any RequestRetrier"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/RequestInterceptorTests.swift",
+                "location" : {
+                  "end_position" : 19729,
+                  "start_position" : 19693
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "requestRetrier",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "_ = requestInterceptor"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 19886,
+              "start_position" : 19765
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "consumeRequestInterceptor",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any RequestInterceptor"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/RequestInterceptorTests.swift",
+                "location" : {
+                  "end_position" : 19846,
+                  "start_position" : 19802
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "requestInterceptor",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "consumeRequestAdapter(.adapter { request, _, completion in completion(.success(request)) })"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 20085,
+              "start_position" : 19886
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatAdapterCanBeCreatedStaticallyFromProtocol",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "consumeRequestRetrier(.retrier { _, _, _, completion in completion(.doNotRetry) })"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 20275,
+              "start_position" : 20085
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatRetrierCanBeCreatedStaticallyFromProtocol",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "consumeRequestInterceptor(.interceptor())"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 20428,
+              "start_position" : 20275
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanBeCreatedStaticallyFromProtocol",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "consumeRequestInterceptor(.retryPolicy())"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 20581,
+              "start_position" : 20428
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatRetryPolicyCanBeCreatedStaticallyFromProtocol",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "consumeRequestInterceptor(.connectionLostRetryPolicy())"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 20762,
+              "start_position" : 20581
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatConnectionLostRetryPolicyCanBeCreatedStaticallyFromProtocol",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/RequestInterceptorTests.swift",
+        "location" : {
+          "end_position" : 20764,
+          "start_position" : 19478
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "StaticAccessorTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 224,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/RequestInterceptorTests.swift"
+  ]
+}

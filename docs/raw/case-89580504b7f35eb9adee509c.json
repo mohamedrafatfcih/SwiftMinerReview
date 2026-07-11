@@ -1,0 +1,1231 @@
+{
+  "caseID" : "case-89580504b7f35eb9adee509c",
+  "commitHash" : "563595b5197188a6770e2482ac3e6d665c5a1578",
+  "commitMessage" : "Refactor Project Structure, Break Request Types Out Into Separate Files (#3819)\n\n### Goals :soccer:\r\nAlamofire's project structure has grown from its original single-file\r\norigin into many files on disk. Unfortunately, as the project has grown,\r\nthe `Request.swift` file has grown rather gigantic, topping 2600 lines\r\nafter the recent addition of `WebSocketRequest`. This PR breaks up\r\n`Request.swift` into separate files for each request type. It also moves\r\nall the previous serialization extensions from\r\n`ResponseSerialization.swift` to their associated type's files.\r\n\r\nThis PR also restructures some of the project's layout on disk to make\r\nsome Xcode groups proper folders.\r\n\r\nThis PR also creates the `AFInfo` namespace and moves the previously\r\ninternal `version` value into it to make it public.\r\n\r\nThis PR also adds primary associated types to the serialization\r\nprotocols.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/563595b5197188a6770e2482ac3e6d665c5a1578",
+  "durationSeconds" : 35.255531072616577,
+  "entityNames" : [
+    "(_ bodyData: Data) -> Bool",
+    "@escaping (Result<URLRequest, Error>) -> Void",
+    "@escaping (_ bodyData: Data) -> Bool",
+    "Data",
+    "DeflateRequestCompressor",
+    "DuplicateHeaderBehavior",
+    "DuplicateHeaderError",
+    "Error"
+  ],
+  "rawRefactoring" : {
+    "category" : "complex",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "RequestInterceptor"
+        }
+      ],
+      "enums" : [
+        {
+          "attributes" : [
+
+          ],
+          "cases" : [
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 2435,
+                  "start_position" : 2358
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 2519,
+                  "start_position" : 2435
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "replace",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 2600,
+                  "start_position" : 2519
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "skip",
+              "parameters" : [
+
+              ]
+            }
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 2606,
+              "start_position" : 2207
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "DuplicateHeaderBehavior",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let bodyData = urlRequest.httpBody else {\n            completion(.success(urlRequest))\n            return\n        }\n\n        guard shouldCompressBodyData(bodyData) else {\n            completion(.success(urlRequest))\n            return\n        }\n\n        if urlRequest.headers.value(for: \"Content-Encoding\") != nil {\n            switch duplicateHeaderBehavior {\n            case .error:\n                completion(.failure(DuplicateHeaderError()))\n                return\n            case .replace:\n                // Header will be replaced once the body data is compressed.\n                break\n            case .skip:\n                completion(.success(urlRequest))\n                return\n            }\n        }\n\n        var compressedRequest = urlRequest\n\n        do {\n            compressedRequest.httpBody = try deflate(bodyData)\n            compressedRequest.headers.update(.contentEncoding(\"deflate\"))\n            completion(.success(compressedRequest))\n        } catch {\n            completion(.failure(error))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 5025,
+              "start_position" : 3749
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "adapt",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3799,
+                  "start_position" : 3773
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Session"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3821,
+                  "start_position" : 3799
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Result<URLRequest, Error>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3878,
+                  "start_position" : 3821
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var output = Data([0x78, 0x5E]) // Header\n        try output.append((data as NSData).compressed(using: .zlib) as Data)\n        var checksum = adler32Checksum(of: data).bigEndian\n        output.append(Data(bytes: &checksum, count: MemoryLayout<UInt32>.size))\n\n        return output"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 5369,
+              "start_position" : 5025
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "deflate",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 5056,
+                  "start_position" : 5044
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "data.withUnsafeBytes { buffer in\n            UInt32(adler32(1, buffer.baseAddress, UInt32(buffer.count)))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 5552,
+              "start_position" : 5369
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "adler32Checksum",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "of",
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 5409,
+                  "start_position" : 5396
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "UInt32"
+            },
+            "description" : "-> UInt32"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 3749,
+              "start_position" : 3133
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DuplicateHeaderBehavior"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "error"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3523,
+                  "start_position" : 3465
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "duplicateHeaderBehavior",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (_ bodyData: Data) -> Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "closure" : {
+                    "_0" : {
+                      "attributes" : [
+
+                      ],
+                      "body" : {
+                        "content" : "true"
+                      },
+                      "captures" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Features/RequestCompression.swift",
+                        "location" : {
+                          "end_position" : 3616,
+                          "start_position" : 3603
+                        }
+                      },
+                      "parameters" : [
+
+                      ]
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3616,
+                  "start_position" : 3523
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldCompressBodyData",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Features/RequestCompression.swift",
+        "location" : {
+          "end_position" : 5554,
+          "start_position" : 1255
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "DeflateRequestCompressor",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Error"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 2820,
+              "start_position" : 2606
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "DuplicateHeaderError",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DuplicateHeaderBehavior"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 2981,
+              "start_position" : 2933
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "duplicateHeaderBehavior"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "(_ bodyData: Data) -> Bool"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/RequestCompression.swift",
+            "location" : {
+              "end_position" : 3133,
+              "start_position" : 3083
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "shouldCompressBodyData"
+        }
+      ]
+    },
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "RequestInterceptor"
+        }
+      ],
+      "enums" : [
+        {
+          "attributes" : [
+
+          ],
+          "cases" : [
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 2435,
+                  "start_position" : 2358
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 2519,
+                  "start_position" : 2435
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "replace",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 2600,
+                  "start_position" : 2519
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "skip",
+              "parameters" : [
+
+              ]
+            }
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 2606,
+              "start_position" : 2207
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "DuplicateHeaderBehavior",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let bodyData = urlRequest.httpBody else {\n            completion(.success(urlRequest))\n            return\n        }\n\n        guard shouldCompressBodyData(bodyData) else {\n            completion(.success(urlRequest))\n            return\n        }\n\n        if urlRequest.headers.value(for: \"Content-Encoding\") != nil {\n            switch duplicateHeaderBehavior {\n            case .error:\n                completion(.failure(DuplicateHeaderError()))\n                return\n            case .replace:\n                // Header will be replaced once the body data is compressed.\n                break\n            case .skip:\n                completion(.success(urlRequest))\n                return\n            }\n        }\n\n        var compressedRequest = urlRequest\n\n        do {\n            compressedRequest.httpBody = try deflate(bodyData)\n            compressedRequest.headers.update(.contentEncoding(\"deflate\"))\n            completion(.success(compressedRequest))\n        } catch {\n            completion(.failure(error))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 5025,
+              "start_position" : 3749
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "adapt",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3799,
+                  "start_position" : 3773
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Session"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3821,
+                  "start_position" : 3799
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Result<URLRequest, Error>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3878,
+                  "start_position" : 3821
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var output = Data([0x78, 0x5E]) // Header\n        try output.append((data as NSData).compressed(using: .zlib) as Data)\n        var checksum = adler32Checksum(of: data).bigEndian\n        output.append(Data(bytes: &checksum, count: MemoryLayout<UInt32>.size))\n\n        return output"
+          },
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 5369,
+              "start_position" : 5025
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "deflate",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 5056,
+                  "start_position" : 5044
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "data.withUnsafeBytes { buffer in\n            UInt32(adler32(1, buffer.baseAddress, UInt32(buffer.count)))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 5552,
+              "start_position" : 5369
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "adler32Checksum",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "of",
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 5409,
+                  "start_position" : 5396
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "UInt32"
+            },
+            "description" : "-> UInt32"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 3749,
+              "start_position" : 3133
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DuplicateHeaderBehavior"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "error"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3523,
+                  "start_position" : 3465
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "duplicateHeaderBehavior",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (_ bodyData: Data) -> Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "closure" : {
+                    "_0" : {
+                      "attributes" : [
+
+                      ],
+                      "body" : {
+                        "content" : "true"
+                      },
+                      "captures" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/RequestCompression.swift",
+                        "location" : {
+                          "end_position" : 3616,
+                          "start_position" : 3603
+                        }
+                      },
+                      "parameters" : [
+
+                      ]
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/RequestCompression.swift",
+                "location" : {
+                  "end_position" : 3616,
+                  "start_position" : 3523
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldCompressBodyData",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/RequestCompression.swift",
+        "location" : {
+          "end_position" : 5554,
+          "start_position" : 1255
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "DeflateRequestCompressor",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Error"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 2820,
+              "start_position" : 2606
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "DuplicateHeaderError",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DuplicateHeaderBehavior"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 2981,
+              "start_position" : 2933
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "duplicateHeaderBehavior"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "(_ bodyData: Data) -> Bool"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/RequestCompression.swift",
+            "location" : {
+              "end_position" : 3133,
+              "start_position" : 3083
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "shouldCompressBodyData"
+        }
+      ]
+    },
+    "type" : "Move Struct Refactoring"
+  },
+  "refactoringIndex" : 38,
+  "refactoringType" : "Move Struct Refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Features/RequestCompression.swift",
+    "Source/RequestCompression.swift"
+  ]
+}

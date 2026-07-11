@@ -1,0 +1,138 @@
+{
+  "caseID" : "case-83aeed5cd330e84d3fafa238",
+  "commitHash" : "c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "commitMessage" : "Reorganize Swift package targets for network plugin. (#1615)\n\n- Part of #1404.\n- Updates containerization to 0.33.2.\n- Reorganizes network plugin targets into:\n  - `ContainerNetworkClient` - network plugin client and default types\n- `ContainerNetworkServer` - separate protocols for `Network` which\nmanages the underlying virtual network, `NetworkService`, which takes a\nnetwork and implements the API, and an actor `NetworkHarness` that\nmarshals between the API and the XPC protocol. The service-harness\nseparation will help us ensure XPC protocol compatibility in both\ndirections as we evolve the plugin APIs.\n- Removes `disableAllocator()` which is no longer used since #1545\nswitched over to using XPC connections between runtime and network\nplugin instances to track whether a network has attached containers.",
+  "commitURL" : "https://github.com/apple/container/commit/c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "durationSeconds" : 8.8029299974441528,
+  "entityNames" : [
+    "(attachment: Attachment, additionalData: XPCMessage?)",
+    "MACAddress?",
+    "String",
+    "XPCServerSession",
+    "allocate",
+    "hostname",
+    "macAddress",
+    "session"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        let state = await network.state\n        guard case .running(_, let status) = state else {\n            throw ContainerizationError(.invalidState, message: \"invalid network state - network \\(state.id) must be running\")\n        }\n\n        let macAddress = macAddress ?? MACAddress((UInt64.random(in: 0...UInt64.max) & 0x0cff_ffff_ffff) | 0xf200_0000_0000)\n        let index = try await allocator.allocate(hostname: hostname)\n        let ipv6Address = try status.ipv6Subnet\n            .map { try CIDRv6(macAddress.ipv6Address(network: $0.lower), prefix: $0.prefix) }\n        let ip = IPv4Address(index)\n        let attachment = Attachment(\n            network: state.id,\n            hostname: hostname,\n            ipv4Address: try CIDRv4(ip, prefix: status.ipv4Subnet.prefix),\n            ipv4Gateway: status.ipv4Gateway,\n            ipv6Address: ipv6Address,\n            macAddress: macAddress\n        )\n        log.info(\n            \"allocated attachment\",\n            metadata: [\n                \"hostname\": \"\\(hostname)\",\n                \"ipv4Address\": \"\\(attachment.ipv4Address)\",\n                \"ipv4Gateway\": \"\\(attachment.ipv4Gateway)\",\n                \"ipv6Address\": \"\\(attachment.ipv6Address?.description ?? \"unavailable\")\",\n                \"macAddress\": \"\\(attachment.macAddress?.description ?? \"unspecified\")\",\n            ])\n\n        var additionalData: XPCMessage?\n        try network.withAdditionalData {\n            additionalData = $0\n        }\n        macAddresses[index] = macAddress\n\n        if allocationsBySession[session] == nil {\n            allocationsBySession[session] = []\n            await session.onDisconnect { [weak self] in\n                await self?.releaseSession(session)\n            }\n        }\n        allocationsBySession[session]!.append((hostname: hostname, index: index))\n\n        return (attachment: attachment, additionalData: additionalData)"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
+        "location" : {
+          "end_position" : 4286,
+          "start_position" : 2037
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "allocate",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
+            "location" : {
+              "end_position" : 2104,
+              "start_position" : 2078
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "hostname",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "MACAddress?"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
+            "location" : {
+              "end_position" : 2137,
+              "start_position" : 2104
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "macAddress",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCServerSession"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
+            "location" : {
+              "end_position" : 2171,
+              "start_position" : 2137
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "session",
+          "order" : 2
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "(attachment: Attachment, additionalData: XPCMessage?)"
+        },
+        "description" : "-> (attachment: Attachment, additionalData: XPCMessage?)"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 104,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/Network/Server/DefaultNetworkService.swift"
+  ]
+}

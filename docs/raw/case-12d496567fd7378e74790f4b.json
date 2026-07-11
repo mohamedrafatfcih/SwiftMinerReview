@@ -1,0 +1,362 @@
+{
+  "caseID" : "case-12d496567fd7378e74790f4b",
+  "commitHash" : "264b2e00a5ac7cc0c2ce19365823b57d35406825",
+  "commitMessage" : "fix: Exclude desktop widgets from tile-all and cascade-all operations (#1707)\n\nFilter out windows belonging to Dock, WindowManager (Stage Manager), and\nNotification Center (which hosts desktop widgets on macOS Sonoma+) in\ngetAllWindowElements(). This prevents desktop widgets from being included\nin multi-window operations like tile-all, cascade-all, and reverse-all.\n\nFixes #1701\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/264b2e00a5ac7cc0c2ce19365823b57d35406825",
+  "durationSeconds" : 1.1336020231246948,
+  "entityNames" : [
+    "AccessibilityElement",
+    "AccessibilityElement?",
+    "CGPoint",
+    "CGWindowID",
+    "Set<String>",
+    "WindowInfo?",
+    "[AccessibilityElement]",
+    "excludedProcessNames"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Set<String>"
+      },
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "other" : {
+            "_0" : "Notification Center"
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Rectangle/AccessibilityElement.swift",
+        "location" : {
+          "end_position" : 14016,
+          "start_position" : 13932
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "excludedProcessNames"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "AccessibilityElement"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let app = NSWorkspace.shared.frontmostApplication else { return nil }\n        return AccessibilityElement(app.processIdentifier)"
+          },
+          "location_info" : {
+            "file_path" : "Rectangle/AccessibilityElement.swift",
+            "location" : {
+              "end_position" : 10576,
+              "start_position" : 10355
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "getFrontApplicationElement",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "AccessibilityElement?"
+            },
+            "description" : "-> AccessibilityElement?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let appElement = getFrontApplicationElement() else {\n            Logger.log(\"Failed to find the application that currently has focus.\")\n            return nil\n        }\n        if let focusedWindowElement = appElement.focusedWindowElement {\n            return focusedWindowElement\n        }\n        if let firstWindowElement = appElement.windowElements?.first {\n            return firstWindowElement\n        }\n        Logger.log(\"Failed to find frontmost window.\")\n        return nil"
+          },
+          "location_info" : {
+            "file_path" : "Rectangle/AccessibilityElement.swift",
+            "location" : {
+              "end_position" : 11152,
+              "start_position" : 10576
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "getFrontWindowElement",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "AccessibilityElement?"
+            },
+            "description" : "-> AccessibilityElement?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "WindowUtil.getWindowList().first(where: {windowInfo in\n            windowInfo.level < 23 // 23 is the level of the Notification Center\n            && ![\"Dock\", \"WindowManager\"].contains(windowInfo.processName)\n            && windowInfo.frame.contains(location)\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Rectangle/AccessibilityElement.swift",
+            "location" : {
+              "end_position" : 11519,
+              "start_position" : 11152
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "getWindowInfo",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CGPoint"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Rectangle/AccessibilityElement.swift",
+                "location" : {
+                  "end_position" : 11215,
+                  "start_position" : 11196
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "location",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "WindowInfo?"
+            },
+            "description" : "-> WindowInfo?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let position = NSEvent.mouseLocation.screenFlipped\n        \n        var systemWideFirst = Defaults.systemWideMouseDown.userEnabled\n        if Defaults.systemWideMouseDown.notSet, let frontAppId = ApplicationToggle.frontAppId {\n            systemWideFirst = Defaults.systemWideMouseDownApps.typedValue?.contains(frontAppId) == true\n        }\n        \n        if systemWideFirst,\n            let element = AccessibilityElement(position),\n            let windowElement = element.windowElement {\n                return windowElement\n        }\n\n        if let info = getWindowInfo(position) {\n            if !Defaults.dragFromStage.userDisabled {\n                if StageUtil.stageCapable && StageUtil.stageEnabled,\n                   let group = StageUtil.getStageStripWindowGroup(info.id),\n                   let windowId = group.first,\n                   windowId != info.id,\n                   let element = StageWindowAccessibilityElement(windowId) {\n                    return element\n                }\n            }\n            if let windowElements = AccessibilityElement(info.pid).windowElements {\n                if let windowElement = (windowElements.first { $0.windowId == info.id }) {\n                    return windowElement\n                }\n                if let windowElement = (windowElements.first { $0.frame == info.frame }) {\n                    return windowElement\n                }\n            }\n        }\n        \n        if !systemWideFirst,\n           let element = AccessibilityElement(position),\n           let windowElement = element.windowElement {\n            \n            if Logger.logging, let pid = windowElement.pid {\n                let appName = NSRunningApplication(processIdentifier: pid)?.localizedName ?? \"\"\n                Logger.log(\"Window under cursor fallback matched: \\(appName)\")\n            }\n            return windowElement\n        }\n        Logger.log(\"Unable to obtain the accessibility element with the specified attribute at mouse location\")\n        return nil"
+          },
+          "location_info" : {
+            "file_path" : "Rectangle/AccessibilityElement.swift",
+            "location" : {
+              "end_position" : 13620,
+              "start_position" : 11519
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "getWindowElementUnderCursor",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "AccessibilityElement?"
+            },
+            "description" : "-> AccessibilityElement?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let pid = WindowUtil.getWindowList(ids: [windowId]).first?.pid else { return nil }\n        return AccessibilityElement(pid).windowElements?.first { $0.windowId == windowId }"
+          },
+          "location_info" : {
+            "file_path" : "Rectangle/AccessibilityElement.swift",
+            "location" : {
+              "end_position" : 13903,
+              "start_position" : 13620
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "getWindowElement",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CGWindowID"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Rectangle/AccessibilityElement.swift",
+                "location" : {
+                  "end_position" : 13681,
+                  "start_position" : 13659
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "windowId",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "AccessibilityElement?"
+            },
+            "description" : "-> AccessibilityElement?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "return WindowUtil.getWindowList()\n            .filter { !excludedProcessNames.contains($0.processName ?? \"\") }\n            .uniqueMap { $0.pid }\n            .compactMap { AccessibilityElement($0).windowElements }\n            .flatMap { $0 }"
+          },
+          "location_info" : {
+            "file_path" : "Rectangle/AccessibilityElement.swift",
+            "location" : {
+              "end_position" : 14339,
+              "start_position" : 14016
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "getAllWindowElements",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[AccessibilityElement]"
+            },
+            "description" : "-> [AccessibilityElement]"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Rectangle/AccessibilityElement.swift",
+        "location" : {
+          "end_position" : 14341,
+          "start_position" : 10321
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Set<String>"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "Notification Center"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Rectangle/AccessibilityElement.swift",
+            "location" : {
+              "end_position" : 14016,
+              "start_position" : 13932
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "excludedProcessNames"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 3,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "rxhanson-rectangle",
+  "repoName" : "rxhanson/Rectangle",
+  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Rectangle/AccessibilityElement.swift"
+  ]
+}

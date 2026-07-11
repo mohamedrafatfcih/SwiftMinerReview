@@ -1,0 +1,107 @@
+{
+  "caseID" : "case-b218c2a83c7a53b1dad82966",
+  "commitHash" : "e58140b172dab65843f36edba810185f51da03d0",
+  "commitMessage" : "Remove @propertyWrapper From Protected (#3777)\n\n### Goals :soccer:\r\nUse of a property wrapper is not thread-safe beyond access of the\r\n`wrappedValue` so for a while now Alamofire has had the implicit rule of\r\nalways accessing `Protected` values through the wrapper using `$`. We\r\ncan make this completely safe by removing the `@propertyWrapper`\r\nconformance altogether and always forcing direct use of `Protected`.\r\nThis is somewhat less ergonomic but should be safer in the long run.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/e58140b172dab65843f36edba810185f51da03d0",
+  "durationSeconds" : 7.985435962677002,
+  "entityNames" : [
+    "@escaping ([Int], Int) -> Void",
+    "Int",
+    "completion",
+    "executeWriteOperationsInParallel",
+    "totalOperations"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "depth" : 0,
+      "description" : "for _ in 1...totalOperations {\n            queue1.async {\n                // Moves the last string element to the beginning of the string array\n                let result: Int = self.$stringContainer.write { stringContainer in\n                    let lastElement = stringContainer.stringArray.removeLast()\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n\n                    stringContainer.stringArray.insert(lastElement, at: 0)\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n\n                    return stringContainer.totalStrings\n                }\n\n                self.$stringContainerWrite.write { mutableState in\n                    mutableState.results.append(result)\n\n                    if mutableState.results.count == totalOperations {\n                        mutableState.queue1Complete = true\n\n                        if mutableState.queue2Complete {\n                            completion(mutableState.results, mutableState.completedWrites)\n                        }\n                    }\n                }\n            }\n\n            queue2.async {\n                // Moves the first string element to the end of the string array\n                self.$stringContainer.write { stringContainer in\n                    let firstElement = stringContainer.stringArray.remove(at: 0)\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n\n                    stringContainer.stringArray.append(firstElement)\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n                }\n\n                self.$stringContainerWrite.write { mutableState in\n                    mutableState.completedWrites += 1\n\n                    if mutableState.completedWrites == totalOperations {\n                        mutableState.queue2Complete = true\n\n                        if mutableState.queue1Complete {\n                            completion(mutableState.results, mutableState.completedWrites)\n                        }\n                    }\n                }\n            }\n        }",
+      "index" : 2
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let queue1 = DispatchQueue(label: \"com.alamofire.testWriterQueue1\")\n        let queue2 = DispatchQueue(label: \"com.alamofire.testWriterQueue2\")\n\n        for _ in 1...totalOperations {\n            queue1.async {\n                // Moves the last string element to the beginning of the string array\n                let result: Int = self.$stringContainer.write { stringContainer in\n                    let lastElement = stringContainer.stringArray.removeLast()\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n\n                    stringContainer.stringArray.insert(lastElement, at: 0)\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n\n                    return stringContainer.totalStrings\n                }\n\n                self.$stringContainerWrite.write { mutableState in\n                    mutableState.results.append(result)\n\n                    if mutableState.results.count == totalOperations {\n                        mutableState.queue1Complete = true\n\n                        if mutableState.queue2Complete {\n                            completion(mutableState.results, mutableState.completedWrites)\n                        }\n                    }\n                }\n            }\n\n            queue2.async {\n                // Moves the first string element to the end of the string array\n                self.$stringContainer.write { stringContainer in\n                    let firstElement = stringContainer.stringArray.remove(at: 0)\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n\n                    stringContainer.stringArray.append(firstElement)\n                    stringContainer.totalStrings = stringContainer.stringArray.count\n                }\n\n                self.$stringContainerWrite.write { mutableState in\n                    mutableState.completedWrites += 1\n\n                    if mutableState.completedWrites == totalOperations {\n                        mutableState.queue2Complete = true\n\n                        if mutableState.queue1Complete {\n                            completion(mutableState.results, mutableState.completedWrites)\n                        }\n                    }\n                }\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Tests/ProtectedTests.swift",
+        "location" : {
+          "end_position" : 9247,
+          "start_position" : 6768
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "executeWriteOperationsInParallel",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "is_variadic" : false,
+          "label" : "totalOperationsToExecute",
+          "location_info" : {
+            "file_path" : "Tests/ProtectedTests.swift",
+            "location" : {
+              "end_position" : 6866,
+              "start_position" : 6820
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "totalOperations",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping ([Int], Int) -> Void"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/ProtectedTests.swift",
+            "location" : {
+              "end_position" : 6959,
+              "start_position" : 6866
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "completion",
+          "order" : 1
+        }
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 194,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/ProtectedTests.swift"
+  ]
+}

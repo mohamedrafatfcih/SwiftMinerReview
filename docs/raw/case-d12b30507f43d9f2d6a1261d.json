@@ -1,0 +1,96 @@
+{
+  "caseID" : "case-d12b30507f43d9f2d6a1261d",
+  "commitHash" : "7174b877a445ce78b291175b08cfdf3f7713d166",
+  "commitMessage" : "feat: improvements in the Remote module\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/7174b877a445ce78b291175b08cfdf3f7713d166",
+  "durationSeconds" : 3.142071008682251,
+  "entityNames" : [
+    "Data",
+    "data",
+    "guard",
+    "handlePublish"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "boolean_expr" : {
+              "_0" : "topic.hasPrefix"
+            }
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 40477,
+              "start_position" : 40446
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/Remote.swift",
+        "location" : {
+          "end_position" : 40492,
+          "start_position" : 40431
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var offset = 1\n        while offset < data.count && data[offset] & 0x80 != 0 { offset += 1 }\n        guard offset < data.count else { return }\n        offset += 1\n        \n        guard data.count > offset + 1 else { return }\n        let topicLength = Int(data[offset]) << 8 | Int(data[offset + 1])\n        offset += 2\n        \n        guard data.count >= offset + topicLength else { return }\n        let topicData = data.subdata(in: offset..<(offset + topicLength))\n        guard let topic = String(data: topicData, encoding: .utf8) else { return }\n        offset += topicLength\n        \n        let base = \"stats/\\(Remote.shared.id.uuidString)/\"\n        if topic == base + \"unregister\" {\n            self.publish(topic: topic, data: Data(), retain: true)\n            self.unregisterHandler?()\n            return\n        }\n        \n        let controlPrefix = base + \"control/\"\n        guard topic.hasPrefix(controlPrefix) else { return }\n        let commandName = String(topic.dropFirst(controlPrefix.count))\n        guard !commandName.isEmpty, !commandName.contains(\"/\") else { return }\n        let payload = data.subdata(in: offset..<data.count)\n        self.commandCallback?(commandName, payload)"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Remote.swift",
+        "location" : {
+          "end_position" : 40760,
+          "start_position" : 39492
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "handlePublish",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Data"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 39541,
+              "start_position" : 39529
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "data",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 67,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Remote.swift"
+  ]
+}

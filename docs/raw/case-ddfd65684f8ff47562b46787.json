@@ -1,0 +1,139 @@
+{
+  "caseID" : "case-ddfd65684f8ff47562b46787",
+  "commitHash" : "c4a22389ac34e25150434fa502921f8ee0988b72",
+  "commitMessage" : "add container machine nested virt (#1742)\n\nThis also includes custom kernels for container machine. Its required\nwith nested virt as CONFIG_KVM needs to be enabled.\n\n---------\n\nSigned-off-by: michael_crosby <michael_crosby@apple.com>",
+  "commitURL" : "https://github.com/apple/container/commit/c4a22389ac34e25150434fa502921f8ee0988b72",
+  "durationSeconds" : 5.6167140007019043,
+  "entityNames" : [
+    "Kernel",
+    "MachineSnapshot",
+    "String?",
+    "[String: String]",
+    "boot",
+    "dynamicEnv",
+    "id",
+    "kernel"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Kernel"
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+        "location" : {
+          "end_position" : 13703,
+          "start_position" : 13689
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "kernel"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "self.log.debug(\"\\(#function)\")\n\n        guard let id = id ?? self.default?.id else {\n            throw ContainerizationError(\n                .invalidArgument,\n                message: \"no container machine specified and no default set\"\n            )\n        }\n\n        return try await self.lock.withLock { context in\n            var state = try await self._getMachineState(id: id)\n\n            switch state.snapshot.status {\n            case .running:\n                return state.snapshot\n            case .stopped:\n                break\n            default:\n                throw ContainerizationError(.invalidState, message: \"container machine \\(id) is \\(state.snapshot.status)\")\n            }\n\n            let cid = \"\\(id)-\\(UUID().uuidString.prefix(MachineConfiguration.containerUUIDLength).lowercased())\"\n            guard try await self.client.list(filters: .init(ids: [cid])).isEmpty else {\n                throw ContainerizationError(.internalError, message: \"container \\(cid) already exists\")\n            }\n\n            let path = try self.bundlePath(id: id)\n            let bundle = MachineBundle(path: path)\n            let rootfs = try bundle.machineRootfs\n\n            let bootConfig = state.snapshot.bootConfig\n            var config = try await state.snapshot.configuration.toContainerConfig(\n                cid: cid,\n                sbin: path.appending(MachineBundle.sbinDirectory),\n                initializedFile: path.appending(MachineBundle.initializedFile),\n                homeMountOption: bootConfig.homeMount,\n                virtualization: bootConfig.virtualization,\n            )\n\n            config.resources.cpus = bootConfig.cpus\n            config.resources.cpuOverhead = 0\n            config.resources.memoryInBytes = bootConfig.memory.toUInt64(unit: .bytes)\n\n            let kernel: Kernel\n            if let kernelPath = bootConfig.kernelPath {\n                let validated = try MachineConfig.validateKernelPath(kernelPath.string)\n                kernel = Kernel(\n                    path: URL(fileURLWithPath: validated.string),\n                    platform: self.systemPlatform(from: state.snapshot.configuration.platform)\n                )\n            } else {\n                kernel = try await ClientKernel.getDefaultKernel(for: .current)\n            }\n\n            var fhs: [FileHandle] = []\n            do {\n                try await self.client.create(\n                    configuration: config,\n                    options: ContainerCreateOptions(autoRemove: true, rootFsOverride: rootfs),\n                    kernel: kernel\n                )\n\n                let process = try await self.client.bootstrap(\n                    id: cid, stdio: [nil, nil, nil], dynamicEnv: dynamicEnv)\n                try await process.start()\n\n                try fhs.append(contentsOf: await self.client.logs(id: cid))\n\n                try bundle.createLogFiles()\n                let stdioLog = try FileHandle(forWritingTo: URL(filePath: bundle.stdioLog.string))\n                let bootLog = try FileHandle(forWritingTo: URL(filePath: bundle.bootLog.string))\n\n                state.logger = Task<Void, Never> { [log = self.log, id = state.id, fhs] in\n                    defer {\n                        try? fhs[0].close()\n                        try? fhs[1].close()\n\n                        try? stdioLog.close()\n                        try? bootLog.close()\n                    }\n\n                    await withTaskGroup(of: Result<Void, Error>.self) { group in\n                        for (from, to) in zip(fhs, [stdioLog, bootLog]) {\n                            group.addTask {\n                                do {\n                                    try await Self.pipeFile(from: from, to: to)\n                                    return .success(())\n                                } catch {\n                                    return .failure(error)\n                                }\n                            }\n                        }\n\n                        for await result in group {\n                            switch result {\n                            case .success():\n                                continue\n                            case .failure(let error):\n                                log.error(\n                                    \"log pipe failed\",\n                                    metadata: [\n                                        \"id\": \"\\(id)\",\n                                        \"error\": \"\\(error)\",\n                                    ])\n                            }\n                        }\n                    }\n                }\n\n                try await self.exitMonitor.registerProcess(\n                    id: id,\n                    onExit: self.handleMachineExit\n                )\n\n                state.snapshot.status = .running\n                state.snapshot.startedDate = Date()\n                state.snapshot.containerId = cid\n                state.snapshot.initialized = bundle.initialized\n                await self.setMachineState(id, state, context: context)\n\n                // Monitor container exit in the background so we can update container machine state\n                // when the backing container stops (e.g., VM crash, kill, etc.)\n                try await self.exitMonitor.track(id: id) {\n                    self.log.info(\"registering container machine with exit monitor\")\n                    let code = try await process.wait()\n                    self.log.info(\n                        \"container machine exited in exit monitor\",\n                        metadata: [\"id\": \"\\(id)\", \"rc\": \"\\(code)\"]\n                    )\n\n                    return ExitStatus(exitCode: code)\n                }\n\n                return state.snapshot\n            } catch {\n                await self.exitMonitor.stopTracking(id: id)\n\n                state.logger?.cancel()\n                await state.logger?.value\n                state.logger = nil\n\n                fhs.forEach { try? $0.close() }\n                try? await self.client.delete(id: cid, force: true)\n\n                state.snapshot.status = .stopped\n                state.snapshot.startedDate = nil\n                state.snapshot.containerId = nil\n                state.snapshot.ipAddress = nil\n                await self.setMachineState(id, state, context: context)\n\n                throw error\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+        "location" : {
+          "end_position" : 18263,
+          "start_position" : 11762
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "boot",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "String?"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location" : {
+              "end_position" : 11798,
+              "start_position" : 11785
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "id",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String: String]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[:]"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location" : {
+              "end_position" : 11832,
+              "start_position" : 11798
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "dynamicEnv",
+          "order" : 1
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "MachineSnapshot"
+        },
+        "description" : "-> MachineSnapshot"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 48,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/MachineAPIService/Server/MachinesService.swift"
+  ]
+}

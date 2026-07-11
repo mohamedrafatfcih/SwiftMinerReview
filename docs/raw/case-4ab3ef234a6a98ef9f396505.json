@@ -1,0 +1,78 @@
+{
+  "caseID" : "case-4ab3ef234a6a98ef9f396505",
+  "commitHash" : "7358102c68c7a8e26ff6d534ef9cbcdff4ee573f",
+  "commitMessage" : "Fix system df to count content blobs and deduplicate shared storage (#1555)\n\n- Closes #1526 and #1527.\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nThis PR fixes `system df` to report actual on-disk allocated bytes\n(content blobs + snapshots) instead of summing per-image snapshot sizes.\nOrphaned blobs are now included as reclaimable, and storage shared\nacross tags is no longer double counted. Also consolidates three\nidentical `calculateDirectorySize` implementations into a shared\n`FileManager.allocatedSize(of:)` extension.\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/7358102c68c7a8e26ff6d534ef9cbcdff4ee573f",
+  "durationSeconds" : 6.2201160192489624,
+  "entityNames" : [
+    "String",
+    "UInt64",
+    "calculateDirectorySize",
+    "path"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let url = URL(fileURLWithPath: path)\n        let fileManager = FileManager.default\n\n        guard\n            let enumerator = fileManager.enumerator(\n                at: url,\n                includingPropertiesForKeys: [.totalFileAllocatedSizeKey],\n                options: [.skipsHiddenFiles]\n            )\n        else {\n            return 0\n        }\n\n        var totalSize: UInt64 = 0\n        for case let fileURL as URL in enumerator {\n            guard\n                let resourceValues = try? fileURL.resourceValues(\n                    forKeys: [.totalFileAllocatedSizeKey]\n                ),\n                let fileSize = resourceValues.totalFileAllocatedSize\n            else {\n                continue\n            }\n            totalSize += UInt64(fileSize)\n        }\n\n        return totalSize"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Server/Containers/ContainersService.swift",
+        "location" : {
+          "end_position" : 10222,
+          "start_position" : 9154
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "calculateDirectorySize",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "label" : "at",
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Server/Containers/ContainersService.swift",
+            "location" : {
+              "end_position" : 9387,
+              "start_position" : 9372
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "path",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "UInt64"
+        },
+        "description" : "-> UInt64"
+      }
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 5,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerAPIService/Server/Containers/ContainersService.swift"
+  ]
+}

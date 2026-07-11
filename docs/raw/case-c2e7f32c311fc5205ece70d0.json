@@ -1,0 +1,54 @@
+{
+  "caseID" : "case-c2e7f32c311fc5205ece70d0",
+  "commitHash" : "cd3d98f41f072f7ee4e29294fcce971bd2984e56",
+  "commitMessage" : "Update CI for GHA Limitations (#3973)\n\n### Goals :soccer:\nThis PR updates CI for all Xcode versions and GHA's limited sim\navailability.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/cd3d98f41f072f7ee4e29294fcce971bd2984e56",
+  "durationSeconds" : 12.768025040626526,
+  "entityNames" : [
+    "testThatInterceptorTriggersRefreshWithMultipleParallelRequestsReturning401Responses"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let credential = TestCredential()\n        let authenticator = TestAuthenticator()\n        let interceptor = AuthenticationInterceptor(authenticator: authenticator, credential: credential)\n\n        let requestCount = 6\n        let session = stored(Session())\n\n        let expect = expectation(description: \"both requests should complete\")\n        expect.expectedFulfillmentCount = requestCount\n\n        var requests: [Int: Request] = [:]\n        var responses: [Int: AFDataResponse<Data?>] = [:]\n\n        for index in 0..<requestCount {\n            let pathAdapter = PathAdapter(paths: [\"/status/401\", \"/status/20\\(index)\"])\n            let compositeInterceptor = Interceptor(adapters: [pathAdapter, interceptor], retriers: [interceptor])\n\n            // When\n            let request = session.request(.default, interceptor: compositeInterceptor).validate().response {\n                responses[index] = $0\n                expect.fulfill()\n            }\n\n            requests[index] = request\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        for index in 0..<requestCount {\n            let response = responses[index]\n            XCTAssertEqual(response?.request?.headers[\"Authorization\"], \"a1\")\n            XCTAssertEqual(response?.result.isSuccess, true)\n\n            let request = requests[index]\n            XCTAssertEqual(request?.retryCount, 1)\n        }\n\n        XCTAssertEqual(authenticator.applyCount, 12)\n        XCTAssertEqual(authenticator.refreshCount, 1)\n        XCTAssertEqual(authenticator.didRequestFailDueToAuthErrorCount, 6)\n        XCTAssertEqual(authenticator.isRequestAuthenticatedWithCredentialCount, 6)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/AuthenticationInterceptorTests.swift",
+        "location" : {
+          "end_position" : 24063,
+          "start_position" : 22260
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatInterceptorTriggersRefreshWithMultipleParallelRequestsReturning401Responses",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 12,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/AuthenticationInterceptorTests.swift"
+  ]
+}

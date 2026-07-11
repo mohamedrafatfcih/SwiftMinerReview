@@ -1,0 +1,98 @@
+{
+  "caseID" : "case-ba98f292d66ba323b5fbd490",
+  "commitHash" : "b5fa4157814e3fb9f79a958da0d64a6fdb13c6f3",
+  "commitMessage" : "fix: moved back to the CSDiskSpaceGetRecoveryEstimate + purgeable but now with most important fix - removeAllCachedResourceValues. Since the macOS by default cache the requested URL data. So does not case what method we use - it will be always cached. And this one is more efficient than `volumeAvailableCapacityForImportantUsageKey`. (#3249)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/b5fa4157814e3fb9f79a958da0d64a6fdb13c6f3",
+  "durationSeconds" : 3.7381749153137207,
+  "entityNames" : [
+    "Int64",
+    "URL",
+    "freeDiskSpaceInBytes",
+    "path",
+    "purgeable"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "description" : "self.purgableSpace[path] = (Date(), purgeable)",
+      "left_operand" : "self.purgableSpace[path]",
+      "location_info" : {
+        "file_path" : "Modules/Disk/readers.swift",
+        "location" : {
+          "end_position" : 4970,
+          "start_position" : 4907
+        }
+      },
+      "operator_value" : "=",
+      "right_operand" : {
+        "reference" : {
+          "arguments" : [
+
+          ],
+          "name" : "purgeable"
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var path = path\n        path.removeAllCachedResourceValues()\n        \n        var stat = statfs()\n        if statfs(path.path, &stat) == 0 {\n            var purgeable: Int64 = 0\n            if self.purgableSpace[path] == nil {\n                let value = CSDiskSpaceGetRecoveryEstimate(path as NSURL)\n                purgeable = Int64(value)\n                self.purgableSpace[path] = (Date(), purgeable)\n            } else if let pair = self.purgableSpace[path] {\n                let delta = Date().timeIntervalSince(pair.0)\n                if delta > 30 {\n                    let value = CSDiskSpaceGetRecoveryEstimate(path as NSURL)\n                    purgeable = Int64(value)\n                    self.purgableSpace[path] = (Date(), purgeable)\n                } else {\n                    purgeable = pair.1\n                }\n            }\n            return (Int64(stat.f_bfree) * Int64(stat.f_bsize)) + Int64(purgeable)\n        }\n        \n        do {\n            let values = try path.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])\n            if let capacity = values.volumeAvailableCapacityForImportantUsage, capacity != 0 {\n                return capacity\n            }\n        } catch let err {\n            error(\"error retrieving free space #1: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        do {\n            let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: path.path)\n            if let freeSpace = (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value {\n                return freeSpace\n            }\n        } catch let err {\n            error(\"error retrieving free space: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        return 0"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Disk/readers.swift",
+        "location" : {
+          "end_position" : 6344,
+          "start_position" : 4495
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "freeDiskSpaceInBytes",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URL"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Modules/Disk/readers.swift",
+            "location" : {
+              "end_position" : 4545,
+              "start_position" : 4534
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "path",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Int64"
+        },
+        "description" : "-> Int64"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 4,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Disk/readers.swift"
+  ]
+}

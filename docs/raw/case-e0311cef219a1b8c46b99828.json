@@ -1,0 +1,391 @@
+{
+  "caseID" : "case-e0311cef219a1b8c46b99828",
+  "commitHash" : "24c850712a7f887e6c1750fb75f454f7673bc7a2",
+  "commitMessage" : "toolbar: use updated confirmation on iOS 15+\n",
+  "commitURL" : "https://github.com/utmapp/UTM/commit/24c850712a7f887e6c1750fb75f454f7673bc7a2",
+  "durationSeconds" : 2.7892330884933472,
+  "entityNames" : [
+
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : [
+      {
+        "value" : "VMConfirmActionModifier(confirmAction: $confirmAction) { action in\n            if case .confirmMoveVM(let vm) = action {\n                shareItem = .utmMove(vm)\n                showSharePopup.toggle()\n            }\n        }"
+      }
+    ],
+    "current_parent" : {
+      "expression" : {
+        "function_call" : {
+          "_0" : {
+            "additional_trailing_closures" : [
+
+            ],
+            "arguments" : [
+              {
+                "value" : "VMConfirmActionModifier(confirmAction: $confirmAction) { action in\n            if case .confirmMoveVM(let vm) = action {\n                shareItem = .utmMove(vm)\n                showSharePopup.toggle()\n            }\n        }"
+              }
+            ],
+            "call" : "modifier",
+            "has_self_reference" : false,
+            "internal_inline_calls" : [
+              {
+                "additional_trailing_closures" : [
+
+                ],
+                "arguments" : [
+
+                ],
+                "call" : "contextMenu",
+                "has_self_reference" : false,
+                "internal_inline_calls" : [
+
+                ],
+                "location_info" : {
+                  "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                  "location" : {
+                    "end_position" : 6792,
+                    "start_position" : 1774
+                  }
+                },
+                "trailing_closure" : {
+                  "attributes" : [
+
+                  ],
+                  "body" : {
+                    "content" : "#if os(macOS)\n            Button {\n                NSWorkspace.shared.activateFileViewerSelecting([vm.pathUrl])\n            } label: {\n                Label(\"Show in Finder\", systemImage: \"folder\")\n            }.help(\"Reveal where the VM is stored.\")\n            Divider()\n            #endif\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                data.close(vm: vm) // close window\n                data.edit(vm: vm)\n            } label: {\n                Label(\"Edit\", systemImage: \"slider.horizontal.3\")\n            }.disabled(vm.hasSuspendState || !vm.isModifyAllowed)\n            .help(\"Modify settings for this VM.\")\n            #endif\n            if vm.hasSuspendState || !vm.isStopped {\n                Button {\n                    confirmAction = .confirmStopVM(vm: vm)\n                } label: {\n                    Label(\"Stop\", systemImage: \"stop\")\n                }.help(\"Stop the running VM.\")\n            } else if !vm.isModifyAllowed { // paused\n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Resume\", systemImage: \"playpause\")\n                }.help(\"Resume running VM.\")\n            } else {\n                Divider()\n                \n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Run\", systemImage: \"play\")\n                }.help(\"Run the VM in the foreground.\")\n                \n                #if os(macOS) && arch(arm64)\n                if #available(macOS 13, *), let appleConfig = vm.config as? UTMAppleConfiguration, appleConfig.system.boot.operatingSystem == .macOS {\n                    Button {\n                        data.run(vm: vm, options: .bootRecovery)\n                    } label: {\n                        Label(\"Run Recovery\", systemImage: \"lifepreserver.fill\")\n                    }.help(\"Boot into recovery mode.\")\n                }\n                #endif\n                \n                if let _ = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        data.run(vm: vm, options: .bootDisposibleMode)\n                    } label: {\n                        Label(\"Run without saving changes\", systemImage: \"memories\")\n                    }.help(\"Run the VM in the foreground, without saving data changes to disk.\")\n                }\n                \n                #if os(iOS) || os(visionOS)\n                if let qemuConfig = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        NotificationCenter.default.post(name: NSNotification.InstallGuestTools, object: vm.wrapped!)\n                    } label: {\n                        Label(\"Install Windows Guest Tools…\", systemImage: \"wrench.and.screwdriver\")\n                    }.help(\"Download and mount the guest tools for Windows.\")\n                }\n                #endif\n                \n                Divider()\n            }\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                shareItem = .utmCopy(vm)\n                showSharePopup.toggle()\n            } label: {\n                Label(\"Share…\", systemImage: \"square.and.arrow.up\")\n            }.help(\"Share a copy of this VM and all its data.\")\n            #if os(macOS)\n            if !vm.isShortcut {\n                Button {\n                    confirmAction = .confirmMoveVM(vm: vm)\n                } label: {\n                    Label(\"Move…\", systemImage: \"arrow.down.doc\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Move this VM from internal storage to elsewhere.\")\n            }\n            #endif\n            Button {\n                confirmAction = .confirmCloneVM(vm: vm)\n            } label: {\n                Label(\"Clone…\", systemImage: \"doc.on.doc\")\n            }.help(\"Duplicate this VM along with all its data.\")\n            Button {\n                data.busyWorkAsync {\n                    try await data.template(vm: vm)\n                }\n            } label: {\n                Label(\"New from template…\", systemImage: \"doc.on.clipboard\")\n            }.help(\"Create a new VM with the same configuration as this one but without any data.\")\n            Divider()\n            if vm.isShortcut {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM(vm: vm)\n                } label: {\n                    Label(\"Remove\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this shortcut. The underlying data will not be deleted.\")\n            } else {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM(vm: vm)\n                } label: {\n                    Label(\"Delete\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this VM and all its data.\")\n            }\n            #endif"
+                  },
+                  "captures" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                    "location" : {
+                      "end_position" : 6792,
+                      "start_position" : 1803
+                    }
+                  },
+                  "parameters" : [
+
+                  ]
+                }
+              },
+              {
+                "additional_trailing_closures" : [
+
+                ],
+                "arguments" : [
+                  {
+                    "value" : "VMShareItemModifier(isPresented: $showSharePopup, shareItem: shareItem)"
+                  }
+                ],
+                "call" : "modifier",
+                "has_self_reference" : false,
+                "internal_inline_calls" : [
+                  {
+                    "additional_trailing_closures" : [
+
+                    ],
+                    "arguments" : [
+
+                    ],
+                    "call" : "contextMenu",
+                    "has_self_reference" : false,
+                    "internal_inline_calls" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                      "location" : {
+                        "end_position" : 6792,
+                        "start_position" : 1774
+                      }
+                    },
+                    "trailing_closure" : {
+                      "attributes" : [
+
+                      ],
+                      "body" : {
+                        "content" : "#if os(macOS)\n            Button {\n                NSWorkspace.shared.activateFileViewerSelecting([vm.pathUrl])\n            } label: {\n                Label(\"Show in Finder\", systemImage: \"folder\")\n            }.help(\"Reveal where the VM is stored.\")\n            Divider()\n            #endif\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                data.close(vm: vm) // close window\n                data.edit(vm: vm)\n            } label: {\n                Label(\"Edit\", systemImage: \"slider.horizontal.3\")\n            }.disabled(vm.hasSuspendState || !vm.isModifyAllowed)\n            .help(\"Modify settings for this VM.\")\n            #endif\n            if vm.hasSuspendState || !vm.isStopped {\n                Button {\n                    confirmAction = .confirmStopVM(vm: vm)\n                } label: {\n                    Label(\"Stop\", systemImage: \"stop\")\n                }.help(\"Stop the running VM.\")\n            } else if !vm.isModifyAllowed { // paused\n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Resume\", systemImage: \"playpause\")\n                }.help(\"Resume running VM.\")\n            } else {\n                Divider()\n                \n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Run\", systemImage: \"play\")\n                }.help(\"Run the VM in the foreground.\")\n                \n                #if os(macOS) && arch(arm64)\n                if #available(macOS 13, *), let appleConfig = vm.config as? UTMAppleConfiguration, appleConfig.system.boot.operatingSystem == .macOS {\n                    Button {\n                        data.run(vm: vm, options: .bootRecovery)\n                    } label: {\n                        Label(\"Run Recovery\", systemImage: \"lifepreserver.fill\")\n                    }.help(\"Boot into recovery mode.\")\n                }\n                #endif\n                \n                if let _ = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        data.run(vm: vm, options: .bootDisposibleMode)\n                    } label: {\n                        Label(\"Run without saving changes\", systemImage: \"memories\")\n                    }.help(\"Run the VM in the foreground, without saving data changes to disk.\")\n                }\n                \n                #if os(iOS) || os(visionOS)\n                if let qemuConfig = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        NotificationCenter.default.post(name: NSNotification.InstallGuestTools, object: vm.wrapped!)\n                    } label: {\n                        Label(\"Install Windows Guest Tools…\", systemImage: \"wrench.and.screwdriver\")\n                    }.help(\"Download and mount the guest tools for Windows.\")\n                }\n                #endif\n                \n                Divider()\n            }\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                shareItem = .utmCopy(vm)\n                showSharePopup.toggle()\n            } label: {\n                Label(\"Share…\", systemImage: \"square.and.arrow.up\")\n            }.help(\"Share a copy of this VM and all its data.\")\n            #if os(macOS)\n            if !vm.isShortcut {\n                Button {\n                    confirmAction = .confirmMoveVM(vm: vm)\n                } label: {\n                    Label(\"Move…\", systemImage: \"arrow.down.doc\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Move this VM from internal storage to elsewhere.\")\n            }\n            #endif\n            Button {\n                confirmAction = .confirmCloneVM(vm: vm)\n            } label: {\n                Label(\"Clone…\", systemImage: \"doc.on.doc\")\n            }.help(\"Duplicate this VM along with all its data.\")\n            Button {\n                data.busyWorkAsync {\n                    try await data.template(vm: vm)\n                }\n            } label: {\n                Label(\"New from template…\", systemImage: \"doc.on.clipboard\")\n            }.help(\"Create a new VM with the same configuration as this one but without any data.\")\n            Divider()\n            if vm.isShortcut {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM(vm: vm)\n                } label: {\n                    Label(\"Remove\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this shortcut. The underlying data will not be deleted.\")\n            } else {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM(vm: vm)\n                } label: {\n                    Label(\"Delete\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this VM and all its data.\")\n            }\n            #endif"
+                      },
+                      "captures" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                        "location" : {
+                          "end_position" : 6792,
+                          "start_position" : 1803
+                        }
+                      },
+                      "parameters" : [
+
+                      ]
+                    }
+                  }
+                ],
+                "location_info" : {
+                  "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                  "location" : {
+                    "end_position" : 6883,
+                    "start_position" : 1774
+                  }
+                },
+                "trailing_closure" : {
+                  "attributes" : [
+
+                  ],
+                  "body" : {
+                    "content" : "#if os(macOS)\n            Button {\n                NSWorkspace.shared.activateFileViewerSelecting([vm.pathUrl])\n            } label: {\n                Label(\"Show in Finder\", systemImage: \"folder\")\n            }.help(\"Reveal where the VM is stored.\")\n            Divider()\n            #endif\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                data.close(vm: vm) // close window\n                data.edit(vm: vm)\n            } label: {\n                Label(\"Edit\", systemImage: \"slider.horizontal.3\")\n            }.disabled(vm.hasSuspendState || !vm.isModifyAllowed)\n            .help(\"Modify settings for this VM.\")\n            #endif\n            if vm.hasSuspendState || !vm.isStopped {\n                Button {\n                    confirmAction = .confirmStopVM(vm: vm)\n                } label: {\n                    Label(\"Stop\", systemImage: \"stop\")\n                }.help(\"Stop the running VM.\")\n            } else if !vm.isModifyAllowed { // paused\n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Resume\", systemImage: \"playpause\")\n                }.help(\"Resume running VM.\")\n            } else {\n                Divider()\n                \n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Run\", systemImage: \"play\")\n                }.help(\"Run the VM in the foreground.\")\n                \n                #if os(macOS) && arch(arm64)\n                if #available(macOS 13, *), let appleConfig = vm.config as? UTMAppleConfiguration, appleConfig.system.boot.operatingSystem == .macOS {\n                    Button {\n                        data.run(vm: vm, options: .bootRecovery)\n                    } label: {\n                        Label(\"Run Recovery\", systemImage: \"lifepreserver.fill\")\n                    }.help(\"Boot into recovery mode.\")\n                }\n                #endif\n                \n                if let _ = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        data.run(vm: vm, options: .bootDisposibleMode)\n                    } label: {\n                        Label(\"Run without saving changes\", systemImage: \"memories\")\n                    }.help(\"Run the VM in the foreground, without saving data changes to disk.\")\n                }\n                \n                #if os(iOS) || os(visionOS)\n                if let qemuConfig = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        NotificationCenter.default.post(name: NSNotification.InstallGuestTools, object: vm.wrapped!)\n                    } label: {\n                        Label(\"Install Windows Guest Tools…\", systemImage: \"wrench.and.screwdriver\")\n                    }.help(\"Download and mount the guest tools for Windows.\")\n                }\n                #endif\n                \n                Divider()\n            }\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                shareItem = .utmCopy(vm)\n                showSharePopup.toggle()\n            } label: {\n                Label(\"Share…\", systemImage: \"square.and.arrow.up\")\n            }.help(\"Share a copy of this VM and all its data.\")\n            #if os(macOS)\n            if !vm.isShortcut {\n                Button {\n                    confirmAction = .confirmMoveVM(vm: vm)\n                } label: {\n                    Label(\"Move…\", systemImage: \"arrow.down.doc\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Move this VM from internal storage to elsewhere.\")\n            }\n            #endif\n            Button {\n                confirmAction = .confirmCloneVM(vm: vm)\n            } label: {\n                Label(\"Clone…\", systemImage: \"doc.on.doc\")\n            }.help(\"Duplicate this VM along with all its data.\")\n            Button {\n                data.busyWorkAsync {\n                    try await data.template(vm: vm)\n                }\n            } label: {\n                Label(\"New from template…\", systemImage: \"doc.on.clipboard\")\n            }.help(\"Create a new VM with the same configuration as this one but without any data.\")\n            Divider()\n            if vm.isShortcut {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM(vm: vm)\n                } label: {\n                    Label(\"Remove\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this shortcut. The underlying data will not be deleted.\")\n            } else {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM(vm: vm)\n                } label: {\n                    Label(\"Delete\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this VM and all its data.\")\n            }\n            #endif"
+                  },
+                  "captures" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                    "location" : {
+                      "end_position" : 6792,
+                      "start_position" : 1803
+                    }
+                  },
+                  "parameters" : [
+
+                  ]
+                }
+              }
+            ],
+            "location_info" : {
+              "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+              "location" : {
+                "end_position" : 7128,
+                "start_position" : 1774
+              }
+            },
+            "trailing_closure" : {
+              "attributes" : [
+
+              ],
+              "body" : {
+                "content" : "if case .confirmMoveVM(let vm) = action {\n                shareItem = .utmMove(vm)\n                showSharePopup.toggle()\n            }"
+              },
+              "captures" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                "location" : {
+                  "end_position" : 7127,
+                  "start_position" : 6957
+                }
+              },
+              "parameters" : [
+
+              ]
+            }
+          }
+        }
+      },
+      "location_info" : {
+        "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+        "location" : {
+          "end_position" : 7128,
+          "start_position" : 1774
+        }
+      }
+    },
+    "old_content" : [
+      {
+        "value" : "VMConfirmActionModifier(vm: vm, confirmAction: $confirmAction) {\n            if confirmAction == .confirmMoveVM {\n                shareItem = .utmMove(vm)\n                showSharePopup.toggle()\n            }\n        }"
+      }
+    ],
+    "old_parent" : {
+      "expression" : {
+        "function_call" : {
+          "_0" : {
+            "additional_trailing_closures" : [
+
+            ],
+            "arguments" : [
+              {
+                "value" : "VMConfirmActionModifier(vm: vm, confirmAction: $confirmAction) {\n            if confirmAction == .confirmMoveVM {\n                shareItem = .utmMove(vm)\n                showSharePopup.toggle()\n            }\n        }"
+              }
+            ],
+            "call" : "modifier",
+            "has_self_reference" : false,
+            "internal_inline_calls" : [
+              {
+                "additional_trailing_closures" : [
+
+                ],
+                "arguments" : [
+
+                ],
+                "call" : "contextMenu",
+                "has_self_reference" : false,
+                "internal_inline_calls" : [
+
+                ],
+                "location_info" : {
+                  "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                  "location" : {
+                    "end_position" : 6758,
+                    "start_position" : 1774
+                  }
+                },
+                "trailing_closure" : {
+                  "attributes" : [
+
+                  ],
+                  "body" : {
+                    "content" : "#if os(macOS)\n            Button {\n                NSWorkspace.shared.activateFileViewerSelecting([vm.pathUrl])\n            } label: {\n                Label(\"Show in Finder\", systemImage: \"folder\")\n            }.help(\"Reveal where the VM is stored.\")\n            Divider()\n            #endif\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                data.close(vm: vm) // close window\n                data.edit(vm: vm)\n            } label: {\n                Label(\"Edit\", systemImage: \"slider.horizontal.3\")\n            }.disabled(vm.hasSuspendState || !vm.isModifyAllowed)\n            .help(\"Modify settings for this VM.\")\n            #endif\n            if vm.hasSuspendState || !vm.isStopped {\n                Button {\n                    confirmAction = .confirmStopVM\n                } label: {\n                    Label(\"Stop\", systemImage: \"stop\")\n                }.help(\"Stop the running VM.\")\n            } else if !vm.isModifyAllowed { // paused\n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Resume\", systemImage: \"playpause\")\n                }.help(\"Resume running VM.\")\n            } else {\n                Divider()\n                \n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Run\", systemImage: \"play\")\n                }.help(\"Run the VM in the foreground.\")\n                \n                #if os(macOS) && arch(arm64)\n                if #available(macOS 13, *), let appleConfig = vm.config as? UTMAppleConfiguration, appleConfig.system.boot.operatingSystem == .macOS {\n                    Button {\n                        data.run(vm: vm, options: .bootRecovery)\n                    } label: {\n                        Label(\"Run Recovery\", systemImage: \"lifepreserver.fill\")\n                    }.help(\"Boot into recovery mode.\")\n                }\n                #endif\n                \n                if let _ = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        data.run(vm: vm, options: .bootDisposibleMode)\n                    } label: {\n                        Label(\"Run without saving changes\", systemImage: \"memories\")\n                    }.help(\"Run the VM in the foreground, without saving data changes to disk.\")\n                }\n                \n                #if os(iOS) || os(visionOS)\n                if let qemuConfig = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        NotificationCenter.default.post(name: NSNotification.InstallGuestTools, object: vm.wrapped!)\n                    } label: {\n                        Label(\"Install Windows Guest Tools…\", systemImage: \"wrench.and.screwdriver\")\n                    }.help(\"Download and mount the guest tools for Windows.\")\n                }\n                #endif\n                \n                Divider()\n            }\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                shareItem = .utmCopy(vm)\n                showSharePopup.toggle()\n            } label: {\n                Label(\"Share…\", systemImage: \"square.and.arrow.up\")\n            }.help(\"Share a copy of this VM and all its data.\")\n            #if os(macOS)\n            if !vm.isShortcut {\n                Button {\n                    confirmAction = .confirmMoveVM\n                } label: {\n                    Label(\"Move…\", systemImage: \"arrow.down.doc\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Move this VM from internal storage to elsewhere.\")\n            }\n            #endif\n            Button {\n                confirmAction = .confirmCloneVM\n            } label: {\n                Label(\"Clone…\", systemImage: \"doc.on.doc\")\n            }.help(\"Duplicate this VM along with all its data.\")\n            Button {\n                data.busyWorkAsync {\n                    try await data.template(vm: vm)\n                }\n            } label: {\n                Label(\"New from template…\", systemImage: \"doc.on.clipboard\")\n            }.help(\"Create a new VM with the same configuration as this one but without any data.\")\n            Divider()\n            if vm.isShortcut {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteShortcut\n                } label: {\n                    Label(\"Remove\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this shortcut. The underlying data will not be deleted.\")\n            } else {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM\n                } label: {\n                    Label(\"Delete\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this VM and all its data.\")\n            }\n            #endif"
+                  },
+                  "captures" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                    "location" : {
+                      "end_position" : 6758,
+                      "start_position" : 1803
+                    }
+                  },
+                  "parameters" : [
+
+                  ]
+                }
+              },
+              {
+                "additional_trailing_closures" : [
+
+                ],
+                "arguments" : [
+                  {
+                    "value" : "VMShareItemModifier(isPresented: $showSharePopup, shareItem: shareItem)"
+                  }
+                ],
+                "call" : "modifier",
+                "has_self_reference" : false,
+                "internal_inline_calls" : [
+                  {
+                    "additional_trailing_closures" : [
+
+                    ],
+                    "arguments" : [
+
+                    ],
+                    "call" : "contextMenu",
+                    "has_self_reference" : false,
+                    "internal_inline_calls" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                      "location" : {
+                        "end_position" : 6758,
+                        "start_position" : 1774
+                      }
+                    },
+                    "trailing_closure" : {
+                      "attributes" : [
+
+                      ],
+                      "body" : {
+                        "content" : "#if os(macOS)\n            Button {\n                NSWorkspace.shared.activateFileViewerSelecting([vm.pathUrl])\n            } label: {\n                Label(\"Show in Finder\", systemImage: \"folder\")\n            }.help(\"Reveal where the VM is stored.\")\n            Divider()\n            #endif\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                data.close(vm: vm) // close window\n                data.edit(vm: vm)\n            } label: {\n                Label(\"Edit\", systemImage: \"slider.horizontal.3\")\n            }.disabled(vm.hasSuspendState || !vm.isModifyAllowed)\n            .help(\"Modify settings for this VM.\")\n            #endif\n            if vm.hasSuspendState || !vm.isStopped {\n                Button {\n                    confirmAction = .confirmStopVM\n                } label: {\n                    Label(\"Stop\", systemImage: \"stop\")\n                }.help(\"Stop the running VM.\")\n            } else if !vm.isModifyAllowed { // paused\n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Resume\", systemImage: \"playpause\")\n                }.help(\"Resume running VM.\")\n            } else {\n                Divider()\n                \n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Run\", systemImage: \"play\")\n                }.help(\"Run the VM in the foreground.\")\n                \n                #if os(macOS) && arch(arm64)\n                if #available(macOS 13, *), let appleConfig = vm.config as? UTMAppleConfiguration, appleConfig.system.boot.operatingSystem == .macOS {\n                    Button {\n                        data.run(vm: vm, options: .bootRecovery)\n                    } label: {\n                        Label(\"Run Recovery\", systemImage: \"lifepreserver.fill\")\n                    }.help(\"Boot into recovery mode.\")\n                }\n                #endif\n                \n                if let _ = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        data.run(vm: vm, options: .bootDisposibleMode)\n                    } label: {\n                        Label(\"Run without saving changes\", systemImage: \"memories\")\n                    }.help(\"Run the VM in the foreground, without saving data changes to disk.\")\n                }\n                \n                #if os(iOS) || os(visionOS)\n                if let qemuConfig = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        NotificationCenter.default.post(name: NSNotification.InstallGuestTools, object: vm.wrapped!)\n                    } label: {\n                        Label(\"Install Windows Guest Tools…\", systemImage: \"wrench.and.screwdriver\")\n                    }.help(\"Download and mount the guest tools for Windows.\")\n                }\n                #endif\n                \n                Divider()\n            }\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                shareItem = .utmCopy(vm)\n                showSharePopup.toggle()\n            } label: {\n                Label(\"Share…\", systemImage: \"square.and.arrow.up\")\n            }.help(\"Share a copy of this VM and all its data.\")\n            #if os(macOS)\n            if !vm.isShortcut {\n                Button {\n                    confirmAction = .confirmMoveVM\n                } label: {\n                    Label(\"Move…\", systemImage: \"arrow.down.doc\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Move this VM from internal storage to elsewhere.\")\n            }\n            #endif\n            Button {\n                confirmAction = .confirmCloneVM\n            } label: {\n                Label(\"Clone…\", systemImage: \"doc.on.doc\")\n            }.help(\"Duplicate this VM along with all its data.\")\n            Button {\n                data.busyWorkAsync {\n                    try await data.template(vm: vm)\n                }\n            } label: {\n                Label(\"New from template…\", systemImage: \"doc.on.clipboard\")\n            }.help(\"Create a new VM with the same configuration as this one but without any data.\")\n            Divider()\n            if vm.isShortcut {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteShortcut\n                } label: {\n                    Label(\"Remove\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this shortcut. The underlying data will not be deleted.\")\n            } else {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM\n                } label: {\n                    Label(\"Delete\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this VM and all its data.\")\n            }\n            #endif"
+                      },
+                      "captures" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                        "location" : {
+                          "end_position" : 6758,
+                          "start_position" : 1803
+                        }
+                      },
+                      "parameters" : [
+
+                      ]
+                    }
+                  }
+                ],
+                "location_info" : {
+                  "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                  "location" : {
+                    "end_position" : 6849,
+                    "start_position" : 1774
+                  }
+                },
+                "trailing_closure" : {
+                  "attributes" : [
+
+                  ],
+                  "body" : {
+                    "content" : "#if os(macOS)\n            Button {\n                NSWorkspace.shared.activateFileViewerSelecting([vm.pathUrl])\n            } label: {\n                Label(\"Show in Finder\", systemImage: \"folder\")\n            }.help(\"Reveal where the VM is stored.\")\n            Divider()\n            #endif\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                data.close(vm: vm) // close window\n                data.edit(vm: vm)\n            } label: {\n                Label(\"Edit\", systemImage: \"slider.horizontal.3\")\n            }.disabled(vm.hasSuspendState || !vm.isModifyAllowed)\n            .help(\"Modify settings for this VM.\")\n            #endif\n            if vm.hasSuspendState || !vm.isStopped {\n                Button {\n                    confirmAction = .confirmStopVM\n                } label: {\n                    Label(\"Stop\", systemImage: \"stop\")\n                }.help(\"Stop the running VM.\")\n            } else if !vm.isModifyAllowed { // paused\n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Resume\", systemImage: \"playpause\")\n                }.help(\"Resume running VM.\")\n            } else {\n                Divider()\n                \n                Button {\n                    data.run(vm: vm)\n                } label: {\n                    Label(\"Run\", systemImage: \"play\")\n                }.help(\"Run the VM in the foreground.\")\n                \n                #if os(macOS) && arch(arm64)\n                if #available(macOS 13, *), let appleConfig = vm.config as? UTMAppleConfiguration, appleConfig.system.boot.operatingSystem == .macOS {\n                    Button {\n                        data.run(vm: vm, options: .bootRecovery)\n                    } label: {\n                        Label(\"Run Recovery\", systemImage: \"lifepreserver.fill\")\n                    }.help(\"Boot into recovery mode.\")\n                }\n                #endif\n                \n                if let _ = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        data.run(vm: vm, options: .bootDisposibleMode)\n                    } label: {\n                        Label(\"Run without saving changes\", systemImage: \"memories\")\n                    }.help(\"Run the VM in the foreground, without saving data changes to disk.\")\n                }\n                \n                #if os(iOS) || os(visionOS)\n                if let qemuConfig = vm.config as? UTMQemuConfiguration {\n                    Button {\n                        NotificationCenter.default.post(name: NSNotification.InstallGuestTools, object: vm.wrapped!)\n                    } label: {\n                        Label(\"Install Windows Guest Tools…\", systemImage: \"wrench.and.screwdriver\")\n                    }.help(\"Download and mount the guest tools for Windows.\")\n                }\n                #endif\n                \n                Divider()\n            }\n            #if !WITH_REMOTE // FIXME: implement remote feature\n            Button {\n                shareItem = .utmCopy(vm)\n                showSharePopup.toggle()\n            } label: {\n                Label(\"Share…\", systemImage: \"square.and.arrow.up\")\n            }.help(\"Share a copy of this VM and all its data.\")\n            #if os(macOS)\n            if !vm.isShortcut {\n                Button {\n                    confirmAction = .confirmMoveVM\n                } label: {\n                    Label(\"Move…\", systemImage: \"arrow.down.doc\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Move this VM from internal storage to elsewhere.\")\n            }\n            #endif\n            Button {\n                confirmAction = .confirmCloneVM\n            } label: {\n                Label(\"Clone…\", systemImage: \"doc.on.doc\")\n            }.help(\"Duplicate this VM along with all its data.\")\n            Button {\n                data.busyWorkAsync {\n                    try await data.template(vm: vm)\n                }\n            } label: {\n                Label(\"New from template…\", systemImage: \"doc.on.clipboard\")\n            }.help(\"Create a new VM with the same configuration as this one but without any data.\")\n            Divider()\n            if vm.isShortcut {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteShortcut\n                } label: {\n                    Label(\"Remove\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this shortcut. The underlying data will not be deleted.\")\n            } else {\n                DestructiveButton {\n                    confirmAction = .confirmDeleteVM\n                } label: {\n                    Label(\"Delete\", systemImage: \"trash\")\n                }.disabled(!vm.isModifyAllowed)\n                .help(\"Delete this VM and all its data.\")\n            }\n            #endif"
+                  },
+                  "captures" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                    "location" : {
+                      "end_position" : 6758,
+                      "start_position" : 1803
+                    }
+                  },
+                  "parameters" : [
+
+                  ]
+                }
+              }
+            ],
+            "location_info" : {
+              "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+              "location" : {
+                "end_position" : 7087,
+                "start_position" : 1774
+              }
+            },
+            "trailing_closure" : {
+              "attributes" : [
+
+              ],
+              "body" : {
+                "content" : "if confirmAction == .confirmMoveVM {\n                shareItem = .utmMove(vm)\n                showSharePopup.toggle()\n            }"
+              },
+              "captures" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+                "location" : {
+                  "end_position" : 7086,
+                  "start_position" : 6931
+                }
+              },
+              "parameters" : [
+
+              ]
+            }
+          }
+        }
+      },
+      "location_info" : {
+        "file_path" : "Platform/Shared/VMContextMenuModifier.swift",
+        "location" : {
+          "end_position" : 7087,
+          "start_position" : 1774
+        }
+      }
+    },
+    "type" : "Replace function call arguments refactoring"
+  },
+  "refactoringIndex" : 20,
+  "refactoringType" : "Replace function call arguments refactoring",
+  "repoID" : "utmapp-utm",
+  "repoName" : "utmapp/UTM",
+  "repoURL" : "https://github.com/utmapp/UTM.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Platform/Shared/VMContextMenuModifier.swift"
+  ]
+}

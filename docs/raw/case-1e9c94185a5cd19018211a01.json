@@ -1,0 +1,54 @@
+{
+  "caseID" : "case-1e9c94185a5cd19018211a01",
+  "commitHash" : "cd3d98f41f072f7ee4e29294fcce971bd2984e56",
+  "commitMessage" : "Update CI for GHA Limitations (#3973)\n\n### Goals :soccer:\nThis PR updates CI for all Xcode versions and GHA's limited sim\navailability.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/cd3d98f41f072f7ee4e29294fcce971bd2984e56",
+  "durationSeconds" : 12.768025040626526,
+  "entityNames" : [
+    "testThatInterceptorDoesNotDeadlockWhenAuthenticatorCallsRefreshCompletionSynchronouslyOnCallingQueue"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let credential = TestCredential(requiresRefresh: true)\n        let authenticator = TestAuthenticator(shouldRefreshAsynchronously: false)\n        let interceptor = AuthenticationInterceptor(authenticator: authenticator, credential: credential)\n\n        let eventMonitor = ClosureEventMonitor()\n\n        eventMonitor.requestDidCreateTask = { _, _ in\n            interceptor.credential = TestCredential(accessToken: \"a1\",\n                                                    refreshToken: \"r1\",\n                                                    userID: \"u0\",\n                                                    expiration: Date(),\n                                                    requiresRefresh: false)\n        }\n\n        let session = Session(eventMonitors: [eventMonitor])\n\n        let pathAdapter = PathAdapter(paths: [\"/status/200\"])\n        let compositeInterceptor = Interceptor(adapters: [pathAdapter, interceptor], retriers: [interceptor])\n\n        let expect = expectation(description: \"request should complete\")\n        var response: AFDataResponse<Data?>?\n\n        // When\n        let request = session.request(.default, interceptor: compositeInterceptor).validate().response {\n            response = $0\n            expect.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(response?.request?.headers[\"Authorization\"], \"a1\")\n        XCTAssertEqual(response?.result.isSuccess, true)\n\n        XCTAssertEqual(authenticator.applyCount, 1)\n        XCTAssertEqual(authenticator.refreshCount, 1)\n        XCTAssertEqual(authenticator.didRequestFailDueToAuthErrorCount, 0)\n        XCTAssertEqual(authenticator.isRequestAuthenticatedWithCredentialCount, 0)\n\n        XCTAssertEqual(request.retryCount, 0)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/AuthenticationInterceptorTests.swift",
+        "location" : {
+          "end_position" : 19272,
+          "start_position" : 17234
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatInterceptorDoesNotDeadlockWhenAuthenticatorCallsRefreshCompletionSynchronouslyOnCallingQueue",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 9,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/AuthenticationInterceptorTests.swift"
+  ]
+}

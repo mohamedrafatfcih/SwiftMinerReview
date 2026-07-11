@@ -1,0 +1,126 @@
+{
+  "caseID" : "case-8f3a890fa3e9ef7d903ea746",
+  "commitHash" : "72c643eab2f289d5b6625ae80bac28c3350b680e",
+  "commitMessage" : "Update pod RxSwift, RxCocoa to 4.5.0\n",
+  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/72c643eab2f289d5b6625ae80bac28c3350b680e",
+  "durationSeconds" : 58.363232016563416,
+  "entityNames" : [
+    "KeyValueObservingOptions",
+    "NSObject",
+    "Observable<AnyObject?>",
+    "[String]",
+    "keyPathSections",
+    "observeWeaklyKeyPathFor",
+    "options",
+    "target"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : "private",
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "weak var weakTarget: AnyObject? = target\n\n        let propertyName = keyPathSections[0]\n        let remainingPaths = Array(keyPathSections[1..<keyPathSections.count])\n\n        let property = class_getProperty(object_getClass(target), propertyName)\n        if property == nil {\n            return Observable.error(RxCocoaError.invalidPropertyName(object: target, propertyName: propertyName))\n        }\n        let propertyAttributes = property_getAttributes(property!)\n\n        // should dealloc hook be in place if week property, or just create strong reference because it doesn't matter\n        let isWeak = isWeakProperty(propertyAttributes.map(String.init) ?? \"\")\n        let propertyObservable = KVOObservable(object: target, keyPath: propertyName, options: options.union(.initial), retainTarget: false) as KVOObservable<AnyObject>\n\n        // KVO recursion for value changes\n        return propertyObservable\n            .flatMapLatest { (nextTarget: AnyObject?) -> Observable<AnyObject?> in\n                if nextTarget == nil {\n                    return Observable.just(nil)\n                }\n                let nextObject = nextTarget! as? NSObject\n\n                let strongTarget: AnyObject? = weakTarget\n\n                if nextObject == nil {\n                    return Observable.error(RxCocoaError.invalidObjectOnKeyPath(object: nextTarget!, sourceObject: strongTarget ?? NSNull(), propertyName: propertyName))\n                }\n\n                // if target is alive, then send change\n                // if it's deallocated, don't send anything\n                if strongTarget == nil {\n                    return Observable.empty()\n                }\n\n                let nextElementsObservable = keyPathSections.count == 1\n                    ? Observable.just(nextTarget)\n                    : observeWeaklyKeyPathFor(nextObject!, keyPathSections: remainingPaths, options: options)\n                \n                if isWeak {\n                    return nextElementsObservable\n                        .finishWithNilWhenDealloc(nextObject!)\n                }\n                else {\n                    return nextElementsObservable\n                }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Pods/RxCocoa/RxCocoa/Foundation/NSObject+Rx.swift",
+        "location" : {
+          "end_position" : 16975,
+          "start_position" : 14595
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "observeWeaklyKeyPathFor",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSObject"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Pods/RxCocoa/RxCocoa/Foundation/NSObject+Rx.swift",
+            "location" : {
+              "end_position" : 14666,
+              "start_position" : 14638
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "target",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxCocoa/RxCocoa/Foundation/NSObject+Rx.swift",
+            "location" : {
+              "end_position" : 14701,
+              "start_position" : 14666
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "keyPathSections",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "KeyValueObservingOptions"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxCocoa/RxCocoa/Foundation/NSObject+Rx.swift",
+            "location" : {
+              "end_position" : 14743,
+              "start_position" : 14701
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "options",
+          "order" : 2
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Observable<AnyObject?>"
+        },
+        "description" : "-> Observable<AnyObject?>"
+      }
+    },
+    "type" : "Add modifier refactoring"
+  },
+  "refactoringIndex" : 150,
+  "refactoringType" : "Add modifier refactoring",
+  "repoID" : "shadowsocks-shadowsocksx-ng",
+  "repoName" : "shadowsocks/ShadowsocksX-NG",
+  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Pods/RxCocoa/RxCocoa/Foundation/NSObject+Rx.swift"
+  ]
+}

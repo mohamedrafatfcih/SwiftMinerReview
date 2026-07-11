@@ -1,0 +1,125 @@
+{
+  "caseID" : "case-abbc5db496218e6f72741757",
+  "commitHash" : "272062981d220d47bb7e21b9b888f857bd904196",
+  "commitMessage" : "feat: removed custom icons and moved to the SF Symbols\nfeat: adjusted the radius in the popups\nfeat: small adjustments in all popups\nfeat: redesigned the sections title in the popups\nfeat: redesigned ColumnChartView\nfeat: redesigned GPU popup view, dropped multi GPU view, only selected GPU will be visible in the popup\nfeat: small redesign in the RAM popup\nfeat: redesigned Battery popup\nfeat: moved to macOS 12 as a minimum required version\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/272062981d220d47bb7e21b9b888f857bd904196",
+  "durationSeconds" : 43.821922898292542,
+  "entityNames" : [
+    "CGRect",
+    "draw",
+    "rect",
+    "tip"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "label" : "x",
+                  "value" : "centerPoint.x + needleLength * cos(needleAngle)"
+                },
+                {
+                  "label" : "y",
+                  "value" : "centerPoint.y + needleLength * sin(needleAngle)"
+                }
+              ],
+              "call" : "CGPoint",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Kit/plugins/Charts.swift",
+                "location" : {
+                  "end_position" : 37446,
+                  "start_position" : 37289
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 37446,
+          "start_position" : 37283
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "tip"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var filled: Bool = false\n        var drawValue: Bool = false\n        var drawNeedle: Bool = false\n        var openCircle: Bool = false\n        var nonActiveSegmentColor: NSColor = NSColor.lightGray\n        var value: Double? = nil\n        var text: String? = nil\n        var activeSegment: Int? = nil\n        var segments: [ColorValue] = []\n        var color: NSColor = NSColor.systemBlue\n        self.read {\n            filled = self.filled\n            drawValue = self.drawValue\n            drawNeedle = self.drawNeedle\n            openCircle = self.openCircle\n            nonActiveSegmentColor = self.nonActiveSegmentColor\n            value = self.value\n            text = self.text\n            activeSegment = self.activeSegment\n            segments = self.segments\n            color = self.color\n        }\n        \n        let arcWidth: CGFloat = filled ? min(self.frame.width, self.frame.height) / 2 : 7\n        let fullCircle: CGFloat = 2 * CGFloat.pi\n        let arcSpan: CGFloat = openCircle ? (3/2) * CGFloat.pi : fullCircle\n        if segments.isEmpty {\n            segments = [ColorValue(value ?? 0, color: color)]\n        }\n        \n        if openCircle {\n            let totalAmount = segments.reduce(0) { $0 + $1.value }\n            if totalAmount < 1 {\n                segments.append(ColorValue(Double(1-totalAmount), color: NSColor.lightGray.withAlphaComponent(0.5)))\n            }\n        } else {\n            let totalAmount = segments.reduce(0) { $0 + $1.value }\n            if totalAmount < 1 {\n                segments.append(ColorValue(Double(1-totalAmount), color: nonActiveSegmentColor.withAlphaComponent(0.5)))\n            }\n        }\n        \n        let centerPoint = CGPoint(x: self.frame.width/2, y: self.frame.height/2)\n        let radius = (min(self.frame.width, self.frame.height) - arcWidth) / 2\n        \n        guard let context = NSGraphicsContext.current?.cgContext else { return }\n        context.setShouldAntialias(true)\n        \n        context.setLineWidth(arcWidth)\n        context.setLineCap(openCircle ? .round : .butt)\n        \n        if openCircle {\n            let startAngle: CGFloat = CGFloat.pi + CGFloat.pi/4\n            var previousAngle = startAngle\n            \n            for segment in segments {\n                let currentAngle: CGFloat = previousAngle - (CGFloat(segment.value) * arcSpan)\n                \n                if let color = segment.color {\n                    context.setStrokeColor(color.cgColor)\n                }\n                context.addArc(center: centerPoint, radius: radius, startAngle: previousAngle, endAngle: currentAngle, clockwise: true)\n                context.strokePath()\n                \n                previousAngle = currentAngle\n            }\n        } else {\n            let startAngle: CGFloat = CGFloat.pi/2\n            var previousAngle = startAngle\n            \n            for segment in segments.reversed() {\n                let currentAngle: CGFloat = previousAngle + (CGFloat(segment.value) * fullCircle)\n                \n                if let color = segment.color {\n                    context.setStrokeColor(color.cgColor)\n                }\n                context.addArc(center: centerPoint, radius: radius, startAngle: previousAngle, endAngle: currentAngle, clockwise: false)\n                context.strokePath()\n                \n                previousAngle = currentAngle\n            }\n        }\n        \n        if drawNeedle, let activeSegment = activeSegment, !segments.isEmpty {\n            let needleEndSize: CGFloat = 2\n            let startAngle: CGFloat = CGFloat.pi + CGFloat.pi/4\n            let idx = min(activeSegment, segments.count - 1)\n            var needleValue: CGFloat = 0\n            for i in 0..<idx {\n                needleValue += CGFloat(segments[i].value)\n            }\n            needleValue += CGFloat(segments[idx].value) / 2\n            let needleAngle = startAngle - needleValue * arcSpan\n            let needleLength = radius - arcWidth/2\n            \n            let tip = CGPoint(\n                x: centerPoint.x + needleLength * cos(needleAngle),\n                y: centerPoint.y + needleLength * sin(needleAngle)\n            )\n            let perpAngle = needleAngle + CGFloat.pi/2\n            let base1 = CGPoint(\n                x: centerPoint.x + needleEndSize * cos(perpAngle),\n                y: centerPoint.y + needleEndSize * sin(perpAngle)\n            )\n            let base2 = CGPoint(\n                x: centerPoint.x - needleEndSize * cos(perpAngle),\n                y: centerPoint.y - needleEndSize * sin(perpAngle)\n            )\n            \n            let needlePath = NSBezierPath()\n            needlePath.move(to: tip)\n            needlePath.line(to: base1)\n            needlePath.line(to: base2)\n            needlePath.close()\n            \n            let needleCirclePath = NSBezierPath(\n                roundedRect: NSRect(\n                    x: centerPoint.x - needleEndSize,\n                    y: centerPoint.y - needleEndSize,\n                    width: needleEndSize * 2,\n                    height: needleEndSize * 2\n                ),\n                xRadius: needleEndSize * 2,\n                yRadius: needleEndSize * 2\n            )\n            needleCirclePath.close()\n            \n            NSColor.systemBlue.setFill()\n            needlePath.fill()\n            needleCirclePath.fill()\n        }\n        \n        if drawNeedle, let activeSegment = activeSegment {\n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 9, weight: .regular),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: NSMutableParagraphStyle()\n            ]\n            \n            let text = \"\\(activeSegment+1)\"\n            let width: CGFloat = text.widthOfString(usingFont: NSFont.systemFont(ofSize: 9))\n            let rect = CGRect(x: (self.frame.width-width)/2, y: (self.frame.height-26)/2, width: width, height: 12)\n            let str = NSAttributedString.init(string: text, attributes: stringAttributes)\n            str.draw(with: rect)\n        } else if let text = text {\n            let style = NSMutableParagraphStyle()\n            style.alignment = .center\n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 10, weight: .regular),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: style\n            ]\n            \n            let width: CGFloat = text.widthOfString(usingFont: NSFont.systemFont(ofSize: 10))\n            let rect = CGRect(x: ((self.frame.width-width)/2)-0.5, y: (self.frame.height-6)/2, width: width, height: 13)\n            let str = NSAttributedString.init(string: text, attributes: stringAttributes)\n            str.draw(with: rect)\n        } else if let value = value, drawValue {\n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 15, weight: .regular),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: NSMutableParagraphStyle()\n            ]\n            \n            let percentage = \"\\(Int(value.rounded(toPlaces: 2) * 100))%\"\n            let width: CGFloat = percentage.widthOfString(usingFont: NSFont.systemFont(ofSize: 15))\n            let rect = CGRect(x: (self.frame.width-width)/2, y: (self.frame.height-11)/2, width: width, height: 12)\n            let str = NSAttributedString.init(string: percentage, attributes: stringAttributes)\n            str.draw(with: rect)\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 41047,
+          "start_position" : 33204
+        }
+      },
+      "modifiers" : [
+        "public",
+        "override"
+      ],
+      "name" : "draw",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CGRect"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 33254,
+              "start_position" : 33240
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "rect",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 99,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Charts.swift"
+  ]
+}

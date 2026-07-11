@@ -1,0 +1,102 @@
+{
+  "caseID" : "case-c377db788dc229ea2801400e",
+  "commitHash" : "563595b5197188a6770e2482ac3e6d665c5a1578",
+  "commitMessage" : "Refactor Project Structure, Break Request Types Out Into Separate Files (#3819)\n\n### Goals :soccer:\r\nAlamofire's project structure has grown from its original single-file\r\norigin into many files on disk. Unfortunately, as the project has grown,\r\nthe `Request.swift` file has grown rather gigantic, topping 2600 lines\r\nafter the recent addition of `WebSocketRequest`. This PR breaks up\r\n`Request.swift` into separate files for each request type. It also moves\r\nall the previous serialization extensions from\r\n`ResponseSerialization.swift` to their associated type's files.\r\n\r\nThis PR also restructures some of the project's layout on disk to make\r\nsome Xcode groups proper folders.\r\n\r\nThis PR also creates the `AFInfo` namespace and moves the previously\r\ninternal `version` value into it to make it public.\r\n\r\nThis PR also adds primary associated types to the serialization\r\nprotocols.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/563595b5197188a6770e2482ac3e6d665c5a1578",
+  "durationSeconds" : 35.255531072616577,
+  "entityNames" : [
+    "Request",
+    "String",
+    "cURLDescription"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Request"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard\n            let request = lastRequest,\n            let url = request.url,\n            let host = url.host,\n            let method = request.httpMethod else { return \"$ curl command could not be created\" }\n\n        var components = [\"$ curl -v\"]\n\n        components.append(\"-X \\(method)\")\n\n        if let credentialStorage = delegate?.sessionConfiguration.urlCredentialStorage {\n            let protectionSpace = URLProtectionSpace(host: host,\n                                                     port: url.port ?? 0,\n                                                     protocol: url.scheme,\n                                                     realm: host,\n                                                     authenticationMethod: NSURLAuthenticationMethodHTTPBasic)\n\n            if let credentials = credentialStorage.credentials(for: protectionSpace)?.values {\n                for credential in credentials {\n                    guard let user = credential.user, let password = credential.password else { continue }\n                    components.append(\"-u \\(user):\\(password)\")\n                }\n            } else {\n                if let credential, let user = credential.user, let password = credential.password {\n                    components.append(\"-u \\(user):\\(password)\")\n                }\n            }\n        }\n\n        if let configuration = delegate?.sessionConfiguration, configuration.httpShouldSetCookies {\n            if\n                let cookieStorage = configuration.httpCookieStorage,\n                let cookies = cookieStorage.cookies(for: url), !cookies.isEmpty {\n                let allCookies = cookies.map { \"\\($0.name)=\\($0.value)\" }.joined(separator: \";\")\n\n                components.append(\"-b \\\"\\(allCookies)\\\"\")\n            }\n        }\n\n        var headers = HTTPHeaders()\n\n        if let sessionHeaders = delegate?.sessionConfiguration.headers {\n            for header in sessionHeaders where header.name != \"Cookie\" {\n                headers[header.name] = header.value\n            }\n        }\n\n        for header in request.headers where header.name != \"Cookie\" {\n            headers[header.name] = header.value\n        }\n\n        for header in headers {\n            let escapedValue = header.value.replacingOccurrences(of: \"\\\"\", with: \"\\\\\\\"\")\n            components.append(\"-H \\\"\\(header.name): \\(escapedValue)\\\"\")\n        }\n\n        if let httpBodyData = request.httpBody {\n            let httpBody = String(decoding: httpBodyData, as: UTF8.self)\n            var escapedBody = httpBody.replacingOccurrences(of: \"\\\\\\\"\", with: \"\\\\\\\\\\\"\")\n            escapedBody = escapedBody.replacingOccurrences(of: \"\\\"\", with: \"\\\\\\\"\")\n\n            components.append(\"-d \\\"\\(escapedBody)\\\"\")\n        }\n\n        components.append(\"\\\"\\(url.absoluteString)\\\"\")\n\n        return components.joined(separator: \" \\\\\\n\\t\")"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 42717,
+              "start_position" : 39701
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "cURLDescription",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/Request.swift",
+        "location" : {
+          "end_position" : 42719,
+          "start_position" : 39680
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add Extension refactoring"
+  },
+  "refactoringIndex" : 151,
+  "refactoringType" : "Add Extension refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Core/Request.swift"
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "caseID" : "case-0b6d51f5ee061f6770b71d59",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "ContainerConfiguration",
+    "Logger?",
+    "[String: String]",
+    "config",
+    "configureContainer",
+    "czConfig",
+    "dynamicEnv",
+    "inout LinuxContainer.Configuration"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "czConfig.cpus = config.resources.cpus\n        czConfig.memoryInBytes = config.resources.memoryInBytes\n        czConfig.sysctl = config.sysctls.reduce(into: [String: String]()) {\n            $0[$1.key] = $1.value\n        }\n        // If the host doesn't support this, we'll throw on container creation.\n        czConfig.virtualization = config.virtualization\n        czConfig.useInit = config.useInit\n\n        if let shmSize = config.shmSize {\n            for i in czConfig.mounts.indices {\n                if czConfig.mounts[i].destination == \"/dev/shm\" {\n                    czConfig.mounts[i].options.removeAll { $0.hasPrefix(\"size=\") }\n                    czConfig.mounts[i].options.append(\"size=\\(shmSize)\")\n                }\n            }\n        }\n\n        for mount in config.mounts {\n            if try mount.isSocket() {\n                let socket = UnixSocketConfiguration(\n                    source: URL(filePath: mount.source),\n                    destination: URL(filePath: mount.destination)\n                )\n                czConfig.sockets.append(socket)\n            } else {\n                czConfig.mounts.append(mount.asMount)\n            }\n        }\n\n        for publishedSocket in config.publishedSockets {\n            let socketConfig = UnixSocketConfiguration(\n                source: publishedSocket.containerPath,\n                destination: publishedSocket.hostPath,\n                permissions: publishedSocket.permissions,\n                direction: .outOf\n            )\n            czConfig.sockets.append(socketConfig)\n        }\n\n        if let socketUrl = Self.sshAuthSocketHostUrl(config: config, dynamicEnv: dynamicEnv, log: log) {\n            let socketPath = socketUrl.path(percentEncoded: false)\n            let attrs = try? FileManager.default.attributesOfItem(atPath: socketPath)\n            let permissions = (attrs?[.posixPermissions] as? NSNumber)\n                .map { FilePermissions(rawValue: mode_t($0.intValue)) }\n            let socketConfig = UnixSocketConfiguration(\n                source: socketUrl,\n                destination: URL(fileURLWithPath: Self.sshAuthSocketGuestPath),\n                permissions: permissions,\n                direction: .into,\n            )\n            czConfig.sockets.append(socketConfig)\n        }\n\n        let containerId = config.id\n        czConfig.hostname =\n            containerId.split(separator: \".\", maxSplits: 1, omittingEmptySubsequences: true)\n            .first\n            .map { String($0) } ?? containerId\n\n        if let dns = config.dns {\n            czConfig.dns = DNS(\n                nameservers: dns.nameservers, domain: dns.domain,\n                searchDomains: dns.searchDomains, options: dns.options)\n        }\n\n        try Self.configureInitialProcess(czConfig: &czConfig, config: config)"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+        "location" : {
+          "end_position" : 41062,
+          "start_position" : 38019
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "configureContainer",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "inout LinuxContainer.Configuration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location" : {
+              "end_position" : 38118,
+              "start_position" : 38064
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "czConfig",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ContainerConfiguration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location" : {
+              "end_position" : 38158,
+              "start_position" : 38118
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "config",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String: String]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[:]"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location" : {
+              "end_position" : 38202,
+              "start_position" : 38158
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "dynamicEnv",
+          "order" : 2
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Logger?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location" : {
+              "end_position" : 38230,
+              "start_position" : 38202
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "log",
+          "order" : 3
+        }
+      ],
+      "specifiers_decl" : {
+        "description" : "throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 97,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerSandboxService/Server/SandboxService.swift"
+  ]
+}

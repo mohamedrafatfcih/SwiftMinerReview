@@ -1,0 +1,2469 @@
+{
+  "caseID" : "case-55c401f6d2dff9ba02b14f4a",
+  "commitHash" : "027471f835a732eb34633bfdc0e2fec9f23b2cbb",
+  "commitMessage" : "feat: renamed Remote plugin to SystemStats\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/027471f835a732eb34633bfdc0e2fec9f23b2cbb",
+  "durationSeconds" : 10.490770936012268,
+  "entityNames" : [
+    "@escaping (Bool) -> Void",
+    "@escaping (Bool?) -> Void",
+    "@escaping (DeviceResponse?) -> Void",
+    "@escaping (Error?) -> Void",
+    "@escaping (URL?) -> Void",
+    "Bool",
+    "Bool?",
+    "CharacterSet"
+  ],
+  "rawRefactoring" : {
+    "category" : "complex",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "self.session.invalidateAndCancel()"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Kit/plugins/SystemStats.swift",
+          "location" : {
+            "end_position" : 17816,
+            "start_position" : 17749
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let body = pairs.map { key, value in\n            let k = key.addingPercentEncoding(withAllowedCharacters: formAllowed) ?? key\n            let v = value.addingPercentEncoding(withAllowedCharacters: formAllowed) ?? value\n            return \"\\(k)=\\(v)\"\n        }.joined(separator: \"&\")\n        return Data(body.utf8)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 17661,
+              "start_position" : 17256
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "formBody",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[(String, String)]"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 17322,
+                  "start_position" : 17295
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "pairs",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if !self.hasCredentials() {\n            completion(false)\n            return\n        }\n        \n        if !self.accessToken.isEmpty && !self.isTokenExpired() {\n            DispatchQueue.main.async {\n                completion(true)\n            }\n            return\n        }\n        \n        self.validate(completion)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 18223,
+              "start_position" : 17816
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isAuthorized",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Bool) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 17887,
+                  "start_position" : 17851
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "return !self.accessToken.isEmpty && !self.refreshToken.isEmpty"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 18343,
+              "start_position" : 18223
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "hasCredentials",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.registerDevice { [weak self] device in\n            guard let self else {\n                completion(nil)\n                return\n            }\n            guard let device else {\n                completion(nil)\n                return\n            }\n            completion(device.verification_uri_complete)\n            \n            self.deviceCode = device.device_code\n            self.userCode = device.user_code\n            self.interval = device.interval ?? 5\n            \n            self.repeater = Repeater(seconds: self.interval) { [weak self] in\n                guard let self else { return }\n                self.pollForToken { [weak self] error in\n                    guard let self else { return }\n                    guard error == nil else {\n                        print(error?.localizedDescription ?? \"error pooling for token\")\n                        self.repeater?.pause()\n                        self.repeater = nil\n                        return\n                    }\n                    if !self.accessToken.isEmpty {\n                        self.repeater?.pause()\n                        self.repeater = nil\n                    }\n                }\n            }\n            self.repeater?.start()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 19654,
+              "start_position" : 18343
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "login",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (URL?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 18407,
+                  "start_position" : 18371
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.accessToken = \"\"\n        self.refreshToken = \"\""
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 19753,
+              "start_position" : 19654
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "logout",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.accessToken.isEmpty && !self.refreshToken.isEmpty, let url = URL(string: \"\\(SystemStats.authHost)/me\") else {\n            completion(false)\n            return\n        }\n        \n        let now = Date()\n        self.cooldownLock.lock()\n        let dynamicCooldown = min(self.baseCooldown * pow(2.0, Double(self.validationAttempts)), self.maxCooldown)\n        if let lastTime = self.lastValidationTime, now.timeIntervalSince(lastTime) < dynamicCooldown {\n            let remainingTime = dynamicCooldown - now.timeIntervalSince(lastTime)\n            self.cooldownLock.unlock()\n            DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) { [weak self] in\n                guard let self else {\n                    completion(false)\n                    return\n                }\n                self.validate(completion)\n            }\n            return\n        }\n        self.lastValidationTime = now\n        self.validationAttempts += 1\n        self.cooldownLock.unlock()\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"GET\"\n        request.setValue(\"Bearer \\(self.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        \n        self.session.dataTask(with: request) { [weak self] _, response, error in\n            guard let self = self, error == nil, let httpResponse = response as? HTTPURLResponse else {\n                completion(false)\n                return\n            }\n            \n            if httpResponse.statusCode == 401 {\n                self.refreshTokenFunc { ok in\n                    if ok == true {\n                        self.cooldownLock.lock()\n                        self.validationAttempts = 0\n                        self.lastValidationTime = nil\n                        self.cooldownLock.unlock()\n                    }\n                    completion(ok ?? false)\n                }\n            } else if httpResponse.statusCode == 200 {\n                self.cooldownLock.lock()\n                self.validationAttempts = 0\n                self.lastValidationTime = nil\n                self.cooldownLock.unlock()\n                completion(true)\n            } else {\n                completion(false)\n            }\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 22063,
+              "start_position" : 19753
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "validate",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Bool) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 19823,
+                  "start_position" : 19785
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.refreshLock.lock()\n        self.refreshCompletions.append(completion)\n        if self.isRefreshing {\n            self.refreshLock.unlock()\n            return\n        }\n        self.isRefreshing = true\n        self.refreshLock.unlock()\n        \n        guard let url = URL(string: \"\\(SystemStats.authHost)/token\") else {\n            self.completeRefresh(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"grant_type\", \"refresh_token\"),\n            (\"refresh_token\", self.refreshToken),\n            (\"device_id\", SystemStats.shared.id.uuidString)\n        ])\n        \n        self.session.dataTask(with: request) { [weak self] data, response, error in\n            guard let self else { return }\n            guard error == nil, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,\n                  let data = data, let token = try? JSONDecoder().decode(TokenResponse.self, from: data) else {\n                self.completeRefresh(nil)\n                return\n            }\n            self.accessToken = token.access_token\n            self.refreshToken = token.refresh_token\n            self.completeRefresh(true)\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 23559,
+              "start_position" : 22063
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshTokenFunc",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Bool?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 22140,
+                  "start_position" : 22103
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.refreshLock.lock()\n        let completions = self.refreshCompletions\n        self.refreshCompletions.removeAll()\n        self.isRefreshing = false\n        self.refreshLock.unlock()\n        for completion in completions {\n            completion(result)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 23897,
+              "start_position" : 23559
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "completeRefresh",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Bool?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 23613,
+                  "start_position" : 23598
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let url = URL(string: \"\\(SystemStats.authHost)/device\") else {\n            completion(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"client_id\", self.clientID),\n            (\"device_id\", SystemStats.shared.id.uuidString)\n        ])\n        \n        self.session.dataTask(with: request) { data, response, error in\n            guard error == nil, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,\n                  let data = data, let resp = try? JSONDecoder().decode(DeviceResponse.self, from: data) else {\n                completion(nil)\n                return\n            }\n            completion(resp)\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 24905,
+              "start_position" : 23897
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "registerDevice",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (DeviceResponse?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 23982,
+                  "start_position" : 23935
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let url = URL(string: \"\\(SystemStats.authHost)/token\") else {\n            completion(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"client_id\", self.clientID),\n            (\"device_code\", self.deviceCode),\n            (\"grant_type\", \"urn:ietf:params:oauth:grant-type:device_code\")\n        ])\n        \n        self.session.dataTask(with: request) { [weak self] data, response, error in\n            guard let self else {\n                completion(nil)\n                return\n            }\n            if let error = error {\n                completion(error)\n                return\n            }\n            \n            guard let httpResponse = response as? HTTPURLResponse else {\n                completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"Invalid response\"]))\n                return\n            }\n            \n            if httpResponse.statusCode == 200 {\n                guard let data = data else {\n                    completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"No data returned\"]))\n                    return\n                }\n                \n                do {\n                    let result = try JSONDecoder().decode(TokenResponse.self, from: data)\n                    self.accessToken = result.access_token\n                    self.refreshToken = result.refresh_token\n                    NotificationCenter.default.post(name: .remoteLoginSuccess, object: nil)\n                    completion(nil)\n                } catch {\n                    completion(error)\n                }\n            } else if httpResponse.statusCode == 400 {\n                guard let data = data, let responseString = String(data: data, encoding: .utf8) else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Bad request\"]))\n                    return\n                }\n                \n                if responseString.contains(\"authorization_pending\") {\n                    completion(nil)\n                } else if responseString.contains(\"expired_token\") {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Device code expired, please re-register\"]))\n                } else if responseString.contains(\"slow_down\") {\n                    self.interval += 5\n                    self.repeater?.reset(seconds: self.interval)\n                    self.repeater?.start()\n                    completion(nil)\n                } else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: responseString]))\n                }\n            } else {\n                let errorMessage = data.flatMap { String(data: $0, encoding: .utf8) } ?? \"Unknown error\"\n                completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Failed to get token (\\(httpResponse.statusCode)): \\(errorMessage)\"]))\n            }\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 28283,
+              "start_position" : 24905
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pollForToken",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Error?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 24979,
+                  "start_position" : 24941
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let parts = self.accessToken.components(separatedBy: \".\")\n        guard parts.count == 3 else { return true }\n        \n        let payload = parts[1]\n        var base64 = payload\n            .replacingOccurrences(of: \"-\", with: \"+\")\n            .replacingOccurrences(of: \"_\", with: \"/\")\n        \n        while base64.count % 4 != 0 {\n            base64 += \"=\"\n        }\n        \n        guard let data = Data(base64Encoded: base64),\n              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],\n              let exp = json[\"exp\"] as? TimeInterval else {\n            return true\n        }\n        \n        return Date().timeIntervalSince1970 >= exp"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29023,
+              "start_position" : 28283
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isTokenExpired",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 17749,
+              "start_position" : 17661
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemStats.swift",
+        "location" : {
+          "end_position" : 29025,
+          "start_position" : 15943
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "RemoteAuth",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "RemoteKeychain.read(\"access_token\") ?? \"\""
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "RemoteKeychain.write(newValue, for: \"access_token\")"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16156,
+              "start_position" : 16003
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "accessToken"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "RemoteKeychain.read(\"refresh_token\") ?? \"\""
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "RemoteKeychain.write(newValue, for: \"refresh_token\")"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16329,
+              "start_position" : 16173
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshToken"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "stats"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16372,
+              "start_position" : 16346
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "clientID"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : ""
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16417,
+              "start_position" : 16394
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "deviceCode"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : ""
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16455,
+              "start_position" : 16434
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "userCode"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "5"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16489,
+              "start_position" : 16472
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "interval"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Repeater?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16525,
+              "start_position" : 16506
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "repeater"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Date?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16572,
+              "start_position" : 16547
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lastValidationTime"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16616,
+              "start_position" : 16589
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "validationAttempts"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "TimeInterval"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "2.0"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16665,
+              "start_position" : 16633
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "baseCooldown"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "TimeInterval"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "60.0"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16714,
+              "start_position" : 16682
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "maxCooldown"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "NSLock",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 16754,
+                      "start_position" : 16746
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16754,
+              "start_position" : 16731
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "cooldownLock"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16796,
+              "start_position" : 16776
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isRefreshing"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[(Bool?) -> Void]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16855,
+              "start_position" : 16813
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshCompletions"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "NSLock",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 16894,
+                      "start_position" : 16886
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 16894,
+              "start_position" : 16872
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshLock"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLSession"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "{\n        let config = URLSessionConfiguration.default\n        config.timeoutIntervalForRequest = 30\n        return URLSession(configuration: config)\n    }",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+                    {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+                        {
+                          "label" : "configuration",
+                          "value" : "config"
+                        }
+                      ],
+                      "call" : "URLSession",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Kit/plugins/SystemStats.swift",
+                        "location" : {
+                          "end_position" : 17087,
+                          "start_position" : 17054
+                        }
+                      }
+                    }
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 17095,
+                      "start_position" : 16938
+                    }
+                  },
+                  "trailing_closure" : {
+                    "attributes" : [
+
+                    ],
+                    "body" : {
+                      "content" : "let config = URLSessionConfiguration.default\n        config.timeoutIntervalForRequest = 30\n        return URLSession(configuration: config)"
+                    },
+                    "captures" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Kit/plugins/SystemStats.swift",
+                      "location" : {
+                        "end_position" : 17093,
+                        "start_position" : 16938
+                      }
+                    },
+                    "parameters" : [
+
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 17095,
+              "start_position" : 16916
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "session"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CharacterSet"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "charactersIn",
+                      "value" : "\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~\""
+                    }
+                  ],
+                  "call" : "CharacterSet",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 17256,
+                      "start_position" : 17152
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 17256,
+              "start_position" : 17124
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "formAllowed"
+        }
+      ]
+    },
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "self.session.invalidateAndCancel()"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Kit/plugins/Remote.swift",
+          "location" : {
+            "end_position" : 17655,
+            "start_position" : 17588
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let body = pairs.map { key, value in\n            let k = key.addingPercentEncoding(withAllowedCharacters: formAllowed) ?? key\n            let v = value.addingPercentEncoding(withAllowedCharacters: formAllowed) ?? value\n            return \"\\(k)=\\(v)\"\n        }.joined(separator: \"&\")\n        return Data(body.utf8)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 17500,
+              "start_position" : 17095
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "formBody",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[(String, String)]"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 17161,
+                  "start_position" : 17134
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "pairs",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if !self.hasCredentials() {\n            completion(false)\n            return\n        }\n        \n        if !self.accessToken.isEmpty && !self.isTokenExpired() {\n            DispatchQueue.main.async {\n                completion(true)\n            }\n            return\n        }\n        \n        self.validate(completion)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 18062,
+              "start_position" : 17655
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "isAuthorized",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Bool) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 17726,
+                  "start_position" : 17690
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "return !self.accessToken.isEmpty && !self.refreshToken.isEmpty"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 18182,
+              "start_position" : 18062
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "hasCredentials",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.registerDevice { [weak self] device in\n            guard let self else {\n                completion(nil)\n                return\n            }\n            guard let device else {\n                completion(nil)\n                return\n            }\n            completion(device.verification_uri_complete)\n            \n            self.deviceCode = device.device_code\n            self.userCode = device.user_code\n            self.interval = device.interval ?? 5\n            \n            self.repeater = Repeater(seconds: self.interval) { [weak self] in\n                guard let self else { return }\n                self.pollForToken { [weak self] error in\n                    guard let self else { return }\n                    guard error == nil else {\n                        print(error?.localizedDescription ?? \"error pooling for token\")\n                        self.repeater?.pause()\n                        self.repeater = nil\n                        return\n                    }\n                    if !self.accessToken.isEmpty {\n                        self.repeater?.pause()\n                        self.repeater = nil\n                    }\n                }\n            }\n            self.repeater?.start()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 19493,
+              "start_position" : 18182
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "login",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (URL?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 18246,
+                  "start_position" : 18210
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.accessToken = \"\"\n        self.refreshToken = \"\""
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 19592,
+              "start_position" : 19493
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "logout",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.accessToken.isEmpty && !self.refreshToken.isEmpty, let url = URL(string: \"\\(Remote.authHost)/me\") else {\n            completion(false)\n            return\n        }\n        \n        let now = Date()\n        self.cooldownLock.lock()\n        let dynamicCooldown = min(self.baseCooldown * pow(2.0, Double(self.validationAttempts)), self.maxCooldown)\n        if let lastTime = self.lastValidationTime, now.timeIntervalSince(lastTime) < dynamicCooldown {\n            let remainingTime = dynamicCooldown - now.timeIntervalSince(lastTime)\n            self.cooldownLock.unlock()\n            DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) { [weak self] in\n                guard let self else {\n                    completion(false)\n                    return\n                }\n                self.validate(completion)\n            }\n            return\n        }\n        self.lastValidationTime = now\n        self.validationAttempts += 1\n        self.cooldownLock.unlock()\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"GET\"\n        request.setValue(\"Bearer \\(self.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        \n        self.session.dataTask(with: request) { [weak self] _, response, error in\n            guard let self = self, error == nil, let httpResponse = response as? HTTPURLResponse else {\n                completion(false)\n                return\n            }\n            \n            if httpResponse.statusCode == 401 {\n                self.refreshTokenFunc { ok in\n                    if ok == true {\n                        self.cooldownLock.lock()\n                        self.validationAttempts = 0\n                        self.lastValidationTime = nil\n                        self.cooldownLock.unlock()\n                    }\n                    completion(ok ?? false)\n                }\n            } else if httpResponse.statusCode == 200 {\n                self.cooldownLock.lock()\n                self.validationAttempts = 0\n                self.lastValidationTime = nil\n                self.cooldownLock.unlock()\n                completion(true)\n            } else {\n                completion(false)\n            }\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 21897,
+              "start_position" : 19592
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "validate",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Bool) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 19662,
+                  "start_position" : 19624
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.refreshLock.lock()\n        self.refreshCompletions.append(completion)\n        if self.isRefreshing {\n            self.refreshLock.unlock()\n            return\n        }\n        self.isRefreshing = true\n        self.refreshLock.unlock()\n        \n        guard let url = URL(string: \"\\(Remote.authHost)/token\") else {\n            self.completeRefresh(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"grant_type\", \"refresh_token\"),\n            (\"refresh_token\", self.refreshToken)\n        ])\n        \n        self.session.dataTask(with: request) { [weak self] data, response, error in\n            guard let self else { return }\n            guard error == nil, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,\n                  let data = data, let token = try? JSONDecoder().decode(TokenResponse.self, from: data) else {\n                self.completeRefresh(nil)\n                return\n            }\n            self.accessToken = token.access_token\n            self.refreshToken = token.refresh_token\n            self.completeRefresh(true)\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 23327,
+              "start_position" : 21897
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshTokenFunc",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Bool?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 21974,
+                  "start_position" : 21937
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.refreshLock.lock()\n        let completions = self.refreshCompletions\n        self.refreshCompletions.removeAll()\n        self.isRefreshing = false\n        self.refreshLock.unlock()\n        for completion in completions {\n            completion(result)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 23665,
+              "start_position" : 23327
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "completeRefresh",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Bool?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 23381,
+                  "start_position" : 23366
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let url = URL(string: \"\\(Remote.authHost)/device\") else {\n            completion(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"client_id\", self.clientID)\n        ])\n        \n        self.session.dataTask(with: request) { data, response, error in\n            guard error == nil, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,\n                  let data = data, let resp = try? JSONDecoder().decode(DeviceResponse.self, from: data) else {\n                completion(nil)\n                return\n            }\n            completion(resp)\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 24607,
+              "start_position" : 23665
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "registerDevice",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (DeviceResponse?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 23750,
+                  "start_position" : 23703
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let url = URL(string: \"\\(Remote.authHost)/token\") else {\n            completion(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"client_id\", self.clientID),\n            (\"device_code\", self.deviceCode),\n            (\"grant_type\", \"urn:ietf:params:oauth:grant-type:device_code\")\n        ])\n        \n        self.session.dataTask(with: request) { [weak self] data, response, error in\n            guard let self else {\n                completion(nil)\n                return\n            }\n            if let error = error {\n                completion(error)\n                return\n            }\n            \n            guard let httpResponse = response as? HTTPURLResponse else {\n                completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"Invalid response\"]))\n                return\n            }\n            \n            if httpResponse.statusCode == 200 {\n                guard let data = data else {\n                    completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"No data returned\"]))\n                    return\n                }\n                \n                do {\n                    let result = try JSONDecoder().decode(TokenResponse.self, from: data)\n                    self.accessToken = result.access_token\n                    self.refreshToken = result.refresh_token\n                    NotificationCenter.default.post(name: .remoteLoginSuccess, object: nil)\n                    completion(nil)\n                } catch {\n                    completion(error)\n                }\n            } else if httpResponse.statusCode == 400 {\n                guard let data = data, let responseString = String(data: data, encoding: .utf8) else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Bad request\"]))\n                    return\n                }\n                \n                if responseString.contains(\"authorization_pending\") {\n                    completion(nil)\n                } else if responseString.contains(\"expired_token\") {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Device code expired, please re-register\"]))\n                } else if responseString.contains(\"slow_down\") {\n                    self.interval += 5\n                    self.repeater?.reset(seconds: self.interval)\n                    self.repeater?.start()\n                    completion(nil)\n                } else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: responseString]))\n                }\n            } else {\n                let errorMessage = data.flatMap { String(data: $0, encoding: .utf8) } ?? \"Unknown error\"\n                completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Failed to get token (\\(httpResponse.statusCode)): \\(errorMessage)\"]))\n            }\n        }.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 27980,
+              "start_position" : 24607
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pollForToken",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Error?) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 24681,
+                  "start_position" : 24643
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let parts = self.accessToken.components(separatedBy: \".\")\n        guard parts.count == 3 else { return true }\n        \n        let payload = parts[1]\n        var base64 = payload\n            .replacingOccurrences(of: \"-\", with: \"+\")\n            .replacingOccurrences(of: \"_\", with: \"/\")\n        \n        while base64.count % 4 != 0 {\n            base64 += \"=\"\n        }\n        \n        guard let data = Data(base64Encoded: base64),\n              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],\n              let exp = json[\"exp\"] as? TimeInterval else {\n            return true\n        }\n        \n        return Date().timeIntervalSince1970 >= exp"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 28720,
+              "start_position" : 27980
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isTokenExpired",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 17588,
+              "start_position" : 17500
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/Remote.swift",
+        "location" : {
+          "end_position" : 28722,
+          "start_position" : 15782
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "RemoteAuth",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "RemoteKeychain.read(\"access_token\") ?? \"\""
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "RemoteKeychain.write(newValue, for: \"access_token\")"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 15995,
+              "start_position" : 15842
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "accessToken"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "RemoteKeychain.read(\"refresh_token\") ?? \"\""
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "RemoteKeychain.write(newValue, for: \"refresh_token\")"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16168,
+              "start_position" : 16012
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshToken"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "stats"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16211,
+              "start_position" : 16185
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "clientID"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : ""
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16256,
+              "start_position" : 16233
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "deviceCode"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : ""
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16294,
+              "start_position" : 16273
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "userCode"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "5"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16328,
+              "start_position" : 16311
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "interval"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Repeater?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16364,
+              "start_position" : 16345
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "repeater"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Date?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16411,
+              "start_position" : 16386
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lastValidationTime"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16455,
+              "start_position" : 16428
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "validationAttempts"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "TimeInterval"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "2.0"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16504,
+              "start_position" : 16472
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "baseCooldown"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "TimeInterval"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "60.0"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16553,
+              "start_position" : 16521
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "maxCooldown"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "NSLock",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Remote.swift",
+                    "location" : {
+                      "end_position" : 16593,
+                      "start_position" : 16585
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16593,
+              "start_position" : 16570
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "cooldownLock"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16635,
+              "start_position" : 16615
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isRefreshing"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[(Bool?) -> Void]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16694,
+              "start_position" : 16652
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshCompletions"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "NSLock",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Remote.swift",
+                    "location" : {
+                      "end_position" : 16733,
+                      "start_position" : 16725
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16733,
+              "start_position" : 16711
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "refreshLock"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLSession"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "{\n        let config = URLSessionConfiguration.default\n        config.timeoutIntervalForRequest = 30\n        return URLSession(configuration: config)\n    }",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+                    {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+                        {
+                          "label" : "configuration",
+                          "value" : "config"
+                        }
+                      ],
+                      "call" : "URLSession",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Kit/plugins/Remote.swift",
+                        "location" : {
+                          "end_position" : 16926,
+                          "start_position" : 16893
+                        }
+                      }
+                    }
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Remote.swift",
+                    "location" : {
+                      "end_position" : 16934,
+                      "start_position" : 16777
+                    }
+                  },
+                  "trailing_closure" : {
+                    "attributes" : [
+
+                    ],
+                    "body" : {
+                      "content" : "let config = URLSessionConfiguration.default\n        config.timeoutIntervalForRequest = 30\n        return URLSession(configuration: config)"
+                    },
+                    "captures" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Kit/plugins/Remote.swift",
+                      "location" : {
+                        "end_position" : 16932,
+                        "start_position" : 16777
+                      }
+                    },
+                    "parameters" : [
+
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 16934,
+              "start_position" : 16755
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "session"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CharacterSet"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "charactersIn",
+                      "value" : "\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~\""
+                    }
+                  ],
+                  "call" : "CharacterSet",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Remote.swift",
+                    "location" : {
+                      "end_position" : 17095,
+                      "start_position" : 16991
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 17095,
+              "start_position" : 16963
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "formAllowed"
+        }
+      ]
+    },
+    "type" : "Move Class Refactoring"
+  },
+  "refactoringIndex" : 1,
+  "refactoringType" : "Move Class Refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Remote.swift",
+    "Kit/plugins/SystemStats.swift"
+  ]
+}

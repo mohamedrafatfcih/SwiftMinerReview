@@ -1,0 +1,158 @@
+{
+  "caseID" : "case-466ffb65a709d14b57be64ad",
+  "commitHash" : "827a879ae2dcc473dfcae8ae188b992f66cd07d6",
+  "commitMessage" : "Require Swift 5.7.1 (#3798)\n\n### Goals :soccer:\r\nThis PR updates Alamofire to require Swift 5.7.1, as Xcode 14.1 has been\r\nrequired to ship to the App Store since April.\r\n\r\n### Implementation Details :construction:\r\nRelevant version checks have been removed and formatting updated for\r\nSwift 5.7.\r\n\r\n### Testing Details :mag:\r\nOlder Swift versions have been removed from CI.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/827a879ae2dcc473dfcae8ae188b992f66cd07d6",
+  "durationSeconds" : 30.380203008651733,
+  "entityNames" : [
+    "@escaping (AFDownloadResponse<Serializer.SerializedObject>) -> Void",
+    "DispatchQueue",
+    "Self",
+    "Serializer",
+    "_response",
+    "completionHandler",
+    "defer",
+    "main"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "body" : {
+        "content" : "if let didComplete {\n                            self.responseSerializerDidComplete { queue.async { didComplete() } }\n                        }"
+      },
+      "location_info" : {
+        "file_path" : "Source/ResponseSerialization.swift",
+        "location" : {
+          "end_position" : 19093,
+          "start_position" : 18874
+        }
+      },
+      "name" : "defer"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "appendResponseSerializer {\n            // Start work that should be on the serialization queue.\n            let start = ProcessInfo.processInfo.systemUptime\n            let result: AFResult<Serializer.SerializedObject> = Result {\n                try responseSerializer.serializeDownload(request: self.request,\n                                                         response: self.response,\n                                                         fileURL: self.fileURL,\n                                                         error: self.error)\n            }.mapError { error in\n                error.asAFError(or: .responseSerializationFailed(reason: .customSerializationFailed(error: error)))\n            }\n            let end = ProcessInfo.processInfo.systemUptime\n            // End work that should be on the serialization queue.\n\n            self.underlyingQueue.async {\n                let response = DownloadResponse(request: self.request,\n                                                response: self.response,\n                                                fileURL: self.fileURL,\n                                                resumeData: self.resumeData,\n                                                metrics: self.metrics,\n                                                serializationDuration: end - start,\n                                                result: result)\n\n                self.eventMonitor?.request(self, didParseResponse: response)\n\n                guard let serializerError = result.failure, let delegate = self.delegate else {\n                    self.responseSerializerDidComplete { queue.async { completionHandler(response) } }\n                    return\n                }\n\n                delegate.retryResult(for: self, dueTo: serializerError) { retryResult in\n                    var didComplete: (() -> Void)?\n\n                    defer {\n                        if let didComplete {\n                            self.responseSerializerDidComplete { queue.async { didComplete() } }\n                        }\n                    }\n\n                    switch retryResult {\n                    case .doNotRetry:\n                        didComplete = { completionHandler(response) }\n\n                    case let .doNotRetryWithError(retryError):\n                        let result: AFResult<Serializer.SerializedObject> = .failure(retryError.asAFError(orFailWith: \"Received retryError was not already AFError\"))\n\n                        let response = DownloadResponse(request: self.request,\n                                                        response: self.response,\n                                                        fileURL: self.fileURL,\n                                                        resumeData: self.resumeData,\n                                                        metrics: self.metrics,\n                                                        serializationDuration: end - start,\n                                                        result: result)\n\n                        didComplete = { completionHandler(response) }\n\n                    case .retry, .retryWithDelay:\n                        delegate.retryRequest(self, withDelay: retryResult.delay)\n                    }\n                }\n            }\n        }\n\n        return self"
+      },
+      "generic_clause" : "<Serializer: DownloadResponseSerializerProtocol>",
+      "location_info" : {
+        "file_path" : "Source/ResponseSerialization.swift",
+        "location" : {
+          "end_position" : 20336,
+          "start_position" : 16617
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "_response",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DispatchQueue"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "main"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Source/ResponseSerialization.swift",
+            "location" : {
+              "end_position" : 16723,
+              "start_position" : 16694
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "queue",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Serializer"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Source/ResponseSerialization.swift",
+            "location" : {
+              "end_position" : 16830,
+              "start_position" : 16723
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "responseSerializer",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping (AFDownloadResponse<Serializer.SerializedObject>) -> Void"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Source/ResponseSerialization.swift",
+            "location" : {
+              "end_position" : 16992,
+              "start_position" : 16830
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "completionHandler",
+          "order" : 2
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Self"
+        },
+        "description" : "-> Self"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 68,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/ResponseSerialization.swift"
+  ]
+}

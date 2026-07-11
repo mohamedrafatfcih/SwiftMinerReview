@@ -1,0 +1,1052 @@
+{
+  "caseID" : "case-54115f2b9ea422a84e75f7b2",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "@escaping (Result<URLRequest, any Error>) -> Void",
+    "@escaping (RetryResult) -> Void",
+    "Bool",
+    "Int",
+    "MutableState",
+    "Protected<MutableState>",
+    "Request",
+    "RequestAdapterState"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Int"
+      },
+      "getter_block" : {
+        "body" : {
+          "content" : "mutableState.retryCalledCount"
+        },
+        "modifier" : "get"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Tests/SessionTests.swift",
+        "location" : {
+          "end_position" : 3971,
+          "start_position" : 3916
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "retryCalledCount"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "RequestInterceptor"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let result = mutableState.write { mutableState in\n                mutableState.adaptCalledCount += 1\n\n                let result: Result<URLRequest, any Error> = Result {\n                    if mutableState.throwsErrorOnFirstAdapt {\n                        mutableState.throwsErrorOnFirstAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/1\")\n                    }\n\n                    if mutableState.throwsErrorOnSecondAdapt && mutableState.adaptedCount == 1 {\n                        mutableState.throwsErrorOnSecondAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/2\")\n                    }\n\n                    var urlRequest = urlRequest\n\n                    mutableState.adaptedCount += 1\n\n                    if mutableState.shouldApplyAuthorizationHeader && mutableState.adaptedCount > 1 {\n                        urlRequest.headers.update(.authorization(username: \"user\", password: \"password\"))\n                    }\n\n                    return urlRequest\n                }\n\n                return result\n            }\n\n            completion(result)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 6208,
+              "start_position" : 4879
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "adapt",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4925,
+                  "start_position" : 4900
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "RequestAdapterState"
+              },
+              "is_variadic" : false,
+              "label" : "using",
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4978,
+                  "start_position" : 4925
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "state",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (Result<URLRequest, any Error>) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 5059,
+                  "start_position" : 4978
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let result: RetryResult = mutableState.write { mutableState in\n                mutableState.retryCalledCount += 1\n\n                if mutableState.throwsErrorOnRetry {\n                    let error = AFError.invalidURL(url: \"/invalid/url/\\(mutableState.retryCalledCount)\")\n                    return .doNotRetryWithError(error)\n                }\n\n                guard mutableState.shouldRetry else { return .doNotRetry }\n\n                mutableState.retryCount += 1\n                mutableState.retryErrors.append(error)\n\n                if mutableState.retryCount < 2 {\n                    if let retryDelay = mutableState.retryDelay {\n                        return .retryWithDelay(retryDelay)\n                    } else {\n                        return .retry\n                    }\n                } else {\n                    return .doNotRetry\n                }\n            }\n\n            completion(result)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 7335,
+              "start_position" : 6208
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "retry",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 6248,
+                  "start_position" : 6229
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Session"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 6289,
+                  "start_position" : 6248
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any Error"
+              },
+              "is_variadic" : false,
+              "label" : "dueTo",
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 6332,
+                  "start_position" : 6289
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (RetryResult) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 6395,
+                  "start_position" : 6332
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "completion",
+              "order" : 3
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 4879,
+              "start_position" : 4093
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "0"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4130,
+                  "start_position" : 4108
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adaptedCount",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4183,
+                  "start_position" : 4130
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "throwsErrorOnSecondAdapt",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4230,
+                  "start_position" : 4183
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "throwsErrorOnRetry",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4289,
+                  "start_position" : 4230
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldApplyAuthorizationHeader",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4328,
+                  "start_position" : 4289
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldRetry",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "TimeInterval?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 4373,
+                  "start_position" : 4328
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retryDelay",
+              "order" : 5
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Tests/SessionTests.swift",
+        "location" : {
+          "end_position" : 7341,
+          "start_position" : 3156
+        }
+      },
+      "modifiers" : [
+        "private",
+        "final"
+      ],
+      "name" : "RequestHandler",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 3715,
+              "start_position" : 3218
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "MutableState",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "0"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3285,
+                  "start_position" : 3265
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adaptCalledCount"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "0"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3318,
+                  "start_position" : 3302
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adaptedCount"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "0"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3349,
+                  "start_position" : 3335
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retryCount"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "0"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3386,
+                  "start_position" : 3366
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retryCalledCount"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[any Error]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3432,
+                  "start_position" : 3403
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retryErrors"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3488,
+                  "start_position" : 3450
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldApplyAuthorizationHeader"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3536,
+                  "start_position" : 3505
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "throwsErrorOnFirstAdapt"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3585,
+                  "start_position" : 3553
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "throwsErrorOnSecondAdapt"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3628,
+                  "start_position" : 3602
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "throwsErrorOnRetry"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3663,
+                  "start_position" : 3645
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldRetry"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "TimeInterval?"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/SessionTests.swift",
+                "location" : {
+                  "end_position" : 3705,
+                  "start_position" : 3680
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retryDelay"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Protected<MutableState>"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 3774,
+              "start_position" : 3737
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "mutableState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.adaptCalledCount"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 3843,
+              "start_position" : 3788
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "adaptCalledCount"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.adaptedCount"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 3903,
+              "start_position" : 3856
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "adaptedCount"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.retryCalledCount"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 3971,
+              "start_position" : 3916
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "retryCalledCount"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.retryCount"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 4027,
+              "start_position" : 3984
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "retryCount"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[any Error]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "mutableState.retryErrors"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/SessionTests.swift",
+            "location" : {
+              "end_position" : 4093,
+              "start_position" : 4040
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "retryErrors"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 855,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/SessionTests.swift"
+  ]
+}

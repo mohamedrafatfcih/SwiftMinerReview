@@ -1,0 +1,424 @@
+{
+  "caseID" : "case-b4afc65f5e2317f93a79df59",
+  "commitHash" : "e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "commitMessage" : "Add WebSocketRequest Under @_spi(WebSocket) (#3455)\n\n### Goals :soccer:\r\nThis PR adds `WebSocketRequest`, an Alamofire wrapper around\r\n`URLSessionWebSocketTask`, as well as assorted functionality for dealing\r\nwith WebSockets. This includes:\r\n\r\n- Automatic listening: no more manual `listen` calls on the task.\r\n- Automatic ping support: ping the server automatically given an\r\ninterval.\r\n- Response serialization support: parse messages into objects, including\r\nusing `Decodable`.\r\n- Concurrency support: full streams of events and messages.\r\n\r\n### Implementation Details :construction:\r\n`WebSocketRequest` follows most of Alamofire's existing patterns. There\r\nare a few differences:\r\n\r\n- Closure vs. cancellation: web sockets can close expectedly, yet this\r\nclosure produces an error from `URLSession`. This had to be customized\r\nin order to ignore the error and allow the user to close a connection\r\nwith no additional issue.\r\n- Like `DataStreamRequest`, `WebSocketRequest` deals with incoming\r\nstreams of data. However, that data is already framed and then partially\r\ndecoded into `Message`s by `URLSession`, so serialization had to be\r\nbuilt at that level.\r\n- Unlike `DataStreamRequest`, `WebSocketRequest` can send `Message` back\r\nup the connection. This requires some queuing on the request side to\r\nensure messages sent before the connection is established are properly\r\nstored for sending.\r\n\r\n### Testing Details :mag:\r\nFull suite of `WebSocketTests` added, as well as the concurrency\r\nversions. Firewalk was updated with several new `websocket` cases to\r\nsupport scenarios like an echo server or expected ping count.\r\n\r\nP.S. This feature was delayed so long due to the many hours of\r\nfrustration I had to deal with when Apple shipped a message dropping bug\r\nin iOS 14.5 - 14.7. In trying to test the socket connections I would\r\nconnect to the test server, have it reply with a message, and then close\r\nthe connection. Shockingly that meant that *sometimes* the messages\r\nwouldn't come through. But sometimes they would. Investigating other web\r\nsocket clients and inspecting network traffic with Wireshark revealed\r\nthat the messages were being sent by the server but the client just\r\nwasn't receiving them. Further investigation showed that delaying the\r\nclose of the connection by 60ms or so let the client receive the message\r\nreliably. After many hours I finally had reliable tests! Only to then\r\ntest on the iOS 15 betas and see that I didn't need the delay at all,\r\nthe tests were reliable without it! Turns out it was just a bug in iOS\r\n14.5 - 14.7. I was so disgusted by this fact that I gave up on the\r\nfeature for years. I'll call out this bug in the documentation.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "durationSeconds" : 15.012655973434448,
+  "entityNames" : [
+    "BaseTestCase",
+    "WebSocketTests",
+    "testOnePingOnly",
+    "testThatTimePingsOccur",
+    "testThatWebSocketFailsWithTooSmallMaximumMessageSize",
+    "testThatWebSocketsCanBeCancelled",
+    "testThatWebSocketsCanHaveMultipleHandlers",
+    "testThatWebSocketsCanReceiveADecodableMessage"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "BaseTestCase"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var message: URLSessionWebSocketTask.Message?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocket()).streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                message = receivedMessage\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didReceiveMessage, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertNotNil(message)\n        XCTAssertEqual(closeCode, .normalClosure)\n        XCTAssertNil(closeReason)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 2139,
+              "start_position" : 420
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanReceiveMessageEvents",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var message: URLSessionWebSocketTask.Message?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocket()).streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                message = receivedMessage\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didReceiveMessage, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertNotNil(message)\n        XCTAssertEqual(closeCode, .normalClosure)\n        XCTAssertNil(closeReason)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 3873,
+              "start_position" : 2139
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanReceiveMessageEventsWithParameters",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var receivedMessage: URLSessionWebSocketTask.Message?\n\n        // When\n        session.webSocketRequest(.websocket()).streamMessages { message in\n            receivedMessage = message\n            didReceiveMessage.fulfill()\n        }\n        .onCompletion {\n            didComplete.fulfill()\n        }\n\n        wait(for: [didReceiveMessage, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNotNil(receivedMessage)\n        XCTAssertNotNil(receivedMessage?.data)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 4638,
+              "start_position" : 3873
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanReceiveAMessage",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var message: TestResponse?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocketCount(1)).streamDecodableEvents(TestResponse.self) { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                message = receivedMessage\n                didReceiveMessage.fulfill()\n            case let .serializerFailed(error):\n                XCTFail(\"websocket message serialization failed with error: \\(error)\")\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didReceiveMessage, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertNotNil(message)\n        XCTAssertEqual(closeCode, .normalClosure)\n        XCTAssertNil(closeReason)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 6504,
+              "start_position" : 4638
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanReceiveADecodableMessage",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didReceiveValue = expectation(description: \"didReceiveMessage\")\n        let didComplete = expectation(description: \"didComplete\")\n\n        let session = stored(Session())\n\n        var receivedValue: TestResponse?\n\n        // When\n        session.webSocketRequest(.websocket()).streamDecodable(TestResponse.self) { value in\n            receivedValue = value\n            didReceiveValue.fulfill()\n        }\n        .onCompletion {\n            didComplete.fulfill()\n        }\n\n        wait(for: [didReceiveValue, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNotNil(receivedValue)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 7215,
+              "start_position" : 6504
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanReceiveADecodableValue",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        let `protocol` = \"protocol\"\n        var connectedProtocol: String?\n        var message: URLSessionWebSocketTask.Message?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocket(), configuration: .protocol(`protocol`)).streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                message = receivedMessage\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didReceiveMessage, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertEqual(connectedProtocol, `protocol`)\n        XCTAssertNotNil(message)\n        XCTAssertEqual(closeCode, .normalClosure)\n        XCTAssertNil(closeReason)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 9031,
+              "start_position" : 7215
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanReceiveAMessageWithAProtocol",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let count = 5\n        let didConnect = expectation(description: \"didConnect\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        didReceiveMessage.expectedFulfillmentCount = count\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var messages: [URLSessionWebSocketTask.Message] = []\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocketCount(count)).streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                messages.append(receivedMessage)\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didReceiveMessage, didDisconnect, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertEqual(messages.count, count)\n        XCTAssertEqual(closeCode, .normalClosure)\n        XCTAssertNil(closeReason)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 10847,
+              "start_position" : 9031
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanReceiveMultipleMessages",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didSend = expectation(description: \"didSend\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n        let sentMessage = URLSessionWebSocketTask.Message.string(\"Echo\")\n\n        var connectedProtocol: String?\n        var message: URLSessionWebSocketTask.Message?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        let request = session.webSocketRequest(.websocketEcho)\n        request.streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n                request.send(sentMessage) { _ in didSend.fulfill() }\n            case let .receivedMessage(receivedMessage):\n                message = receivedMessage\n                event.close(sending: .normalClosure)\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didSend, didReceiveMessage, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertNotNil(message)\n        XCTAssertEqual(sentMessage, message)\n        XCTAssertEqual(closeCode, .normalClosure)\n        XCTAssertNil(closeReason)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 12908,
+              "start_position" : 10847
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanSendAndReceiveMessages",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        let request = session.webSocketRequest(.websocketEcho)\n        request.streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n                request.cancel()\n            case let .receivedMessage(receivedMessage):\n                XCTFail(\"cancelled socket received message: \\(receivedMessage)\")\n            case .disconnected:\n                XCTFail(\"cancelled socket shouldn't receive disconnected event\")\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertTrue(receivedCompletion?.error?.isExplicitlyCancelledError == true)\n        XCTAssertTrue(request.error?.isExplicitlyCancelledError == true)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 14274,
+              "start_position" : 12908
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanBeCancelled",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didSend = expectation(description: \"didSend\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didReceivePong = expectation(description: \"didReceivePong\")\n        didReceivePong.expectedFulfillmentCount = 100\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n        let sentMessage = URLSessionWebSocketTask.Message.string(\"Echo\")\n\n        var connectedProtocol: String?\n        var message: URLSessionWebSocketTask.Message?\n        var receivedPong: WebSocketRequest.PingResponse.Pong?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        let request = session.webSocketRequest(.websocketEcho)\n        request.streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n                request.send(sentMessage) { _ in didSend.fulfill() }\n            case let .receivedMessage(receivedMessage):\n                message = receivedMessage\n                didReceiveMessage.fulfill()\n                for count in 0..<100 {\n                    request.sendPing { response in\n                        switch response {\n                        case let .pong(pong):\n                            receivedPong = pong\n                        default:\n                            break\n                        }\n                        didReceivePong.fulfill()\n                        if count == 99 {\n                            request.close(sending: .normalClosure)\n                        }\n                    }\n                }\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didSend, didReceiveMessage, didReceivePong, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertNotNil(message)\n        XCTAssertEqual(sentMessage, message)\n        XCTAssertEqual(closeCode, .normalClosure)\n        XCTAssertNil(closeReason)\n        XCTAssertNotNil(receivedCompletion)\n        XCTAssertNil(receivedCompletion?.error)\n        XCTAssertNotNil(receivedPong)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 17082,
+              "start_position" : 14274
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testOnePingOnly",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        let request = session.webSocketRequest(.websocketPings(), configuration: .pingInterval(0.01))\n        request.streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case .receivedMessage:\n                break\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didDisconnect, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertEqual(closeCode, .goingAway) // Default Vapor close() code.\n        XCTAssertNil(closeReason)\n        XCTAssertNotNil(receivedCompletion)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 18630,
+              "start_position" : 17082
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatTimePingsOccur",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocket(), configuration: .maximumMessageSize(1)).streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case .receivedMessage, .disconnected:\n                break\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertNotNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 19705,
+              "start_position" : 18630
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketFailsWithTooSmallMaximumMessageSize",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        let didComplete = expectation(description: \"didComplete\")\n        let session = stored(Session())\n\n        var connectedProtocol: String?\n        var message: URLSessionWebSocketTask.Message?\n        var closeCode: URLSessionWebSocketTask.CloseCode?\n        var closeReason: Data?\n        var receivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocket(closeCode: .goingAway)).streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                connectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                message = receivedMessage\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                closeCode = code\n                closeReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                receivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didReceiveMessage, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertNil(connectedProtocol)\n        XCTAssertNotNil(message)\n        XCTAssertEqual(closeCode, .goingAway)\n        XCTAssertNil(closeReason)\n        XCTAssertNil(receivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 21451,
+              "start_position" : 19705
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsFinishAfterNonNormalResponseCode",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let didConnect = expectation(description: \"didConnect\")\n        didConnect.expectedFulfillmentCount = 2\n        let didReceiveMessage = expectation(description: \"didReceiveMessage\")\n        didReceiveMessage.expectedFulfillmentCount = 2\n        let didDisconnect = expectation(description: \"didDisconnect\")\n        didDisconnect.expectedFulfillmentCount = 2\n        let didComplete = expectation(description: \"didComplete\")\n        didComplete.expectedFulfillmentCount = 2\n        let session = stored(Session())\n\n        var firstConnectedProtocol: String?\n        var firstMessage: URLSessionWebSocketTask.Message?\n        var firstCloseCode: URLSessionWebSocketTask.CloseCode?\n        var firstCloseReason: Data?\n        var firstReceivedCompletion: WebSocketRequest.Completion?\n        var secondConnectedProtocol: String?\n        var secondMessage: URLSessionWebSocketTask.Message?\n        var secondCloseCode: URLSessionWebSocketTask.CloseCode?\n        var secondCloseReason: Data?\n        var secondReceivedCompletion: WebSocketRequest.Completion?\n\n        // When\n        session.webSocketRequest(.websocket(closeCode: .goingAway)).streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                firstConnectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                firstMessage = receivedMessage\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                firstCloseCode = code\n                firstCloseReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                firstReceivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n        .streamMessageEvents { event in\n            switch event.kind {\n            case let .connected(`protocol`):\n                secondConnectedProtocol = `protocol`\n                didConnect.fulfill()\n            case let .receivedMessage(receivedMessage):\n                secondMessage = receivedMessage\n                didReceiveMessage.fulfill()\n            case let .disconnected(code, reason):\n                secondCloseCode = code\n                secondCloseReason = reason\n                didDisconnect.fulfill()\n            case let .completed(completion):\n                secondReceivedCompletion = completion\n                didComplete.fulfill()\n            }\n        }\n\n        wait(for: [didConnect, didReceiveMessage, didDisconnect, didComplete],\n             timeout: timeout,\n             enforceOrder: true)\n\n        // Then\n        XCTAssertNil(firstConnectedProtocol)\n        XCTAssertEqual(firstConnectedProtocol, secondConnectedProtocol)\n        XCTAssertNotNil(firstMessage)\n        XCTAssertEqual(firstMessage, secondMessage)\n        XCTAssertEqual(firstCloseCode, .goingAway)\n        XCTAssertEqual(firstCloseCode, secondCloseCode)\n        XCTAssertNil(firstCloseReason)\n        XCTAssertEqual(firstCloseReason, secondCloseReason)\n        XCTAssertNil(firstReceivedCompletion?.error)\n        XCTAssertNil(secondReceivedCompletion?.error)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/WebSocketTests.swift",
+            "location" : {
+              "end_position" : 24721,
+              "start_position" : 21451
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatWebSocketsCanHaveMultipleHandlers",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/WebSocketTests.swift",
+        "location" : {
+          "end_position" : 24723,
+          "start_position" : 321
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "WebSocketTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 56,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/WebSocketTests.swift"
+  ]
+}

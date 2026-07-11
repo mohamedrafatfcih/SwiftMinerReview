@@ -1,0 +1,292 @@
+{
+  "caseID" : "case-1c048673ae8b8e666132cde2",
+  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds" : 14.10075306892395,
+  "entityNames" : [
+    "CLITest",
+    "String",
+    "TestCLICreateCommand",
+    "getTestName",
+    "testCreateArgsPassthrough",
+    "testCreateWithFQDNName",
+    "testCreateWithMACAddress",
+    "testPublishPortParserMaxPorts"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialSuites"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "Test.current!.name.trimmingCharacters(in: [\"(\", \")\"]).lowercased()"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift",
+            "location" : {
+              "end_position" : 1039,
+              "start_position" : 915
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getTestName",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n        #expect(throws: Never.self, \"expected container create to succeed\") {\n            try doCreate(name: name, args: [\"echo\", \"-n\", \"hello\", \"world\"])\n            try doRemove(name: name)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift",
+            "location" : {
+              "end_position" : 1333,
+              "start_position" : 1039
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateArgsPassthrough",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n        let expectedMAC = try MACAddress(\"02:42:ac:11:00:03\")\n        #expect(throws: Never.self, \"expected container create with MAC address to succeed\") {\n            try doCreate(name: name, networks: [\"default,mac=\\(expectedMAC)\"])\n            try doStart(name: name)\n            defer {\n                try? doStop(name: name)\n                try? doRemove(name: name)\n            }\n            try waitForContainerRunning(name)\n            let inspectResp = try inspectContainer(name)\n            #expect(inspectResp.networks.count > 0, \"expected at least one network attachment\")\n            let actualMAC = inspectResp.networks[0].macAddress?.description ?? \"nil\"\n            #expect(\n                actualMAC == expectedMAC.description, \"expected MAC address \\(expectedMAC), got \\(actualMAC)\"\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift",
+            "location" : {
+              "end_position" : 2251,
+              "start_position" : 1333
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateWithMACAddress",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n        var args: [String] = [\"create\", \"--name\", name]\n\n        let portCount = 64\n        for i in 0..<portCount {\n            args.append(\"--publish\")\n            args.append(\"127.0.0.1:\\(8000 + i):\\(9000 + i)\")\n        }\n\n        args.append(\"ghcr.io/linuxcontainers/alpine:3.20\")\n        args.append(\"echo\")\n        args.append(\"\\\"hello world\\\"\")\n\n        #expect(throws: Never.self, \"expected container create maximum port publishes to succeed\") {\n            let (_, _, error, status) = try run(arguments: args)\n            defer { try? doRemove(name: name) }\n            if status != 0 {\n                throw CLIError.executionFailed(\"command failed: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift",
+            "location" : {
+              "end_position" : 3042,
+              "start_position" : 2251
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testPublishPortParserMaxPorts",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = getTestName()\n        var args: [String] = [\"create\", \"--name\", name]\n\n        let portCount = 65\n        for i in 0..<portCount {\n            args.append(\"--publish\")\n            args.append(\"127.0.0.1:\\(8000 + i):\\(9000 + i)\")\n        }\n\n        args.append(\"ghcr.io/linuxcontainers/alpine:3.20\")\n        args.append(\"echo\")\n        args.append(\"\\\"hello world\\\"\")\n\n        #expect(throws: CLIError.self, \"expected container create more than maximum port publishes to fail\") {\n            let (_, _, error, status) = try run(arguments: args)\n            defer { try? doRemove(name: name) }\n            if status != 0 {\n                throw CLIError.executionFailed(\"command failed: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift",
+            "location" : {
+              "end_position" : 3847,
+              "start_position" : 3042
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testPublishPortParserTooManyPorts",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let name = \"test.example.com\"\n        let expectedHostname = \"test\"\n        #expect(throws: Never.self, \"expected container create with FQDN name to succeed\") {\n            try doCreate(name: name)\n            try doStart(name: name)\n            defer {\n                try? doStop(name: name)\n                try? doRemove(name: name)\n            }\n            try waitForContainerRunning(name)\n            let inspectResp = try inspectContainer(name)\n            let attachmentHostname = inspectResp.networks.first?.hostname ?? \"\"\n            let gotHostname =\n                attachmentHostname\n                .split(separator: \".\", maxSplits: 1, omittingEmptySubsequences: true)\n                .first\n                .map { String($0) } ?? attachmentHostname\n            #expect(\n                gotHostname == expectedHostname,\n                \"expected hostname to be extracted as '\\(expectedHostname)' from FQDN '\\(name)', got '\\(gotHostname)' (attachment hostname: '\\(attachmentHostname)')\"\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift",
+            "location" : {
+              "end_position" : 4936,
+              "start_position" : 3847
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateWithFQDNName",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift",
+        "location" : {
+          "end_position" : 4939,
+          "start_position" : 854
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLICreateCommand",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 7,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Containers/TestCLICreate.swift"
+  ]
+}

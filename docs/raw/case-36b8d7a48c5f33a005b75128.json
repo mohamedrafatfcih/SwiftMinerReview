@@ -1,0 +1,979 @@
+{
+  "caseID" : "case-36b8d7a48c5f33a005b75128",
+  "commitHash" : "272062981d220d47bb7e21b9b888f857bd904196",
+  "commitMessage" : "feat: removed custom icons and moved to the SF Symbols\nfeat: adjusted the radius in the popups\nfeat: small adjustments in all popups\nfeat: redesigned the sections title in the popups\nfeat: redesigned ColumnChartView\nfeat: redesigned GPU popup view, dropped multi GPU view, only selected GPU will be visible in the popup\nfeat: small redesign in the RAM popup\nfeat: redesigned Battery popup\nfeat: moved to macOS 12 as a minimum required version\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/272062981d220d47bb7e21b9b888f857bd904196",
+  "durationSeconds" : 43.821922898292542,
+  "entityNames" : [
+    "(() -> Void)",
+    "@escaping (() -> Void)",
+    "CGFloat",
+    "CGSize",
+    "Double?",
+    "GPUDetails",
+    "GPUView",
+    "GPU_Info"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "NSStackView"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.layer?.backgroundColor = (isDarkMode ? NSColor(red: 17/255, green: 17/255, blue: 17/255, alpha: 0.25) : NSColor(red: 245/255, green: 245/255, blue: 245/255, alpha: 1)).cgColor"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 4645,
+              "start_position" : 4411
+            }
+          },
+          "modifiers" : [
+            "override"
+          ],
+          "name" : "updateLayer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 24))\n        view.heightAnchor.constraint(equalToConstant: view.bounds.height).isActive = true\n        \n        let width: CGFloat = self.value.model.widthOfString(usingFont: NSFont.systemFont(ofSize: 13, weight: .regular)) + 16\n        let labelView: NSTextField = TextView(frame: NSRect(x: 0, y: (view.frame.height-16)/2, width: width - 8, height: 16))\n        labelView.alignment = .center\n        labelView.textColor = .secondaryLabelColor\n        labelView.font = NSFont.systemFont(ofSize: 13, weight: .regular)\n        labelView.stringValue = self.value.model\n        \n        let stateView: NSView = NSView(frame: NSRect(x: width - 8, y: (view.frame.height-7)/2, width: 6, height: 6))\n        stateView.wantsLayer = true\n        stateView.layer?.backgroundColor = (self.value.state ? NSColor.systemGreen : NSColor.systemRed).cgColor\n        stateView.toolTip = localizedString(\"GPU \\(self.value.state ? \"enabled\" : \"disabled\")\")\n        stateView.layer?.cornerRadius = 4\n        \n        let details = localizedString(\"Details\").uppercased()\n        let w = details.widthOfString(usingFont: NSFont.systemFont(ofSize: 9, weight: .regular)) + 8\n        let button = NSButtonWithPadding()\n        button.frame = CGRect(x: view.frame.width - w, y: 2, width: w, height: view.frame.height-2)\n        button.verticalPadding = 9\n        button.bezelStyle = .regularSquare\n        button.translatesAutoresizingMaskIntoConstraints = false\n        button.isBordered = false\n        button.action = #selector(self.showDetails)\n        button.target = self\n        button.toolTip = localizedString(\"Details\")\n        button.title = details\n        button.font = NSFont.systemFont(ofSize: 9, weight: .regular)\n        \n        view.addSubview(labelView)\n        view.addSubview(stateView)\n        view.addSubview(button)\n        self.stateView = stateView\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 6664,
+              "start_position" : 4645
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "title",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 0))\n        let container: NSStackView = NSStackView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 0))\n        container.orientation = .vertical\n        container.spacing = 0\n        \n        let circles: NSStackView = NSStackView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 0))\n        circles.orientation = .horizontal\n        circles.distribution = .fillEqually\n        circles.alignment = .bottom\n        self.circleRow = circles\n        \n        let charts: NSStackView = NSStackView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 0))\n        charts.orientation = .horizontal\n        charts.distribution = .fillEqually\n        self.chartRow = charts\n        \n        self.addStats(id: \"GPU temperature\", self.value.temperature)\n        self.addStats(id: \"GPU utilization\", self.value.utilization)\n        self.addStats(id: \"Render utilization\", self.value.renderUtilization)\n        self.addStats(id: \"Tiler utilization\", self.value.tilerUtilization)\n        self.addStats(id: \"ANE utilization\", self.value.aneUtilization)\n        \n        container.addArrangedSubview(circles)\n        container.addArrangedSubview(charts)\n        \n        view.addSubview(container)\n        \n        let h = container.arrangedSubviews.map({ $0.bounds.height }).reduce(0, +)\n        view.setFrameSize(NSSize(width: self.frame.width, height: h))\n        container.setFrameSize(NSSize(width: self.frame.width, height: view.bounds.height))\n        view.heightAnchor.constraint(equalToConstant: view.bounds.height).isActive = true\n        container.heightAnchor.constraint(equalToConstant: view.bounds.height).isActive = true\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 8484,
+              "start_position" : 6664
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stats",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let value = val else { return }\n        \n        var circle: PieChartView\n        var chart: LineChartView\n        \n        if let view = self.circleRow?.arrangedSubviews.filter({ $0 is PieChartView }).first(where: { ($0 as! PieChartView).id == id }) {\n            circle = view as! PieChartView\n        } else {\n            circle = PieChartView(frame: NSRect(x: 0, y: 0, width: circleSize, height: circleSize), openCircle: true)\n            circle.id = id\n            circle.toolTip = localizedString(id)\n            if let row = self.circleRow {\n                row.setFrameSize(NSSize(width: row.frame.width, height: self.circleSize + 20))\n                row.edgeInsets = NSEdgeInsets(top: 10, left: 10, bottom: 0, right: 10)\n                row.heightAnchor.constraint(equalToConstant: row.bounds.height).isActive = true\n                row.addArrangedSubview(circle)\n            }\n        }\n        \n        if let view = self.chartRow?.arrangedSubviews.filter({ $0 is LineChartView }).first(where: { ($0 as! LineChartView).id == id }) {\n            chart = view as! LineChartView\n        } else {\n            chart = LineChartView(frame: NSRect(x: 0, y: 0, width: 100, height: self.chartSize), num: 120)\n            chart.setTooltipEnabled(false)\n            chart.wantsLayer = true\n            chart.layer?.backgroundColor = NSColor.lightGray.withAlphaComponent(0.1).cgColor\n            chart.layer?.cornerRadius = 3\n            chart.id = id\n            chart.toolTip = localizedString(id)\n            if let row = self.chartRow {\n                row.setFrameSize(NSSize(width: row.frame.width, height: self.chartSize + 20))\n                row.spacing = Constants.Popup.margins\n                row.edgeInsets = NSEdgeInsets(\n                    top: Constants.Popup.margins,\n                    left: Constants.Popup.margins,\n                    bottom: Constants.Popup.margins,\n                    right: Constants.Popup.margins\n                )\n                row.heightAnchor.constraint(equalToConstant: row.bounds.height).isActive = true\n                row.addArrangedSubview(chart)\n            }\n        }\n        \n        if id == \"GPU temperature\" {\n            circle.setValue(value)\n            circle.setText(temperature(value))\n            circle.toolTip = \"\\(localizedString(id)): \\(temperature(value))\"\n            chart.setSuffix(UnitTemperature.current.symbol)\n            \n            if self.temperatureChart == nil {\n                self.temperatureChart = chart\n            }\n        } else if id == \"GPU utilization\" {\n            circle.setValue(value)\n            circle.setText(\"\\(Int(value*100))%\")\n            circle.toolTip = \"\\(localizedString(id)): \\(Int(value*100))%\"\n            \n            if self.utilizationChart == nil {\n                self.utilizationChart = chart\n            }\n        } else if id == \"Render utilization\" {\n            circle.setValue(value)\n            circle.setText(\"\\(Int(value*100))%\")\n            circle.toolTip = \"\\(localizedString(id)): \\(Int(value*100))%\"\n            \n            if self.renderUtilizationChart == nil {\n                self.renderUtilizationChart = chart\n            }\n        } else if id == \"Tiler utilization\" {\n            circle.setValue(value)\n            circle.setText(\"\\(Int(value*100))%\")\n            circle.toolTip = \"\\(localizedString(id)): \\(Int(value*100))%\"\n            \n            if self.tilerUtilizationChart == nil {\n                self.tilerUtilizationChart = chart\n            }\n        } else if id == \"ANE utilization\" {\n            circle.setValue(value)\n            circle.setText(\"\\(Int(value*100))%\")\n            circle.toolTip = \"\\(localizedString(id)): \\(Int(value*100))%\"\n            \n            if self.aneUtilizationChart == nil {\n                self.aneUtilizationChart = chart\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 12407,
+              "start_position" : 8484
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "addStats",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 8528,
+                  "start_position" : 8516
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Double?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 8548,
+                  "start_position" : 8528
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "val",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.detailsView.update(gpu)\n        \n        self.cache.apply(gpu, visible: self.window?.isVisible ?? false, render: self.renderGPU)\n        \n        if let value = gpu.temperature {\n            if let temp = Double(temperature(value).replacingOccurrences(of: \"C\", with: \"\").replacingOccurrences(of: \"F\", with: \"\").digits) {\n                self.temperatureChart?.addValue(temp/100)\n            } else {\n                self.temperatureChart?.addValue(value)\n            }\n        }\n        if let value = gpu.utilization {\n            self.utilizationChart?.addValue(value)\n        }\n        if let value = gpu.renderUtilization {\n            self.renderUtilizationChart?.addValue(value)\n        }\n        if let value = gpu.tilerUtilization {\n            self.tilerUtilizationChart?.addValue(value)\n        }\n        if let value = gpu.aneUtilization {\n            self.aneUtilizationChart?.addValue(value)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 13388,
+              "start_position" : 12407
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "update",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "GPU_Info"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 12451,
+                  "start_position" : 12436
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "gpu",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.stateView?.layer?.backgroundColor = (gpu.state ? NSColor.systemGreen : NSColor.systemRed).cgColor\n        self.stateView?.toolTip = localizedString(\"GPU \\(gpu.state ? \"enabled\" : \"disabled\")\")\n        \n        self.addStats(id: \"GPU temperature\", gpu.temperature)\n        self.addStats(id: \"GPU utilization\", gpu.utilization)\n        self.addStats(id: \"Render utilization\", gpu.renderUtilization)\n        self.addStats(id: \"Tiler utilization\", gpu.tilerUtilization)\n        self.addStats(id: \"ANE utilization\", gpu.aneUtilization)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 13989,
+              "start_position" : 13388
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "renderGPU",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "GPU_Info"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 13436,
+                  "start_position" : 13421
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "gpu",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.cache.replay(render: self.renderGPU)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 14077,
+              "start_position" : 13989
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "appear",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if let view = self.arrangedSubviews.first(where: { $0 is GPUDetails }) {\n            view.removeFromSuperview()\n        } else {\n            self.insertArrangedSubview(self.detailsView, at: 1)\n        }\n        \n        self.setFrameSize(NSSize(\n            width: self.frame.width,\n            height: self.arrangedSubviews.map({ $0.bounds.height + self.spacing }).reduce(0, +)\n        ))\n        self.sizeCallback()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 14553,
+              "start_position" : 14077
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "showDetails",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 4303,
+              "start_position" : 3110
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CGFloat"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 3148,
+                  "start_position" : 3132
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "width",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "GPU_Info"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 3163,
+                  "start_position" : 3148
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "gpu",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (() -> Void)"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 3195,
+                  "start_position" : 3163
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "callback",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 4411,
+              "start_position" : 4303
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/GPU/popup.swift",
+                "location" : {
+                  "end_position" : 4342,
+                  "start_position" : 4328
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/GPU/popup.swift",
+        "location" : {
+          "end_position" : 14555,
+          "start_position" : 2255
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "GPUView",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "GPU_Info"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2324,
+              "start_position" : 2309
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "value"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "GPUDetails"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2364,
+              "start_position" : 2341
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "detailsView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CGFloat"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "50"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2405,
+              "start_position" : 2381
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "circleSize"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CGFloat"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "60"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2445,
+              "start_position" : 2422
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "chartSize"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2491,
+              "start_position" : 2467
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stateView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSStackView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2537,
+              "start_position" : 2508
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "circleRow"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSStackView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2582,
+              "start_position" : 2554
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "chartRow"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2642,
+              "start_position" : 2604
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "temperatureChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2697,
+              "start_position" : 2659
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "utilizationChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2758,
+              "start_position" : 2714
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "renderUtilizationChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2818,
+              "start_position" : 2775
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "tilerUtilizationChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2876,
+              "start_position" : 2835
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "aneUtilizationChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "PopupCache<GPU_Info>",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/GPU/popup.swift",
+                    "location" : {
+                      "end_position" : 2923,
+                      "start_position" : 2901
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2923,
+              "start_position" : 2893
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "cache"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "(() -> Void)"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 2970,
+              "start_position" : 2944
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "sizeCallback"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CGSize"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "return CGSize(width: self.bounds.width, height: self.bounds.height)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/GPU/popup.swift",
+            "location" : {
+              "end_position" : 3110,
+              "start_position" : 2998
+            }
+          },
+          "modifiers" : [
+            "open",
+            "override"
+          ],
+          "name" : "intrinsicContentSize"
+        }
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 261,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/GPU/popup.swift"
+  ]
+}

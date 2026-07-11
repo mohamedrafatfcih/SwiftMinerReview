@@ -1,0 +1,51 @@
+{
+  "caseID" : "case-dd1e9e3d2c9e418de0c6bc4b",
+  "commitHash" : "89ac79e6d01860dce836f02594e2cb7e437755dc",
+  "commitMessage" : "feat: redesigned Battery popup view\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/89ac79e6d01860dce836f02594e2cb7e437755dc",
+  "durationSeconds" : 2.6532659530639648,
+  "entityNames" : [
+    "read"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "depth" : 0,
+      "description" : "for ps in psList {\n            if let list = IOPSGetPowerSourceDescription(psInfo, ps).takeUnretainedValue() as? [String: Any] {\n                self.usage.powerSource = list[kIOPSPowerSourceStateKey] as? String ?? \"AC Power\"\n                self.usage.isBatteryPowered = self.usage.powerSource == \"Battery Power\"\n                self.usage.isCharged = list[kIOPSIsChargedKey] as? Bool ?? false\n                self.usage.isCharging = self.getBoolValue(\"IsCharging\" as CFString) ?? false\n                self.usage.optimizedChargingEngaged = list[\"Optimized Battery Charging Engaged\"] as? Int == 1\n                self.usage.level = Double(list[kIOPSCurrentCapacityKey] as? Int ?? 0) / 100\n                \n                if let time = list[kIOPSTimeToEmptyKey] as? Int {\n                    self.usage.timeToEmpty = Int(time)\n                }\n                if let time = list[kIOPSTimeToFullChargeKey] as? Int {\n                    self.usage.timeToCharge = Int(time)\n                }\n                \n                if self.usage.powerSource == \"AC Power\" {\n                    self.usage.timeOnACPower = Date()\n                }\n                \n                self.usage.cycles = self.getIntValue(\"CycleCount\" as CFString) ?? 0\n                \n                self.usage.currentCapacity = self.getIntValue(\"AppleRawCurrentCapacity\" as CFString) ?? 0\n                self.usage.designedCapacity = self.getIntValue(\"DesignCapacity\" as CFString) ?? 1\n                if self.usage.designedCapacity == 0 {\n                    self.usage.designedCapacity = 1\n                }\n                self.usage.maxCapacity = self.getIntValue((isARM ? \"AppleRawMaxCapacity\" : \"MaxCapacity\") as CFString) ?? 1\n                if !isARM {\n                    self.usage.state = list[kIOPSBatteryHealthKey] as? String\n                }\n                self.usage.health = Int((Double(100 * self.usage.maxCapacity) / Double(self.usage.designedCapacity)).rounded(.toNearestOrEven))\n                \n                self.usage.current = self.getIntValue(\"Amperage\" as CFString) ?? 0\n                self.usage.voltage = self.getVoltage() ?? 0\n                self.usage.temperature = self.getTemperature() ?? 0\n                \n                var ACwatts: Int = 0\n                if let ACDetails = IOPSCopyExternalPowerAdapterDetails() {\n                    if let ACList = ACDetails.takeRetainedValue() as? [String: Any] {\n                        guard let watts = ACList[kIOPSPowerAdapterWattsKey] as? Int else {\n                            return\n                        }\n                        ACwatts = watts\n                    }\n                }\n                self.usage.ACwatts = ACwatts\n                \n                self.usage.batteryPower = SMC.shared.getValue(\"PPBR\") ?? (self.usage.voltage * (Double(self.usage.current) / 1000))\n                self.usage.adapterPower = SMC.shared.getValue(\"PDTR\") ?? 0\n                if let adapterDetails = self.getAdapterDetails() {\n                    self.usage.adapterVoltage = Double(adapterDetails[\"AdapterVoltage\"] as? Int ?? 0) / 1000\n                }\n                \n                if let chargerData = self.getChargerData() {\n                    self.usage.chargingCurrent = chargerData[\"ChargingCurrent\"] as? Int ?? 0\n                    self.usage.chargingVoltage = chargerData[\"ChargingVoltage\"] as? Int ?? 0\n                    \n                    if !self.usage.optimizedChargingEngaged && !self.usage.isBatteryPowered && !self.usage.isCharging && self.usage.level < 1,\n                       let notChargingReason = chargerData[\"NotChargingReason\"] as? Int, notChargingReason != 0 {\n                        self.usage.optimizedChargingEngaged = true\n                    }\n                }\n                \n                self.callback(self.usage)\n            }\n        }",
+      "index" : 3
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let psInfo = IOPSCopyPowerSourcesInfo().takeRetainedValue()\n        let psList = IOPSCopyPowerSourcesList(psInfo).takeRetainedValue() as [CFTypeRef]\n        \n        if psList.isEmpty {\n            return\n        }\n        \n        for ps in psList {\n            if let list = IOPSGetPowerSourceDescription(psInfo, ps).takeUnretainedValue() as? [String: Any] {\n                self.usage.powerSource = list[kIOPSPowerSourceStateKey] as? String ?? \"AC Power\"\n                self.usage.isBatteryPowered = self.usage.powerSource == \"Battery Power\"\n                self.usage.isCharged = list[kIOPSIsChargedKey] as? Bool ?? false\n                self.usage.isCharging = self.getBoolValue(\"IsCharging\" as CFString) ?? false\n                self.usage.optimizedChargingEngaged = list[\"Optimized Battery Charging Engaged\"] as? Int == 1\n                self.usage.level = Double(list[kIOPSCurrentCapacityKey] as? Int ?? 0) / 100\n                \n                if let time = list[kIOPSTimeToEmptyKey] as? Int {\n                    self.usage.timeToEmpty = Int(time)\n                }\n                if let time = list[kIOPSTimeToFullChargeKey] as? Int {\n                    self.usage.timeToCharge = Int(time)\n                }\n                \n                if self.usage.powerSource == \"AC Power\" {\n                    self.usage.timeOnACPower = Date()\n                }\n                \n                self.usage.cycles = self.getIntValue(\"CycleCount\" as CFString) ?? 0\n                \n                self.usage.currentCapacity = self.getIntValue(\"AppleRawCurrentCapacity\" as CFString) ?? 0\n                self.usage.designedCapacity = self.getIntValue(\"DesignCapacity\" as CFString) ?? 1\n                if self.usage.designedCapacity == 0 {\n                    self.usage.designedCapacity = 1\n                }\n                self.usage.maxCapacity = self.getIntValue((isARM ? \"AppleRawMaxCapacity\" : \"MaxCapacity\") as CFString) ?? 1\n                if !isARM {\n                    self.usage.state = list[kIOPSBatteryHealthKey] as? String\n                }\n                self.usage.health = Int((Double(100 * self.usage.maxCapacity) / Double(self.usage.designedCapacity)).rounded(.toNearestOrEven))\n                \n                self.usage.current = self.getIntValue(\"Amperage\" as CFString) ?? 0\n                self.usage.voltage = self.getVoltage() ?? 0\n                self.usage.temperature = self.getTemperature() ?? 0\n                \n                var ACwatts: Int = 0\n                if let ACDetails = IOPSCopyExternalPowerAdapterDetails() {\n                    if let ACList = ACDetails.takeRetainedValue() as? [String: Any] {\n                        guard let watts = ACList[kIOPSPowerAdapterWattsKey] as? Int else {\n                            return\n                        }\n                        ACwatts = watts\n                    }\n                }\n                self.usage.ACwatts = ACwatts\n                \n                self.usage.batteryPower = SMC.shared.getValue(\"PPBR\") ?? (self.usage.voltage * (Double(self.usage.current) / 1000))\n                self.usage.adapterPower = SMC.shared.getValue(\"PDTR\") ?? 0\n                if let adapterDetails = self.getAdapterDetails() {\n                    self.usage.adapterVoltage = Double(adapterDetails[\"AdapterVoltage\"] as? Int ?? 0) / 1000\n                }\n                \n                if let chargerData = self.getChargerData() {\n                    self.usage.chargingCurrent = chargerData[\"ChargingCurrent\"] as? Int ?? 0\n                    self.usage.chargingVoltage = chargerData[\"ChargingVoltage\"] as? Int ?? 0\n                    \n                    if !self.usage.optimizedChargingEngaged && !self.usage.isBatteryPowered && !self.usage.isCharging && self.usage.level < 1,\n                       let notChargingReason = chargerData[\"NotChargingReason\"] as? Int, notChargingReason != 0 {\n                        self.usage.optimizedChargingEngaged = true\n                    }\n                }\n                \n                self.callback(self.usage)\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Battery/readers.swift",
+        "location" : {
+          "end_position" : 5735,
+          "start_position" : 1604
+        }
+      },
+      "modifiers" : [
+        "public",
+        "override"
+      ],
+      "name" : "read",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 102,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Battery/readers.swift"
+  ]
+}

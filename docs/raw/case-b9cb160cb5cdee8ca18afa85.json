@@ -1,0 +1,116 @@
+{
+  "caseID" : "case-b9cb160cb5cdee8ca18afa85",
+  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds" : 16.732138991355896,
+  "entityNames" : [
+    "NetworkConfiguration",
+    "NetworkResource",
+    "configuration",
+    "create"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "expression" : {
+        "function_call" : {
+          "_0" : {
+            "additional_trailing_closures" : [
+
+            ],
+            "arguments" : [
+              {
+                "value" : "state"
+              }
+            ],
+            "call" : "NetworkResource",
+            "has_self_reference" : false,
+            "internal_inline_calls" : [
+
+            ],
+            "location_info" : {
+              "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+              "location" : {
+                "end_position" : 4147,
+                "start_position" : 4125
+              }
+            }
+          }
+        }
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+        "location" : {
+          "end_position" : 4147,
+          "start_position" : 4105
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let request = XPCMessage(route: .networkCreate)\n        request.set(key: .networkId, value: configuration.id)\n\n        let data = try JSONEncoder().encode(configuration)\n        request.set(key: .networkConfig, value: data)\n\n        let response = try await xpcSend(message: request)\n\n        // Prefer current encoding (≥ 0.12.0 server).\n        if let resourceData = response.dataNoCopy(key: .networkResource) {\n            return try JSONDecoder().decode(NetworkResource.self, from: resourceData)\n        }\n\n        // Fall back to pre-0.12.0 server: decode NetworkState and convert.\n        if let stateData = response.dataNoCopy(key: .networkState) {\n            let state = try JSONDecoder().decode(NetworkState.self, from: stateData)\n            return NetworkResource(state)\n        }\n\n        throw ContainerizationError(.invalidArgument, message: \"network configuration not received\")"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+        "location" : {
+          "end_position" : 4265,
+          "start_position" : 2719
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "create",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NetworkConfiguration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+            "location" : {
+              "end_position" : 3319,
+              "start_position" : 3284
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "configuration",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "NetworkResource"
+        },
+        "description" : "-> NetworkResource"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 82,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerAPIService/Client/NetworkClient.swift"
+  ]
+}

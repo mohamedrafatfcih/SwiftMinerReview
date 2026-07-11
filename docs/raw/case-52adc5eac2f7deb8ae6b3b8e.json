@@ -1,0 +1,200 @@
+{
+  "caseID" : "case-52adc5eac2f7deb8ae6b3b8e",
+  "commitHash" : "e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "commitMessage" : "Add WebSocketRequest Under @_spi(WebSocket) (#3455)\n\n### Goals :soccer:\r\nThis PR adds `WebSocketRequest`, an Alamofire wrapper around\r\n`URLSessionWebSocketTask`, as well as assorted functionality for dealing\r\nwith WebSockets. This includes:\r\n\r\n- Automatic listening: no more manual `listen` calls on the task.\r\n- Automatic ping support: ping the server automatically given an\r\ninterval.\r\n- Response serialization support: parse messages into objects, including\r\nusing `Decodable`.\r\n- Concurrency support: full streams of events and messages.\r\n\r\n### Implementation Details :construction:\r\n`WebSocketRequest` follows most of Alamofire's existing patterns. There\r\nare a few differences:\r\n\r\n- Closure vs. cancellation: web sockets can close expectedly, yet this\r\nclosure produces an error from `URLSession`. This had to be customized\r\nin order to ignore the error and allow the user to close a connection\r\nwith no additional issue.\r\n- Like `DataStreamRequest`, `WebSocketRequest` deals with incoming\r\nstreams of data. However, that data is already framed and then partially\r\ndecoded into `Message`s by `URLSession`, so serialization had to be\r\nbuilt at that level.\r\n- Unlike `DataStreamRequest`, `WebSocketRequest` can send `Message` back\r\nup the connection. This requires some queuing on the request side to\r\nensure messages sent before the connection is established are properly\r\nstored for sending.\r\n\r\n### Testing Details :mag:\r\nFull suite of `WebSocketTests` added, as well as the concurrency\r\nversions. Firewalk was updated with several new `websocket` cases to\r\nsupport scenarios like an echo server or expected ping count.\r\n\r\nP.S. This feature was delayed so long due to the many hours of\r\nfrustration I had to deal with when Apple shipped a message dropping bug\r\nin iOS 14.5 - 14.7. In trying to test the socket connections I would\r\nconnect to the test server, have it reply with a message, and then close\r\nthe connection. Shockingly that meant that *sometimes* the messages\r\nwouldn't come through. But sometimes they would. Investigating other web\r\nsocket clients and inspecting network traffic with Wireshark revealed\r\nthat the messages were being sent by the server but the client just\r\nwasn't receiving them. Further investigation showed that delaying the\r\nclose of the connection by 60ms or so let the client receive the message\r\nreliably. After many hours I finally had reliable tests! Only to then\r\ntest on the iOS 15 betas and see that I didn't need the delay at all,\r\nthe tests were reliable without it! Turns out it was just a bug in iOS\r\n14.5 - 14.7. I was so disgusted by this fact that I gave up on the\r\nfeature for years. I'll call out this bug in the documentation.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "durationSeconds" : 15.012655973434448,
+  "entityNames" : [
+    "Error",
+    "Failure",
+    "Output",
+    "URLSessionWebSocketTask.Message",
+    "WebSocketMessageSerializer",
+    "decode",
+    "message"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "associated_types" : [
+        {
+          "attributes" : [
+
+          ],
+          "inherited_types" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Request.swift",
+            "location" : {
+              "end_position" : 83611,
+              "start_position" : 83585
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Output"
+        },
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "Error"
+          },
+          "attributes" : [
+
+          ],
+          "inherited_types" : [
+            {
+              "is_optional" : false,
+              "name" : "Error"
+            }
+          ],
+          "location_info" : {
+            "file_path" : "Source/Request.swift",
+            "location" : {
+              "end_position" : 83653,
+              "start_position" : 83611
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Failure"
+        }
+      ],
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        }
+      ],
+      "conformed_types" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Request.swift",
+            "location" : {
+              "end_position" : 83731,
+              "start_position" : 83653
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "decode",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionWebSocketTask.Message"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Request.swift",
+                "location" : {
+                  "end_position" : 83713,
+                  "start_position" : 83671
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Output"
+            },
+            "description" : "-> Output"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Source/Request.swift",
+        "location" : {
+          "end_position" : 83733,
+          "start_position" : 83467
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "WebSocketMessageSerializer",
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add protocol refactoring"
+  },
+  "refactoringIndex" : 24,
+  "refactoringType" : "Add protocol refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Request.swift"
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "caseID" : "case-bfd29749828965d9b320d083",
+  "commitHash" : "d8fde8ffdcef38b7e03e5fe158eee346ce3ba3c6",
+  "commitMessage" : "feat: improved updater mechanism for better handling of the mount point, and added new app version signature\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/d8fde8ffdcef38b7e03e5fe158eee346ce3ba3c6",
+  "durationSeconds" : 6.7010700702667236,
+  "entityNames" : [
+    "@escaping (_ error: String?) -> Void",
+    "String",
+    "completion",
+    "defer",
+    "install",
+    "path"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "body" : {
+        "content" : "self.lastInstallTS = Int(Date().timeIntervalSince1970)"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Updater.swift",
+        "location" : {
+          "end_position" : 8231,
+          "start_position" : 8129
+        }
+      },
+      "name" : "defer"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let pwd = Bundle.main.bundleURL.absoluteString\n            .replacingOccurrences(of: \"file://\", with: \"\")\n            .replacingOccurrences(of: \"Stats.app\", with: \"\")\n            .replacingOccurrences(of: \"//\", with: \"/\")\n        let dmg = path.replacingOccurrences(of: \"file://\", with: \"\")\n        \n        if !FileManager.default.isWritableFile(atPath: pwd) {\n            completion(\"has no write permission on \\(pwd)\")\n            return\n        }\n        \n        let diff = (Int(Date().timeIntervalSince1970) - self.lastInstallTS) / 60\n        if diff <= 3 {\n            completion(\"last install was \\(diff) minutes ago, stopping...\")\n            return\n        }\n        \n        print(\"Started new version installation...\")\n        \n        _ = syncShell(\"mkdir /tmp/Stats\") // make sure that directory exist\n        let res = syncShell(\"/usr/bin/hdiutil attach \\(path) -mountpoint /tmp/Stats -noverify -nobrowse -noautoopen 2>&1\") // mount the dmg\n        \n        print(\"DMG is mounted\")\n        \n        if res.contains(\"is busy\") { // dmg can be busy, if yes, unmount it and mount again\n            print(\"DMG is busy, remounting\")\n            \n            _ = syncShell(\"/usr/bin/hdiutil detach $TMPDIR/Stats\")\n            _ = syncShell(\"/usr/bin/hdiutil attach \\(path) -mountpoint /tmp/Stats -noverify -nobrowse -noautoopen\")\n        } else if res.contains(\"attach failed\") { // Attach can fail due to edge cases like MDM restrictions.\n            let errorMessage = res.replacingOccurrences(of: \"hdiutil: attach failed - \", with: \"\")\n            completion(\"Could not mount DMG (attach failed) - \\(errorMessage)\")\n            _ = syncShell(\"rm \\(dmg)\")\n            return\n        }\n        \n        _ = syncShell(\"cp -rf /tmp/Stats/Stats.app/Contents/Resources/Scripts/updater.sh $TMPDIR/updater.sh\") // copy updater script to tmp folder\n        \n        print(\"Script is copied to $TMPDIR/updater.sh\")\n        \n        asyncShell(\"sh $TMPDIR/updater.sh --app \\(pwd) --dmg \\(dmg) >/dev/null &\") // run updater script in in background\n        \n        print(\"Run updater.sh with app: \\(pwd) and dmg: \\(dmg)\")\n        \n        defer {\n            self.lastInstallTS = Int(Date().timeIntervalSince1970)\n        }\n        \n        exit(0)"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Updater.swift",
+        "location" : {
+          "end_position" : 8262,
+          "start_position" : 5904
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "install",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Updater.swift",
+            "location" : {
+              "end_position" : 5948,
+              "start_position" : 5934
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "path",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping (_ error: String?) -> Void"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Updater.swift",
+            "location" : {
+              "end_position" : 5996,
+              "start_position" : 5948
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "completion",
+          "order" : 1
+        }
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 10,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Updater.swift"
+  ]
+}

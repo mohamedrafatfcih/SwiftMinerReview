@@ -1,0 +1,222 @@
+{
+  "caseID" : "case-6f0a9b9454ea69260156706f",
+  "commitHash" : "ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "commitMessage" : "Use FilePath for app, install, and log roots. (#1558)\n\n- Closes #1557.\n- Replaces `executableURL` utility function for getting app executable\npath with `executablePath`.\n- Adds `FilePath.resolvingSymlinks()` extension.\n- Also converts for FilePath for types in `ContainerVersion` target.",
+  "commitURL" : "https://github.com/apple/container/commit/ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "durationSeconds" : 3.797727108001709,
+  "entityNames" : [
+    "ContainerSystemConfig",
+    "ContainersService",
+    "Logger",
+    "NetworksService",
+    "PluginLoader",
+    "containerSystemConfig",
+    "containersService",
+    "initializeNetworksService"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "value" : "\"networks\""
+                }
+              ],
+              "call" : "appending",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Sources/APIServer/APIServer+Start.swift",
+                "location" : {
+                  "end_position" : 14125,
+                  "start_position" : 14096
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Sources/APIServer/APIServer+Start.swift",
+        "location" : {
+          "end_position" : 14125,
+          "start_position" : 14081
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "resourceRoot"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "log.info(\"initializing networks service\")\n\n            // TODO: This goes away when we convert our roots to FilePath\n            let appPath = FilePath(appRoot.absolutePath())\n            let resourceRoot = appPath.appending(\"networks\")\n            let service = try await NetworksService(\n                pluginLoader: pluginLoader,\n                resourceRoot: resourceRoot,\n                containersService: containersService,\n                log: log,\n                debugHelpers: debug\n            )\n\n            let defaultNetwork = try await service.list()\n                .filter { $0.isBuiltin }\n                .first\n            if defaultNetwork == nil {\n                // FIXME: default network should be configurable elsewhere\n                let config = try NetworkConfiguration(\n                    id: NetworkClient.defaultNetworkName,\n                    mode: .nat,\n                    ipv4Subnet: containerSystemConfig.network.subnet,\n                    ipv6Subnet: containerSystemConfig.network.subnetv6,\n                    labels: try .init([ResourceLabelKeys.role: ResourceRoleValues.builtin]),\n                    pluginInfo: NetworkPluginInfo(plugin: \"container-network-vmnet\")\n                )\n                _ = try await service.create(configuration: config)\n            }\n\n            let harness = NetworksHarness(service: service, log: log)\n\n            if #available(macOS 26, *) {\n                routes[XPCRoute.networkCreate] = XPCServer.route(harness.create)\n            }\n            routes[XPCRoute.networkList] = XPCServer.route(harness.list)\n            routes[XPCRoute.networkDelete] = XPCServer.route(harness.delete)\n\n            return service"
+      },
+      "location_info" : {
+        "file_path" : "Sources/APIServer/APIServer+Start.swift",
+        "location" : {
+          "end_position" : 15594,
+          "start_position" : 13549
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "initializeNetworksService",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "PluginLoader"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/APIServer/APIServer+Start.swift",
+            "location" : {
+              "end_position" : 13638,
+              "start_position" : 13598
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "pluginLoader",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ContainersService"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/APIServer/APIServer+Start.swift",
+            "location" : {
+              "end_position" : 13688,
+              "start_position" : 13638
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "containersService",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ContainerSystemConfig"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/APIServer/APIServer+Start.swift",
+            "location" : {
+              "end_position" : 13746,
+              "start_position" : 13688
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "containerSystemConfig",
+          "order" : 2
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Logger"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/APIServer/APIServer+Start.swift",
+            "location" : {
+              "end_position" : 13771,
+              "start_position" : 13746
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "log",
+          "order" : 3
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "inout [XPCRoute: XPCServer.RouteHandler]"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/APIServer/APIServer+Start.swift",
+            "location" : {
+              "end_position" : 13832,
+              "start_position" : 13771
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "routes",
+          "order" : 4
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "NetworksService"
+        },
+        "description" : "-> NetworksService"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 21,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/APIServer/APIServer+Start.swift"
+  ]
+}

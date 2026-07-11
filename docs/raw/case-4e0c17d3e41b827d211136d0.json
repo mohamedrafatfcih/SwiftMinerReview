@@ -1,0 +1,115 @@
+{
+  "caseID" : "case-4e0c17d3e41b827d211136d0",
+  "commitHash" : "d8fde8ffdcef38b7e03e5fe158eee346ce3ba3c6",
+  "commitMessage" : "feat: improved updater mechanism for better handling of the mount point, and added new app version signature\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/d8fde8ffdcef38b7e03e5fe158eee346ce3ba3c6",
+  "durationSeconds" : 6.7010700702667236,
+  "entityNames" : [
+    "@escaping (_ error: String?) -> Void",
+    "String",
+    "completion",
+    "install",
+    "path"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "expression" : {
+        "other" : {
+          "_0" : ""
+        }
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Updater.swift",
+        "location" : {
+          "end_position" : 6953,
+          "start_position" : 6934
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let dmg = path.replacingOccurrences(of: \"file://\", with: \"\")\n        let pwd = Bundle.main.bundleURL.deletingLastPathComponent().path\n        \n        guard FileManager.default.fileExists(atPath: dmg) else {\n            completion(\"DMG not found at \\(dmg)\")\n            return\n        }\n        if !FileManager.default.isWritableFile(atPath: pwd) {\n            completion(\"has no write permission on \\(pwd)\")\n            return\n        }\n        \n        let diff = (Int(Date().timeIntervalSince1970) - self.lastInstallTS) / 60\n        if diff <= 3 {\n            completion(\"last install was \\(diff) minutes ago, stopping...\")\n            return\n        }\n        \n        print(\"Started new version installation...\")\n        \n        let mountPoint: String\n        do {\n            mountPoint = try self.makeUniqueMountPoint()\n        } catch {\n            completion(\"failed to create mount point: \\(error)\")\n            return\n        }\n        \n        var attach = self.runProcess(\"/usr/bin/hdiutil\", [\n            \"attach\", dmg, \"-mountpoint\", mountPoint, \"-nobrowse\", \"-noautoopen\", \"-readonly\"\n        ])\n        if attach.exit != 0, (attach.error + attach.output).contains(\"is busy\") {\n            print(\"DMG is busy, remounting\")\n            _ = self.runProcess(\"/usr/bin/hdiutil\", [\"detach\", mountPoint, \"-force\"])\n            attach = self.runProcess(\"/usr/bin/hdiutil\", [\n                \"attach\", dmg, \"-mountpoint\", mountPoint, \"-nobrowse\", \"-noautoopen\", \"-readonly\"\n            ])\n        }\n        if attach.exit != 0 {\n            let msg = (attach.error + attach.output).replacingOccurrences(of: \"hdiutil: attach failed - \", with: \"\")\n            completion(\"Could not mount DMG (attach failed) - \\(msg)\")\n            try? FileManager.default.removeItem(atPath: dmg)\n            try? FileManager.default.removeItem(atPath: mountPoint)\n            return\n        }\n        \n        print(\"DMG is mounted at \\(mountPoint)\")\n        \n        let mountedApp = (mountPoint as NSString).appendingPathComponent(\"Stats.app\")\n        if let err = self.validateAppSignature(at: mountedApp) {\n            _ = self.runProcess(\"/usr/bin/hdiutil\", [\"detach\", mountPoint, \"-force\"])\n            try? FileManager.default.removeItem(atPath: mountPoint)\n            try? FileManager.default.removeItem(atPath: dmg)\n            completion(\"DMG signature validation failed: \\(err)\")\n            return\n        }\n        \n        print(\"DMG signature validated\")\n        \n        let scriptSrc = (mountedApp as NSString).appendingPathComponent(\"Contents/Resources/Scripts/updater.sh\")\n        let scriptDst = (NSTemporaryDirectory() as NSString).appendingPathComponent(\"stats-updater-\\(UUID().uuidString).sh\")\n        do {\n            if FileManager.default.fileExists(atPath: scriptDst) {\n                try FileManager.default.removeItem(atPath: scriptDst)\n            }\n            try FileManager.default.copyItem(atPath: scriptSrc, toPath: scriptDst)\n            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: scriptDst)\n        } catch {\n            _ = self.runProcess(\"/usr/bin/hdiutil\", [\"detach\", mountPoint, \"-force\"])\n            completion(\"failed to stage updater script: \\(error)\")\n            return\n        }\n        \n        print(\"Script staged at \\(scriptDst)\")\n        \n        let task = Process()\n        task.executableURL = URL(fileURLWithPath: \"/bin/bash\")\n        task.arguments = [scriptDst, \"--app\", pwd, \"--dmg\", dmg, \"--mount\", mountPoint]\n        do {\n            try task.run()\n        } catch {\n            completion(\"failed to launch updater: \\(error)\")\n            return\n        }\n        \n        print(\"Run updater.sh with app: \\(pwd) and dmg: \\(dmg)\")\n        \n        self.lastInstallTS = Int(Date().timeIntervalSince1970)\n        \n        exit(0)"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Updater.swift",
+        "location" : {
+          "end_position" : 9852,
+          "start_position" : 5920
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "install",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Updater.swift",
+            "location" : {
+              "end_position" : 5964,
+              "start_position" : 5950
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "path",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping (_ error: String?) -> Void"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Updater.swift",
+            "location" : {
+              "end_position" : 6012,
+              "start_position" : 5964
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "completion",
+          "order" : 1
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 24,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Updater.swift"
+  ]
+}

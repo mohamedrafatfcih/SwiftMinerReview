@@ -1,0 +1,1366 @@
+{
+  "caseID" : "case-c27e03d795bef8a70ed93da4",
+  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds" : 14.10075306892395,
+  "entityNames" : [
+    "CLITest",
+    "String",
+    "TestCLICopyCommand",
+    "getTestName",
+    "testCopyContainerToContainerFails",
+    "testCopyContainerToHost",
+    "testCopyDirectoryContainerToHost",
+    "testCopyDirectoryHostToContainer"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "Test.current!.name.trimmingCharacters(in: [\"(\", \")\"]).lowercased()"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 1010,
+              "start_position" : 886
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getTestName",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let tempFile = testDir.appendingPathComponent(\"testfile.txt\")\n            let content = \"hello from host\"\n            try content.write(to: tempFile, atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\n                \"copy\",\n                tempFile.path,\n                \"\\(name):/tmp/\",\n            ])\n            if status != 0 {\n                throw CLIError.executionFailed(\"copy failed: \\(error)\")\n            }\n\n            let catOutput = try doExec(name: name, cmd: [\"cat\", \"/tmp/testfile.txt\"])\n            #expect(\n                catOutput.trimmingCharacters(in: .whitespacesAndNewlines) == content,\n                \"expected file content to be '\\(content)', got '\\(catOutput.trimmingCharacters(in: .whitespacesAndNewlines))'\"\n            )\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to copy file from host to container: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 2287,
+              "start_position" : 1010
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyHostToContainer",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"hello from container\"\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n '\\(content)' > /tmp/containerfile.txt\"])\n\n            let destPath = testDir.appendingPathComponent(\"containerfile.txt\")\n            let (_, _, error, status) = try run(arguments: [\n                \"copy\",\n                \"\\(name):/tmp/containerfile.txt\",\n                destPath.path,\n            ])\n            if status != 0 {\n                throw CLIError.executionFailed(\"copy failed: \\(error)\")\n            }\n\n            let hostContent = try String(contentsOfFile: destPath.path, encoding: .utf8)\n            #expect(\n                hostContent == content,\n                \"expected file content to be '\\(content)', got '\\(hostContent)'\"\n            )\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to copy file from container to host: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 3530,
+              "start_position" : 2287
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyContainerToHost",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let tempFile = testDir.appendingPathComponent(\"aliasfile.txt\")\n            let content = \"testing cp alias\"\n            try content.write(to: tempFile, atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\n                \"cp\",\n                tempFile.path,\n                \"\\(name):/tmp/\",\n            ])\n            if status != 0 {\n                throw CLIError.executionFailed(\"cp alias failed: \\(error)\")\n            }\n\n            let catOutput = try doExec(name: name, cmd: [\"cat\", \"/tmp/aliasfile.txt\"])\n            #expect(\n                catOutput.trimmingCharacters(in: .whitespacesAndNewlines) == content,\n                \"expected file content to be '\\(content)', got '\\(catOutput.trimmingCharacters(in: .whitespacesAndNewlines))'\"\n            )\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to copy file using cp alias: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 4801,
+              "start_position" : 3530
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyUsingCpAlias",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let (_, _, _, status) = try run(arguments: [\n            \"copy\",\n            \"/tmp/source.txt\",\n            \"/tmp/dest.txt\",\n        ])\n        #expect(status != 0, \"expected local-to-local copy to fail\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 5073,
+              "start_position" : 4801
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyLocalToLocalFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n\n            let (_, _, _, status) = try run(arguments: [\n                \"copy\",\n                \"\\(name):/tmp/file.txt\",\n                \"\\(name):/tmp/file2.txt\",\n            ])\n            #expect(status != 0, \"expected container-to-container copy to fail\")\n        } catch {\n            Issue.record(\"failed test for container-to-container copy: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 5691,
+              "start_position" : 5073
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyContainerToContainerFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n\n            let tempFile = testDir.appendingPathComponent(\"norun.txt\")\n            try \"test\".write(to: tempFile, atomically: true, encoding: .utf8)\n\n            let (_, _, _, status) = try run(arguments: [\n                \"copy\",\n                tempFile.path,\n                \"\\(name):/tmp/\",\n            ])\n            #expect(status != 0, \"expected copy to non-running container to fail\")\n        } catch {\n            Issue.record(\"failed test for copy to non-running container: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 6445,
+              "start_position" : 5691
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyToNonRunningContainerFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"hostdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"file1 content\".write(to: srcDir.appendingPathComponent(\"file1.txt\"), atomically: true, encoding: .utf8)\n            try \"file2 content\".write(to: srcDir.appendingPathComponent(\"file2.txt\"), atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\n                \"copy\",\n                srcDir.path,\n                \"\\(name):/tmp/\",\n            ])\n            if status != 0 {\n                throw CLIError.executionFailed(\"copy directory failed: \\(error)\")\n            }\n\n            let cat1 = try doExec(name: name, cmd: [\"cat\", \"/tmp/hostdir/file1.txt\"])\n            #expect(\n                cat1.trimmingCharacters(in: .whitespacesAndNewlines) == \"file1 content\",\n                \"expected file1 content, got '\\(cat1.trimmingCharacters(in: .whitespacesAndNewlines))'\"\n            )\n            let cat2 = try doExec(name: name, cmd: [\"cat\", \"/tmp/hostdir/file2.txt\"])\n            #expect(\n                cat2.trimmingCharacters(in: .whitespacesAndNewlines) == \"file2 content\",\n                \"expected file2 content, got '\\(cat2.trimmingCharacters(in: .whitespacesAndNewlines))'\"\n            )\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to copy directory from host to container: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 8249,
+              "start_position" : 6445
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyDirectoryHostToContainer",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/guestdir && echo -n 'aaa' > /tmp/guestdir/a.txt && echo -n 'bbb' > /tmp/guestdir/b.txt\"])\n\n            let destPath = testDir.appendingPathComponent(\"guestdir\")\n            let (_, _, error, status) = try run(arguments: [\n                \"copy\",\n                \"\\(name):/tmp/guestdir\",\n                destPath.path,\n            ])\n            if status != 0 {\n                throw CLIError.executionFailed(\"copy directory failed: \\(error)\")\n            }\n\n            let contentA = try String(contentsOfFile: destPath.appendingPathComponent(\"a.txt\").path, encoding: .utf8)\n            #expect(contentA == \"aaa\", \"expected 'aaa', got '\\(contentA)'\")\n            let contentB = try String(contentsOfFile: destPath.appendingPathComponent(\"b.txt\").path, encoding: .utf8)\n            #expect(contentB == \"bbb\", \"expected 'bbb', got '\\(contentB)'\")\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to copy directory from container to host: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 9647,
+              "start_position" : 8249
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyDirectoryContainerToHost",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"nested\")\n            let subDir = srcDir.appendingPathComponent(\"sub\")\n            try FileManager.default.createDirectory(at: subDir, withIntermediateDirectories: true)\n            try \"root file\".write(to: srcDir.appendingPathComponent(\"root.txt\"), atomically: true, encoding: .utf8)\n            try \"nested file\".write(to: subDir.appendingPathComponent(\"deep.txt\"), atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\n                \"copy\",\n                srcDir.path,\n                \"\\(name):/tmp/\",\n            ])\n            if status != 0 {\n                throw CLIError.executionFailed(\"copy nested directory failed: \\(error)\")\n            }\n\n            let catRoot = try doExec(name: name, cmd: [\"cat\", \"/tmp/nested/root.txt\"])\n            #expect(\n                catRoot.trimmingCharacters(in: .whitespacesAndNewlines) == \"root file\",\n                \"expected 'root file', got '\\(catRoot.trimmingCharacters(in: .whitespacesAndNewlines))'\"\n            )\n            let catDeep = try doExec(name: name, cmd: [\"cat\", \"/tmp/nested/sub/deep.txt\"])\n            #expect(\n                catDeep.trimmingCharacters(in: .whitespacesAndNewlines) == \"nested file\",\n                \"expected 'nested file', got '\\(catDeep.trimmingCharacters(in: .whitespacesAndNewlines))'\"\n            )\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to copy nested directory from host to container: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 11534,
+              "start_position" : 9647
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyNestedDirectoryHostToContainer",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(\n                name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/nested/sub && echo -n 'root file' > /tmp/nested/root.txt && echo -n 'nested file' > /tmp/nested/sub/deep.txt\"])\n\n            let destPath = testDir.appendingPathComponent(\"nested\")\n            let (_, _, error, status) = try run(arguments: [\n                \"copy\",\n                \"\\(name):/tmp/nested\",\n                destPath.path,\n            ])\n            if status != 0 {\n                throw CLIError.executionFailed(\"copy nested directory failed: \\(error)\")\n            }\n\n            let contentRoot = try String(contentsOfFile: destPath.appendingPathComponent(\"root.txt\").path, encoding: .utf8)\n            #expect(contentRoot == \"root file\", \"expected 'root file', got '\\(contentRoot)'\")\n            let contentDeep = try String(contentsOfFile: destPath.appendingPathComponent(\"sub\").appendingPathComponent(\"deep.txt\").path, encoding: .utf8)\n            #expect(contentDeep == \"nested file\", \"expected 'nested file', got '\\(contentDeep)'\")\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to copy nested directory from container to host: \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 13069,
+              "start_position" : 11534
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyNestedDirectoryContainerToHost",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"container content\"\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n '\\(content)' > /tmp/source.txt\"])\n\n            let destPath = testDir.appendingPathComponent(\"existing.txt\")\n            try \"old content\".write(to: destPath, atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/source.txt\", destPath.path])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destPath.path, encoding: .utf8)\n            #expect(result == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutFileToExistingFile failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 14161,
+              "start_position" : 13069
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutFileToExistingFile",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'x' > /tmp/srcdir/file.txt\"])\n\n            let destPath = testDir.appendingPathComponent(\"existing.txt\")\n            try \"x\".write(to: destPath, atomically: true, encoding: .utf8)\n\n            let (_, _, _, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir\", destPath.path])\n            #expect(status != 0, \"expected directory-to-existing-file to fail\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryToExistingFileFails failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 15052,
+              "start_position" : 14161
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryToExistingFileFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"container content\"\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n '\\(content)' > /tmp/source.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"dstdir\")\n            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/source.txt\", destDir.path])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"source.txt\").path, encoding: .utf8)\n            #expect(result == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutFileToExistingDirectory failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 16151,
+              "start_position" : 15052
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutFileToExistingDirectory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'hello' > /tmp/srcdir/file.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"dstdir\")\n            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir\", destDir.path])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"srcdir\").appendingPathComponent(\"file.txt\").path, encoding: .utf8)\n            #expect(result == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryToExistingDirectory failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 17265,
+              "start_position" : 16151
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryToExistingDirectory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n 'x' > /tmp/source.txt\"])\n\n            let destPath = testDir.appendingPathComponent(\"nonexistent\").path + \"/\"\n            let (_, _, _, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/source.txt\", destPath])\n            #expect(status != 0, \"expected file-to-nonexisting/ to fail\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutFileToNonExistingTrailingSlashFails failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 18118,
+              "start_position" : 17265
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutFileToNonExistingTrailingSlashFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'hello' > /tmp/srcdir/file.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"newdir\")\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir\", destDir.path + \"/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            var isDir: ObjCBool = false\n            #expect(FileManager.default.fileExists(atPath: destDir.path, isDirectory: &isDir) && isDir.boolValue)\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"file.txt\").path, encoding: .utf8)\n            #expect(result == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryToNonExistingTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 19272,
+              "start_position" : 18118
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryToNonExistingTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"container content\"\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n '\\(content)' > /tmp/source.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"dstdir\")\n            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/source.txt\", destDir.path + \"/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"source.txt\").path, encoding: .utf8)\n            #expect(result == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutFileToExistingDirectoryTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 20403,
+              "start_position" : 19272
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutFileToExistingDirectoryTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'hello' > /tmp/srcdir/file.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"dstdir\")\n            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir\", destDir.path + \"/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"srcdir\").appendingPathComponent(\"file.txt\").path, encoding: .utf8)\n            #expect(result == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryToExistingDirectoryTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 21549,
+              "start_position" : 20403
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryToExistingDirectoryTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir/sub && echo -n 'hello' > /tmp/srcdir/file.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"newdir\")\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir/\", destDir.path])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"file.txt\").path, encoding: .utf8)\n            #expect(result == \"hello\")\n            var isDir: ObjCBool = false\n            #expect(FileManager.default.fileExists(atPath: destDir.appendingPathComponent(\"sub\").path, isDirectory: &isDir) && isDir.boolValue)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryContentsToNonExisting failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 22772,
+              "start_position" : 21549
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryContentsToNonExisting",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'x' > /tmp/srcdir/file.txt\"])\n\n            let destPath = testDir.appendingPathComponent(\"existing.txt\")\n            try \"x\".write(to: destPath, atomically: true, encoding: .utf8)\n\n            let (_, _, _, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir/\", destPath.path])\n            #expect(status != 0, \"expected directory/-to-existing-file to fail\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryContentsToExistingFileFails failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 23681,
+              "start_position" : 22772
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryContentsToExistingFileFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'hello' > /tmp/srcdir/file.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"dstdir\")\n            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir/\", destDir.path])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"srcdir\").appendingPathComponent(\"file.txt\").path, encoding: .utf8)\n            #expect(result == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryContentsToExistingDirectory failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 24812,
+              "start_position" : 23681
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryContentsToExistingDirectory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'hello' > /tmp/srcdir/file.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"newdir\")\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir/\", destDir.path + \"/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"file.txt\").path, encoding: .utf8)\n            #expect(result == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryContentsToNonExistingTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 25892,
+              "start_position" : 24812
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryContentsToNonExistingTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"mkdir -p /tmp/srcdir && echo -n 'hello' > /tmp/srcdir/file.txt\"])\n\n            let destDir = testDir.appendingPathComponent(\"dstdir\")\n            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", \"\\(name):/tmp/srcdir/\", destDir.path + \"/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: destDir.appendingPathComponent(\"srcdir\").appendingPathComponent(\"file.txt\").path, encoding: .utf8)\n            #expect(result == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutDirectoryContentsToExistingDirectoryTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 27055,
+              "start_position" : 25892
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutDirectoryContentsToExistingDirectoryTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"new content\"\n            let srcFile = testDir.appendingPathComponent(\"source.txt\")\n            try content.write(to: srcFile, atomically: true, encoding: .utf8)\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n 'old content' > /tmp/existing.txt\"])\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcFile.path, \"\\(name):/tmp/existing.txt\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/existing.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInFileToExistingFile failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 28178,
+              "start_position" : 27055
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInFileToExistingFile",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"x\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n 'x' > /tmp/existing.txt\"])\n\n            let (_, _, _, status) = try run(arguments: [\"copy\", srcDir.path, \"\\(name):/tmp/existing.txt\"])\n            #expect(status != 0, \"expected directory-to-existing-file to fail\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryToExistingFileFails failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 29167,
+              "start_position" : 28178
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryToExistingFileFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"host content\"\n            let srcFile = testDir.appendingPathComponent(\"source.txt\")\n            try content.write(to: srcFile, atomically: true, encoding: .utf8)\n            _ = try doExec(name: name, cmd: [\"mkdir\", \"-p\", \"/tmp/dstdir\"])\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcFile.path, \"\\(name):/tmp/dstdir\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/dstdir/source.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInFileToExistingDirectory failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 30228,
+              "start_position" : 29167
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInFileToExistingDirectory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"hello\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n            _ = try doExec(name: name, cmd: [\"mkdir\", \"-p\", \"/tmp/dstdir\"])\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcDir.path, \"\\(name):/tmp/dstdir\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/dstdir/srcdir/file.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryToExistingDirectory failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 31390,
+              "start_position" : 30228
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryToExistingDirectory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcFile = testDir.appendingPathComponent(\"source.txt\")\n            try \"x\".write(to: srcFile, atomically: true, encoding: .utf8)\n\n            let (_, _, _, status) = try run(arguments: [\"copy\", srcFile.path, \"\\(name):/tmp/nonexistent/\"])\n            #expect(status != 0, \"expected file-to-nonexisting/ to fail\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInFileToNonExistingTrailingSlashFails failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 32216,
+              "start_position" : 31390
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInFileToNonExistingTrailingSlashFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"hello\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcDir.path, \"\\(name):/tmp/newdir/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/newdir/file.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryToNonExistingTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 33310,
+              "start_position" : 32216
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryToNonExistingTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            let subDir = srcDir.appendingPathComponent(\"sub\")\n            try FileManager.default.createDirectory(at: subDir, withIntermediateDirectories: true)\n            try \"hello\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcDir.path + \"/\", \"\\(name):/tmp/newdir\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/newdir/file.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryContentsToNonExisting failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 34510,
+              "start_position" : 33310
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryContentsToNonExisting",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"x\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n 'x' > /tmp/existing.txt\"])\n\n            let (_, _, _, status) = try run(arguments: [\"copy\", srcDir.path + \"/\", \"\\(name):/tmp/existing.txt\"])\n            #expect(status != 0, \"expected directory/-to-existing-file to fail\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryContentsToExistingFileFails failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 35522,
+              "start_position" : 34510
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryContentsToExistingFileFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"hello\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n            _ = try doExec(name: name, cmd: [\"mkdir\", \"-p\", \"/tmp/dstdir\"])\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcDir.path + \"/\", \"\\(name):/tmp/dstdir\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/dstdir/srcdir/file.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryContentsToExistingDirectory failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 36706,
+              "start_position" : 35522
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryContentsToExistingDirectory",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"hello\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcDir.path + \"/\", \"\\(name):/tmp/newdir/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/newdir/file.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryContentsToNonExistingTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 37884,
+              "start_position" : 36706
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryContentsToNonExistingTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let srcDir = testDir.appendingPathComponent(\"srcdir\")\n            try FileManager.default.createDirectory(at: srcDir, withIntermediateDirectories: true)\n            try \"hello\".write(to: srcDir.appendingPathComponent(\"file.txt\"), atomically: true, encoding: .utf8)\n            _ = try doExec(name: name, cmd: [\"mkdir\", \"-p\", \"/tmp/dstdir\"])\n\n            let (_, _, error, status) = try run(arguments: [\"copy\", srcDir.path + \"/\", \"\\(name):/tmp/dstdir/\"])\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/dstdir/srcdir/file.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == \"hello\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInDirectoryContentsToExistingDirectoryTrailingSlash failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 39095,
+              "start_position" : 37884
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInDirectoryContentsToExistingDirectoryTrailingSlash",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"relative source\"\n            try content.write(to: testDir.appendingPathComponent(\"relfile.txt\"), atomically: true, encoding: .utf8)\n\n            let (_, _, error, status) = try run(\n                arguments: [\"copy\", \"./relfile.txt\", \"\\(name):/tmp/\"],\n                currentDirectory: testDir)\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try doExec(name: name, cmd: [\"cat\", \"/tmp/relfile.txt\"])\n            #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyInRelativeSourcePath failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 40132,
+              "start_position" : 39095
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInRelativeSourcePath",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"relative dest\"\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n '\\(content)' > /tmp/relfile.txt\"])\n\n            let (_, _, error, status) = try run(\n                arguments: [\"copy\", \"\\(name):/tmp/relfile.txt\", \"./\"],\n                currentDirectory: testDir)\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: testDir.appendingPathComponent(\"relfile.txt\").path, encoding: .utf8)\n            #expect(result == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutRelativeDestinationPath failed: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+            "location" : {
+              "end_position" : 41114,
+              "start_position" : 40132
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyOutRelativeDestinationPath",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+        "location" : {
+          "end_position" : 41116,
+          "start_position" : 849
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLICopyCommand",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 3,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift"
+  ]
+}

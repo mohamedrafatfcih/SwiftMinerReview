@@ -1,0 +1,526 @@
+{
+  "caseID" : "case-1b62a1abcfc414513f191d6c",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "@escaping (Result<URLRequest, any Error>) -> Void",
+    "AdapterTestCase",
+    "BaseTestCase",
+    "RequestAdapter",
+    "RequestAdapterState",
+    "Session",
+    "URLRequest",
+    "adapt"
+  ],
+  "rawRefactoring" : {
+    "category" : "complex",
+    "inlined_function" : {
+      "attributes" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Source/Features/RequestInterceptor.swift",
+        "location" : {
+          "end_position" : 2173,
+          "start_position" : 1676
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "adapt",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLRequest"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Source/Features/RequestInterceptor.swift",
+            "location" : {
+              "end_position" : 2089,
+              "start_position" : 2063
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlRequest",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Session"
+          },
+          "is_variadic" : false,
+          "label" : "for",
+          "location_info" : {
+            "file_path" : "Source/Features/RequestInterceptor.swift",
+            "location" : {
+              "end_position" : 2111,
+              "start_position" : 2089
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "session",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping (Result<URLRequest, any Error>) -> Void"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Source/Features/RequestInterceptor.swift",
+            "location" : {
+              "end_position" : 2172,
+              "start_position" : 2111
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "completion",
+          "order" : 2
+        }
+      ]
+    },
+    "inlining_parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "final class StateCaptureAdapter: Adapter {\n            private(set) var urlRequest: URLRequest?\n            private(set) var state: RequestAdapterState?\n\n            @preconcurrency\n            override init(_ adaptHandler: @escaping AdaptHandler) {\n                super.init(adaptHandler)\n            }\n\n            override func adapt(_ urlRequest: URLRequest,\n                                using state: RequestAdapterState,\n                                completion: @escaping (Result<URLRequest, any Error>) -> Void) {\n                self.urlRequest = urlRequest\n                self.state = state\n\n                super.adapt(urlRequest, using: state, completion: completion)\n            }\n        }\n\n        let urlRequest = Endpoint().urlRequest\n        let session = Session()\n        let requestID = UUID()\n\n        var adapted = false\n\n        let adapter = StateCaptureAdapter { urlRequest, _, completion in\n            adapted = true\n            completion(.success(urlRequest))\n        }\n\n        let state = RequestAdapterState(requestID: requestID, session: session)\n\n        var result: Result<URLRequest, any Error>!\n\n        // When\n        adapter.adapt(urlRequest, using: state) { result = $0 }\n\n        // Then\n        XCTAssertTrue(adapted)\n        XCTAssertTrue(result.isSuccess)\n        XCTAssertEqual(adapter.urlRequest, urlRequest)\n        XCTAssertEqual(adapter.state?.requestID, requestID)\n        XCTAssertEqual(adapter.state?.session.session, session.session)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/RequestInterceptorTests.swift",
+        "location" : {
+          "end_position" : 5072,
+          "start_position" : 3487
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatAdapterCallsAdaptHandlerWithStateAPI",
+      "parameters" : [
+
+      ]
+    },
+    "source_owner" : {
+      "protocol_decl" : {
+        "_0" : {
+          "associated_types" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "functions" : [
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Features/RequestInterceptor.swift",
+                "location" : {
+                  "end_position" : 2173,
+                  "start_position" : 1676
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adapt",
+              "parameters" : [
+                {
+                  "attributes" : [
+
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "URLRequest"
+                  },
+                  "is_variadic" : false,
+                  "label" : "_",
+                  "location_info" : {
+                    "file_path" : "Source/Features/RequestInterceptor.swift",
+                    "location" : {
+                      "end_position" : 2089,
+                      "start_position" : 2063
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "urlRequest",
+                  "order" : 0
+                },
+                {
+                  "attributes" : [
+
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "Session"
+                  },
+                  "is_variadic" : false,
+                  "label" : "for",
+                  "location_info" : {
+                    "file_path" : "Source/Features/RequestInterceptor.swift",
+                    "location" : {
+                      "end_position" : 2111,
+                      "start_position" : 2089
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "session",
+                  "order" : 1
+                },
+                {
+                  "attributes" : [
+                    {
+                      "annotation" : {
+                        "escaping" : {
+
+                        }
+                      },
+                      "arguments" : [
+
+                      ]
+                    }
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "@escaping (Result<URLRequest, any Error>) -> Void"
+                  },
+                  "is_variadic" : false,
+                  "location_info" : {
+                    "file_path" : "Source/Features/RequestInterceptor.swift",
+                    "location" : {
+                      "end_position" : 2172,
+                      "start_position" : 2111
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "completion",
+                  "order" : 2
+                }
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Features/RequestInterceptor.swift",
+                "location" : {
+                  "end_position" : 2693,
+                  "start_position" : 2173
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adapt",
+              "parameters" : [
+                {
+                  "attributes" : [
+
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "URLRequest"
+                  },
+                  "is_variadic" : false,
+                  "label" : "_",
+                  "location_info" : {
+                    "file_path" : "Source/Features/RequestInterceptor.swift",
+                    "location" : {
+                      "end_position" : 2597,
+                      "start_position" : 2571
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "urlRequest",
+                  "order" : 0
+                },
+                {
+                  "attributes" : [
+
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "RequestAdapterState"
+                  },
+                  "is_variadic" : false,
+                  "label" : "using",
+                  "location_info" : {
+                    "file_path" : "Source/Features/RequestInterceptor.swift",
+                    "location" : {
+                      "end_position" : 2631,
+                      "start_position" : 2597
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "state",
+                  "order" : 1
+                },
+                {
+                  "attributes" : [
+                    {
+                      "annotation" : {
+                        "escaping" : {
+
+                        }
+                      },
+                      "arguments" : [
+
+                      ]
+                    }
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "@escaping (Result<URLRequest, any Error>) -> Void"
+                  },
+                  "is_variadic" : false,
+                  "location_info" : {
+                    "file_path" : "Source/Features/RequestInterceptor.swift",
+                    "location" : {
+                      "end_position" : 2692,
+                      "start_position" : 2631
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "completion",
+                  "order" : 2
+                }
+              ]
+            }
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/RequestInterceptor.swift",
+            "location" : {
+              "end_position" : 2695,
+              "start_position" : 1537
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "RequestAdapter",
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      }
+    },
+    "target_owner" : {
+      "class_decl" : {
+        "_0" : {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "BaseTestCase"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+            {
+              "attributes" : [
+
+              ],
+              "body" : {
+                "content" : "let urlRequest = Endpoint().urlRequest\n        let session = Session()\n        var adapted = false\n\n        let adapter = Adapter { request, _, completion in\n            adapted = true\n            completion(.success(request))\n        }\n\n        var result: Result<URLRequest, any Error>!\n\n        // When\n        adapter.adapt(urlRequest, for: session) { result = $0 }\n\n        // Then\n        XCTAssertTrue(adapted)\n        XCTAssertTrue(result.isSuccess)"
+              },
+              "location_info" : {
+                "file_path" : "Tests/RequestInterceptorTests.swift",
+                "location" : {
+                  "end_position" : 3487,
+                  "start_position" : 2952
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testThatAdapterCallsAdaptHandler",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "body" : {
+                "content" : "final class StateCaptureAdapter: Adapter {\n            private(set) var urlRequest: URLRequest?\n            private(set) var state: RequestAdapterState?\n\n            @preconcurrency\n            override init(_ adaptHandler: @escaping AdaptHandler) {\n                super.init(adaptHandler)\n            }\n\n            override func adapt(_ urlRequest: URLRequest,\n                                using state: RequestAdapterState,\n                                completion: @escaping (Result<URLRequest, any Error>) -> Void) {\n                self.urlRequest = urlRequest\n                self.state = state\n\n                super.adapt(urlRequest, using: state, completion: completion)\n            }\n        }\n\n        let urlRequest = Endpoint().urlRequest\n        let session = Session()\n        let requestID = UUID()\n\n        var adapted = false\n\n        let adapter = StateCaptureAdapter { urlRequest, _, completion in\n            adapted = true\n            completion(.success(urlRequest))\n        }\n\n        let state = RequestAdapterState(requestID: requestID, session: session)\n\n        var result: Result<URLRequest, any Error>!\n\n        // When\n        adapter.adapt(urlRequest, using: state) { result = $0 }\n\n        // Then\n        XCTAssertTrue(adapted)\n        XCTAssertTrue(result.isSuccess)\n        XCTAssertEqual(adapter.urlRequest, urlRequest)\n        XCTAssertEqual(adapter.state?.requestID, requestID)\n        XCTAssertEqual(adapter.state?.session.session, session.session)"
+              },
+              "location_info" : {
+                "file_path" : "Tests/RequestInterceptorTests.swift",
+                "location" : {
+                  "end_position" : 5072,
+                  "start_position" : 3487
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testThatAdapterCallsAdaptHandlerWithStateAPI",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "body" : {
+                "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        let adapter = Adapter { request, _, completion in\n            completion(.success(request))\n        }\n\n        var result: RetryResult!\n\n        // When\n        adapter.retry(request, for: session, dueTo: MockError()) { result = $0 }\n\n        // Then\n        XCTAssertEqual(result, .doNotRetry)"
+              },
+              "location_info" : {
+                "file_path" : "Tests/RequestInterceptorTests.swift",
+                "location" : {
+                  "end_position" : 5599,
+                  "start_position" : 5072
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testThatAdapterCallsRequestRetrierDefaultImplementationInProtocolExtension",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "MainActor"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let urlRequest = Endpoint().urlRequest\n        let session = Session()\n        var adapted = false\n\n        let adapter = Adapter { request, _, completion in\n            adapted = true\n            DispatchQueue.main.async {\n                completion(.success(request))\n            }\n        }\n\n        var result: Result<URLRequest, any Error>!\n\n        let completesExpectation = expectation(description: \"adapter completes\")\n\n        // When\n        adapter.adapt(urlRequest, for: session) {\n            result = $0\n            completesExpectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertTrue(adapted)\n        XCTAssertTrue(result.isSuccess)"
+              },
+              "location_info" : {
+                "file_path" : "Tests/RequestInterceptorTests.swift",
+                "location" : {
+                  "end_position" : 6412,
+                  "start_position" : 5599
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testThatAdapterCanBeImplementedAsynchronously",
+              "parameters" : [
+
+              ]
+            }
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 6414,
+              "start_position" : 2895
+            }
+          },
+          "modifiers" : [
+            "final"
+          ],
+          "name" : "AdapterTestCase",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      }
+    },
+    "type" : "Move And Inline Function Refactoring"
+  },
+  "refactoringIndex" : 4,
+  "refactoringType" : "Move And Inline Function Refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Features/RequestInterceptor.swift",
+    "Tests/RequestInterceptorTests.swift"
+  ]
+}

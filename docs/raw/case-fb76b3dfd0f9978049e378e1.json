@@ -1,0 +1,138 @@
+{
+  "caseID" : "case-fb76b3dfd0f9978049e378e1",
+  "commitHash" : "796630258bd8ca4a3d2341a1b504b0356fdbbd06",
+  "commitMessage" : "kill: Wait for container to exit after sigkill (#1589)\n\nToday when we send a signal we don't wait for the container to exit, as\nwe don't know what signals the program will actually do anything with.\nHowever, sigkill does not fit this mold, and we should wait for the\ncontainer to exit (or be removed for --rm containers).",
+  "commitURL" : "https://github.com/apple/container/commit/796630258bd8ca4a3d2341a1b504b0356fdbbd06",
+  "durationSeconds" : 7.9591920375823975,
+  "entityNames" : [
+    "XPCMessage",
+    "kill",
+    "message"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "body" : {
+        "content" : "_ = await withCheckedContinuation { cc in\n                self.waitForExit(id: id, cont: cc)\n            }"
+      },
+      "conditions" : [
+        {
+          "condition_value" : {
+            "comparison" : {
+              "_0" : {
+                "description" : "signal == .kill",
+                "left_operand" : "signal",
+                "location_info" : {
+                  "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+                  "location" : {
+                    "end_position" : 23287,
+                    "start_position" : 23271
+                  }
+                },
+                "operator_value" : "==",
+                "right_operand" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "kill"
+                  }
+                }
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 23287,
+              "start_position" : 23271
+            }
+          }
+        }
+      ],
+      "description" : "if",
+      "location_info" : {
+        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location" : {
+          "end_position" : 23417,
+          "start_position" : 23139
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        let id = try message.id()\n        let signal = try Signal(message.signal())\n\n        try await self.lock.withLock { [self] _ in\n            switch await self.state {\n            case .running:\n                let ctr = try await getContainer()\n                if id != ctr.container.id {\n                    guard let processInfo = await self.processes[id] else {\n                        throw ContainerizationError(.invalidState, message: \"process \\(id) does not exist\")\n                    }\n\n                    guard let proc = processInfo.process else {\n                        throw ContainerizationError(.invalidState, message: \"process \\(id) not started\")\n                    }\n                    try await proc.kill(signal)\n                    return\n                }\n\n                try await ctr.container.kill(signal)\n            default:\n                throw ContainerizationError(\n                    .invalidState,\n                    message: \"cannot kill: container is not running\"\n                )\n            }\n        }\n\n        // SIGKILL is guaranteed by the kernel to terminate the target, so block\n        // until we observe the exit.\n        if signal == .kill {\n            _ = await withCheckedContinuation { cc in\n                self.waitForExit(id: id, cont: cc)\n            }\n        }\n\n        return message.reply()"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location" : {
+          "end_position" : 23455,
+          "start_position" : 21554
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "kill",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCMessage"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 21910,
+              "start_position" : 21889
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "message",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "XPCMessage"
+        },
+        "description" : "-> XPCMessage"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 15,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
+  ]
+}

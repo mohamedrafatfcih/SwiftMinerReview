@@ -1,0 +1,538 @@
+{
+  "caseID" : "case-8b76ce86dfb178da598e222c",
+  "commitHash" : "3842977f4aa4c53cc9b9df65900aa1ab4498fdc1",
+  "commitMessage" : "Migrate basic system tests to new test support types. (#1841)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/3842977f4aa4c53cc9b9df65900aa1ab4498fdc1",
+  "durationSeconds" : 0.67437291145324707,
+  "entityNames" : [
+    "Codable",
+    "StatusJSON",
+    "String",
+    "String?",
+    "TestCLIStatus",
+    "apiServerAppName",
+    "apiServerBuild",
+    "apiServerCommit"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"status\"])\n            guard result.status == 0 else { return }\n\n            #expect(!result.output.isEmpty)\n\n            let lines = result.output.trimmingCharacters(in: .whitespacesAndNewlines)\n                .components(separatedBy: .newlines)\n            #expect(lines.count >= 2)\n            #expect(lines[0].contains(\"FIELD\") && lines[0].contains(\"VALUE\"))\n\n            let fullOutput = lines.joined(separator: \"\\n\")\n            #expect(fullOutput.contains(\"status\"))\n            #expect(fullOutput.contains(\"running\"))\n            #expect(fullOutput.contains(\"appRoot\"))\n            #expect(fullOutput.contains(\"installRoot\"))\n            #expect(fullOutput.contains(\"apiserver.version\"))\n            #expect(fullOutput.contains(\"apiserver.commit\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+            "location" : {
+              "end_position" : 2150,
+              "start_position" : 1229
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "defaultDisplaysTable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"status\", \"--format\", \"json\"])\n\n            if result.status != 0 {\n                #expect(!result.output.isEmpty)\n                let decoded = try JSONDecoder().decode(StatusJSON.self, from: result.outputData)\n                #expect(decoded.status == \"not running\" || decoded.status == \"unregistered\")\n                return\n            }\n\n            #expect(!result.output.isEmpty)\n            let decoded = try JSONDecoder().decode(StatusJSON.self, from: result.outputData)\n            #expect(decoded.status == \"running\")\n            #expect(!decoded.appRoot.isEmpty)\n            #expect(!decoded.installRoot.isEmpty)\n            #expect(!decoded.apiServerVersion.isEmpty)\n            #expect(!decoded.apiServerCommit.isEmpty)\n            #expect(!decoded.apiServerBuild.isEmpty)\n            #expect(!decoded.apiServerAppName.isEmpty)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+            "location" : {
+              "end_position" : 3146,
+              "start_position" : 2150
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "jsonFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"status\", \"--format\", \"table\"])\n            guard result.status == 0 else { return }\n\n            #expect(!result.output.isEmpty)\n\n            let lines = result.output.trimmingCharacters(in: .whitespacesAndNewlines)\n                .components(separatedBy: .newlines)\n            #expect(lines.count >= 2)\n            #expect(lines[0].contains(\"FIELD\") && lines[0].contains(\"VALUE\"))\n            #expect(lines.joined(separator: \"\\n\").contains(\"running\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+            "location" : {
+              "end_position" : 3764,
+              "start_position" : 3146
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "explicitTableFormat",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let jsonResult = try f.run([\"system\", \"status\", \"--format\", \"json\"])\n            let tableResult = try f.run([\"system\", \"status\", \"--format\", \"table\"])\n            #expect(jsonResult.status == tableResult.status)\n\n            guard jsonResult.status == 0 else { return }\n\n            let decoded = try JSONDecoder().decode(StatusJSON.self, from: jsonResult.outputData)\n            #expect(tableResult.output.contains(decoded.status))\n            #expect(tableResult.output.contains(decoded.appRoot))\n            #expect(tableResult.output.contains(decoded.installRoot))\n            #expect(tableResult.output.contains(decoded.apiServerVersion))\n            #expect(tableResult.output.contains(decoded.apiServerCommit))\n            #expect(tableResult.output.contains(decoded.apiServerBuild))\n            #expect(tableResult.output.contains(decoded.apiServerAppName))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+            "location" : {
+              "end_position" : 4757,
+              "start_position" : 3764
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "statusFieldsMatch",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"status\", \"--format\", \"json\"])\n            let decoded = try JSONDecoder().decode(StatusJSON.self, from: result.outputData)\n            if result.status == 0 {\n                #expect(decoded.status == \"running\")\n                #expect(!decoded.appRoot.isEmpty)\n                #expect(!decoded.installRoot.isEmpty)\n                #expect(!decoded.apiServerVersion.isEmpty)\n            } else {\n                #expect(decoded.status == \"not running\" || decoded.status == \"unregistered\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+            "location" : {
+              "end_position" : 5428,
+              "start_position" : 4757
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "jsonOutputValidStructure",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"system\", \"status\", \"--prefix\", \"com.apple.container.\"])\n            guard result.status == 0 else { return }\n\n            #expect(!result.output.isEmpty)\n            let lines = result.output.trimmingCharacters(in: .whitespacesAndNewlines)\n                .components(separatedBy: .newlines)\n            #expect(lines.count >= 2)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+            "location" : {
+              "end_position" : 5904,
+              "start_position" : 5428
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "prefixOption",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+        "location" : {
+          "end_position" : 5906,
+          "start_position" : 819
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIStatus",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "Codable"
+            }
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+            "location" : {
+              "end_position" : 1229,
+              "start_position" : 929
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "StatusJSON",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 989,
+                  "start_position" : 975
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "status"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 1017,
+                  "start_position" : 1002
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "appRoot"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 1049,
+                  "start_position" : 1030
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "installRoot"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 1078,
+                  "start_position" : 1062
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "logRoot"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 1115,
+                  "start_position" : 1091
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "apiServerVersion"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 1151,
+                  "start_position" : 1128
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "apiServerCommit"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 1186,
+                  "start_position" : 1164
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "apiServerBuild"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : true,
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIStatus.swift",
+                "location" : {
+                  "end_position" : 1223,
+                  "start_position" : 1199
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "apiServerAppName"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 14,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/System/TestCLIStatus.swift"
+  ]
+}

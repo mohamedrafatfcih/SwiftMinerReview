@@ -1,0 +1,95 @@
+{
+  "caseID" : "case-bdb50af306a28e366fd1df98",
+  "commitHash" : "bd5209f2254fd5a536f746e8693cd0abbd75f8e5",
+  "commitMessage" : "Fix bug where double clicking on the toolbar (not titlebar) in Eclipse would maximize.\n",
+  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/bd5209f2254fd5a536f746e8693cd0abbd75f8e5",
+  "durationSeconds" : 1.2439509630203247,
+  "entityNames" : [
+    "NSEvent",
+    "String?",
+    "bundleIdentifier",
+    "event",
+    "handle"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : true,
+        "name" : "String?"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Rectangle/TitleBarManager.swift",
+        "location" : {
+          "end_position" : 1550,
+          "start_position" : 1525
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "bundleIdentifier"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard\n            event.type == .leftMouseUp,\n            event.clickCount == 2,\n            event.eventNumber != lastEventNumber,\n            TitleBarManager.systemSettingDisabled,\n            let action = WindowAction(rawValue: Defaults.doubleClickTitleBar.value - 1),\n            case let location = NSEvent.mouseLocation.screenFlipped,\n            let element = AccessibilityElement(location)?.getSelfOrChildElementRecursively(location),\n            let windowElement = element.windowElement,\n            var titleBarFrame = windowElement.titleBarFrame\n        else {\n            return\n        }\n        lastEventNumber = event.eventNumber\n        \n        var bundleIdentifier: String?\n        if let pid = element.pid {\n            bundleIdentifier = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier\n        }\n        \n        if let toolbarFrame = windowElement.getChildElement(.toolbar)?.frame, toolbarFrame != .null {\n            if let bundleIdentifier,\n               let toolbarIgnoredIds = Defaults.doubleClickToolBarIgnoredApps.typedValue,\n               toolbarIgnoredIds.contains(bundleIdentifier) {\n               // don't add the toolbar frame to the title bar\n            } else {\n                titleBarFrame = titleBarFrame.union(toolbarFrame)\n            }\n        }\n        guard\n            titleBarFrame.contains(location),\n            element.isWindow == true || element.isToolbar == true || element.isGroup == true || element.isTabGroup == true || element.isStaticText == true\n        else {\n            return\n        }\n        if let bundleIdentifier,\n            let ignoredApps = Defaults.doubleClickTitleBarIgnoredApps.typedValue,\n            ignoredApps.contains(bundleIdentifier) {\n            return\n        }\n        if Defaults.doubleClickTitleBarRestore.enabled != false,\n           let windowId = windowElement.windowId,\n           case let windowFrame = windowElement.frame,\n           windowFrame != .null,\n           let historyAction = AppDelegate.windowHistory.lastRectangleActions[windowId],\n           historyAction.action == action,\n           historyAction.rect == windowFrame {\n            WindowAction.restore.postTitleBar(windowElement: windowElement)\n            return\n        }\n        action.postTitleBar(windowElement: windowElement)"
+      },
+      "location_info" : {
+        "file_path" : "Rectangle/TitleBarManager.swift",
+        "location" : {
+          "end_position" : 3170,
+          "start_position" : 801
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "handle",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSEvent"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Rectangle/TitleBarManager.swift",
+            "location" : {
+              "end_position" : 847,
+              "start_position" : 831
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "event",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 5,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "rxhanson-rectangle",
+  "repoName" : "rxhanson/Rectangle",
+  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Rectangle/TitleBarManager.swift"
+  ]
+}

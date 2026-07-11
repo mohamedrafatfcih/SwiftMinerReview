@@ -1,0 +1,91 @@
+{
+  "caseID" : "case-0d9e60ad55ecc35dba9f9c95",
+  "commitHash" : "83313ef34491e1f937a219b4988673fae518ff95",
+  "commitMessage" : "feat: added Network preview (disabled for now)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/83313ef34491e1f937a219b4988673fae518ff95",
+  "durationSeconds" : 33.389628887176514,
+  "entityNames" : [
+    "Network_Usage?",
+    "raw",
+    "usageCallback"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+        {
+          "value" : "value"
+        }
+      ],
+      "call" : "usageCallback",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Net/main.swift",
+        "location" : {
+          "end_position" : 7956,
+          "start_position" : 7910
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard let value = raw, self.enabled else { return }\n        \n        self.popupView.usageCallback(value)\n        self.portalView.usageCallback(value)\n        self.notificationsView.usageCallback(value)\n        self.previewView.usageCallback(value)\n        \n        var upload: Int64 = value.bandwidth.upload\n        var download: Int64 = value.bandwidth.download\n        if self.widgetActivationThresholdState {\n            upload = 0\n            download = 0\n            let threshold = self.widgetActivationThresholdSize.toBytes(self.widgetActivationThreshold)\n            if value.bandwidth.upload >= threshold || value.bandwidth.download >= threshold {\n                upload = value.bandwidth.upload\n                download = value.bandwidth.download\n            }\n        }\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as SpeedWidget: widget.setValue(input: download, output: upload)\n            case let widget as NetworkChart: widget.setValue(upload: Double(upload), download: Double(download))\n            case let widget as TextWidget:\n                var text = self.textValue\n                let pairs = TextWidget.parseText(text)\n                pairs.forEach { pair in\n                    var replacement: String? = nil\n                    \n                    switch pair.key {\n                    case \"$addr\":\n                        switch pair.value {\n                        case \"public\": replacement = value.raddr.v4 ?? value.raddr.v6 ?? \"-\"\n                        case \"publicV4\": replacement = value.raddr.v4 ?? \"-\"\n                        case \"publicV6\": replacement = value.raddr.v6 ?? \"-\"\n                        case \"private\": replacement = value.laddr.v4 ?? value.laddr.v6 ?? \"-\"\n                        case \"privateV4\": replacement = value.laddr.v4 ?? \"-\"\n                        case \"privateV6\": replacement = value.laddr.v6 ?? \"-\"\n                        case \"countryCode\": replacement = value.raddr.countryCode ?? \"-\"\n                        case \"flag\": replacement = value.raddr.countryCode != nil ? countryFlag(value.raddr.countryCode!) : \"-\"\n                        default: return\n                        }\n                    case \"$interface\":\n                        switch pair.value {\n                        case \"displayName\": replacement = value.interface?.displayName ?? \"-\"\n                        case \"BSDName\": replacement = value.interface?.BSDName ?? \"-\"\n                        case \"address\": replacement = value.interface?.address ?? \"-\"\n                        case \"transmitRate\": replacement = \"\\(value.interface?.transmitRate ?? 0)\"\n                        default: return\n                        }\n                    case \"$wifi\":\n                        switch pair.value {\n                        case \"ssid\": replacement = value.wifiDetails.ssid ?? \"-\"\n                        case \"bssid\": replacement = value.wifiDetails.bssid ?? \"-\"\n                        case \"RSSI\": replacement = \"\\(value.wifiDetails.RSSI ?? 0)\"\n                        case \"noise\": replacement = \"\\(value.wifiDetails.noise ?? 0)\"\n                        case \"standard\": replacement = value.wifiDetails.standard ?? \"-\"\n                        case \"mode\": replacement = value.wifiDetails.mode ?? \"-\"\n                        case \"security\": replacement = value.wifiDetails.security ?? \"-\"\n                        case \"channel\": replacement = value.wifiDetails.channel ?? \"-\"\n                        case \"channelBand\": replacement = value.wifiDetails.channelBand ?? \"-\"\n                        case \"channelWidth\": replacement = value.wifiDetails.channelWidth ?? \"-\"\n                        case \"channelNumber\": replacement = value.wifiDetails.channelNumber ?? \"-\"\n                        default: return\n                        }\n                    case \"$status\":\n                        replacement = localizedString(value.status ? \"UP\" : \"DOWN\")\n                    case \"$upload\":\n                        switch pair.value {\n                        case \"total\": replacement = Units(bytes: value.total.upload).getReadableMemory()\n                        default: replacement = Units(bytes: value.bandwidth.upload).getReadableMemory()\n                        }\n                    case \"$download\":\n                        switch pair.value {\n                        case \"total\": replacement = Units(bytes: value.total.download).getReadableMemory()\n                        default: replacement = Units(bytes: value.bandwidth.download).getReadableMemory()\n                        }\n                    case \"$type\":\n                        replacement = value.connectionType?.rawValue ?? \"-\"\n                    case \"$icmp\":\n                        guard let connectivity = self.connectivityReader?.value else { return }\n                        switch pair.value {\n                        case \"status\": replacement = localizedString(connectivity.status ? \"UP\" : \"DOWN\")\n                        case \"latency\": replacement = \"\\(Int(connectivity.latency)) ms\"\n                        default: return\n                        }\n                    default: return\n                    }\n                    \n                    if let replacement {\n                        let key = pair.value.isEmpty ? pair.key : \"\\(pair.key).\\(pair.value)\"\n                        text = text.replacingOccurrences(of: key, with: replacement)\n                    }\n                }\n                widget.setValue(text)\n            default: break\n            }\n        }\n        \n        if self.systemWidgetsUpdatesState {\n            if isWidgetActive(self.userDefaults, [Network_entry.kind]), let blobData = try? JSONEncoder().encode(raw) {\n                self.userDefaults?.set(blobData, forKey: \"Network@UsageReader\")\n            }\n            WidgetCenter.shared.reloadTimelines(ofKind: Network_entry.kind)\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Net/main.swift",
+        "location" : {
+          "end_position" : 13673,
+          "start_position" : 7639
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "usageCallback",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Network_Usage?"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 7697,
+              "start_position" : 7676
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "raw",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 4,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Net/main.swift"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "caseID" : "case-a41c03f535e7b355cde3ed00",
+  "commitHash" : "d8fde8ffdcef38b7e03e5fe158eee346ce3ba3c6",
+  "commitMessage" : "feat: improved updater mechanism for better handling of the mount point, and added new app version signature\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/d8fde8ffdcef38b7e03e5fe158eee346ce3ba3c6",
+  "durationSeconds" : 6.7010700702667236,
+  "entityNames" : [
+    "parseArguments"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "expression" : {
+        "function_call" : {
+          "_0" : {
+            "additional_trailing_closures" : [
+
+            ],
+            "arguments" : [
+
+            ],
+            "call" : "run",
+            "has_self_reference" : false,
+            "internal_inline_calls" : [
+
+            ],
+            "location_info" : {
+              "file_path" : "Stats/helpers.swift",
+              "location" : {
+                "end_position" : 1819,
+                "start_position" : 1807
+              }
+            }
+          }
+        }
+      },
+      "location_info" : {
+        "file_path" : "Stats/helpers.swift",
+        "location" : {
+          "end_position" : 1819,
+          "start_position" : 1781
+        }
+      },
+      "wrapping_type" : "?"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let args = CommandLine.arguments\n        \n        if args.contains(\"--reset\") {\n            debug(\"Receive --reset argument. Resetting store (UserDefaults)...\")\n            Store.shared.reset()\n        }\n        \n        if let disableIndex = args.firstIndex(of: \"--disable\") {\n            if args.indices.contains(disableIndex+1) {\n                let disableModules = args[disableIndex+1].split(separator: \",\")\n                \n                disableModules.forEach { (moduleName: Substring) in\n                    if let module = modules.first(where: { $0.config.name.lowercased() == moduleName.lowercased()}) {\n                        module.unmount()\n                    }\n                }\n            }\n        }\n        \n        if let mountIndex = args.firstIndex(of: \"--mount-path\") {\n            if args.indices.contains(mountIndex+1) {\n                let mountPath = args[mountIndex+1]\n                let tmp = NSTemporaryDirectory()\n                let stdTmp = (tmp as NSString).standardizingPath\n                let stdMount = (mountPath as NSString).standardizingPath\n                let inTmp = stdMount.hasPrefix(stdTmp) || stdMount.hasPrefix(\"/private/tmp/\") || stdMount.hasPrefix(\"/tmp/\")\n                if inTmp, !stdMount.contains(\"..\") {\n                    let detach = Process()\n                    detach.executableURL = URL(fileURLWithPath: \"/usr/bin/hdiutil\")\n                    detach.arguments = [\"detach\", mountPath, \"-force\"]\n                    try? detach.run()\n                    detach.waitUntilExit()\n                    try? FileManager.default.removeItem(atPath: mountPath)\n                    \n                    debug(\"DMG was unmounted and mountPath deleted\")\n                } else {\n                    debug(\"rejected --mount-path outside tmp: \\(mountPath)\")\n                }\n            }\n        }\n        \n        if let dmgIndex = args.firstIndex(of: \"--dmg-path\") {\n            if args.indices.contains(dmgIndex+1) {\n                let dmgPath = args[dmgIndex+1]\n                let stdDmg = (dmgPath as NSString).standardizingPath\n                let downloads = (try? FileManager.default.url(for: .downloadsDirectory, in: .userDomainMask, appropriateFor: nil, create: false).path) ?? \"\"\n                let inDownloads = downloads.isEmpty || stdDmg.hasPrefix(downloads)\n                if stdDmg.hasSuffix(\".dmg\"), !stdDmg.contains(\"..\"), inDownloads {\n                    try? FileManager.default.removeItem(atPath: dmgPath)\n                    debug(\"DMG was deleted\")\n                } else {\n                    debug(\"rejected --dmg-path: \\(dmgPath)\")\n                }\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Stats/helpers.swift",
+        "location" : {
+          "end_position" : 2984,
+          "start_position" : 273
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "parseArguments",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 51,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Stats/helpers.swift"
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "caseID" : "case-be7af4c3edc151954702eaf8",
+  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds" : 16.732138991355896,
+  "entityNames" : [
+    "XPCMessage",
+    "create",
+    "message"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+        {
+          "label" : "key",
+          "value" : ".networkState"
+        },
+        {
+          "label" : "value",
+          "value" : "try JSONEncoder().encode(networkState)"
+        }
+      ],
+      "call" : "set",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksHarness.swift",
+        "location" : {
+          "end_position" : 2690,
+          "start_position" : 2472
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let data = message.dataNoCopy(key: .networkConfig)\n        guard let data else {\n            throw ContainerizationError(.invalidArgument, message: \"network configuration cannot be empty\")\n        }\n\n        let config = try JSONDecoder().decode(NetworkConfiguration.self, from: data)\n        let networkState = try await service.create(configuration: config)\n\n        let reply = message.reply()\n\n        // Current encoding: NetworkResource with status.phase shape (≥ 0.12.0).\n        reply.set(key: .networkResource, value: try JSONEncoder().encode(NetworkResource(networkState)))\n\n        // DEPRECATED 0.12.0 — retained for down-revision client compatibility.\n        // Remove at next major version boundary.\n        reply.set(key: .networkState, value: try JSONEncoder().encode(networkState))\n\n        return reply"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksHarness.swift",
+        "location" : {
+          "end_position" : 2718,
+          "start_position" : 1788
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "create",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCMessage"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksHarness.swift",
+            "location" : {
+              "end_position" : 1848,
+              "start_position" : 1827
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "message",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "XPCMessage"
+        },
+        "description" : "-> XPCMessage"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 100,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerAPIService/Server/Networks/NetworksHarness.swift"
+  ]
+}

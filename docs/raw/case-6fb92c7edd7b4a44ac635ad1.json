@@ -1,0 +1,58 @@
+{
+  "caseID" : "case-6fb92c7edd7b4a44ac635ad1",
+  "commitHash" : "83313ef34491e1f937a219b4988673fae518ff95",
+  "commitMessage" : "feat: added Network preview (disabled for now)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/83313ef34491e1f937a219b4988673fae518ff95",
+  "durationSeconds" : 33.389628887176514,
+  "entityNames" : [
+    "Bandwidth",
+    "readInterfaceBandwidth"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "depth" : 0,
+      "description" : "while pointer != nil {\n            defer { pointer = pointer?.pointee.ifa_next }\n            guard let pointer = pointer else { break }\n            \n            if String(cString: pointer.pointee.ifa_name) != self.interfaceID {\n                continue\n            }\n            self.usage.interface?.status = (pointer.pointee.ifa_flags & UInt32(IFF_UP)) != 0\n            \n            if let wifiInterface = CWWiFiClient.shared().interface(withName: self.interfaceID) {\n                self.usage.interface?.transmitRate = wifiInterface.transmitRate()\n            } else if let raw = pointer.pointee.ifa_data {\n                let dataPtr = raw.assumingMemoryBound(to: if_data.self)\n                let ifData = dataPtr.pointee\n                let baud = UInt64(ifData.ifi_baudrate)\n                if baud > 0 {\n                    self.usage.interface?.transmitRate = Double(baud) / 1_000_000.0\n                }\n            }\n            \n            self.getLocalIP(pointer)\n            \n            if let info = self.getBytesInfo(pointer) {\n                totalUpload += info.upload\n                totalDownload += info.download\n            }\n        }",
+      "index" : 5
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var interfaceAddresses: UnsafeMutablePointer<ifaddrs>? = nil\n        var totalUpload: Int64 = 0\n        var totalDownload: Int64 = 0\n        guard getifaddrs(&interfaceAddresses) == 0 else {\n            return Bandwidth()\n        }\n        \n        var pointer = interfaceAddresses\n        while pointer != nil {\n            defer { pointer = pointer?.pointee.ifa_next }\n            guard let pointer = pointer else { break }\n            \n            if String(cString: pointer.pointee.ifa_name) != self.interfaceID {\n                continue\n            }\n            self.usage.interface?.status = (pointer.pointee.ifa_flags & UInt32(IFF_UP)) != 0\n            \n            if let wifiInterface = CWWiFiClient.shared().interface(withName: self.interfaceID) {\n                self.usage.interface?.transmitRate = wifiInterface.transmitRate()\n            } else if let raw = pointer.pointee.ifa_data {\n                let dataPtr = raw.assumingMemoryBound(to: if_data.self)\n                let ifData = dataPtr.pointee\n                let baud = UInt64(ifData.ifi_baudrate)\n                if baud > 0 {\n                    self.usage.interface?.transmitRate = Double(baud) / 1_000_000.0\n                }\n            }\n            \n            self.getLocalIP(pointer)\n            \n            if let info = self.getBytesInfo(pointer) {\n                totalUpload += info.upload\n                totalDownload += info.download\n            }\n        }\n        freeifaddrs(interfaceAddresses)\n        \n        return Bandwidth(upload: totalUpload, download: totalDownload)"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Net/readers.swift",
+        "location" : {
+          "end_position" : 10364,
+          "start_position" : 8717
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "readInterfaceBandwidth",
+      "parameters" : [
+
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Bandwidth"
+        },
+        "description" : "-> Bandwidth"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 37,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Net/readers.swift"
+  ]
+}

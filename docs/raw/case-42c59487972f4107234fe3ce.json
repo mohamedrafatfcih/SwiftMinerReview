@@ -1,0 +1,264 @@
+{
+  "caseID" : "case-42c59487972f4107234fe3ce",
+  "commitHash" : "586fa07d2abb3539f46f84b6b6241d8a18f845a0",
+  "commitMessage" : "Migrate registry tests to new test support types. (#1845)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/586fa07d2abb3539f46f84b6b6241d8a18f845a0",
+  "durationSeconds" : 3.4522330760955811,
+  "entityNames" : [
+    "TestCLIBuilderEnvOnlySerial",
+    "testBuildEnvironmentOnlyImageFromAlpine",
+    "testBuildEnvironmentOnlyImageFromScratch",
+    "testComplexArgAndEnvCombinations",
+    "testLabelOnlyDockerfile",
+    "testMultiStageBuildWithEnvOnlyBase"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialized"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                let dir = try f.createTempDir()\n                let dockerfile =\n                    \"\"\"\n                    FROM scratch\n                    ARG BUILD_DATE\n                    ARG VERSION=1.0.0\n                    ENV TERM=xterm \\\\\n                        BUILD_DATE=${BUILD_DATE} \\\\\n                        APP_VERSION=${VERSION} \\\\\n                        PATH=/usr/local/bin:/usr/bin:/bin\n                    LABEL maintainer=\"test@example.com\" version=\"${VERSION}\"\n                    \"\"\"\n                try f.createContext(dir: dir, dockerfile: dockerfile)\n                let imageName = \"test-env-only:\\(UUID().uuidString)\"\n                try f.build(tag: imageName, contextDir: dir, buildArgs: [\"BUILD_DATE=2025-01-01\", \"VERSION=2.0.0\"])\n                try f.assertImageBuilt(imageName)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderEnvOnlySerial.swift",
+            "location" : {
+              "end_position" : 1885,
+              "start_position" : 877
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testBuildEnvironmentOnlyImageFromScratch",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                let dir = try f.createTempDir()\n                let dockerfile =\n                    \"\"\"\n                    FROM ghcr.io/linuxcontainers/alpine:3.20\n                    ENV APP_NAME=myapp APP_VERSION=1.0.0 APP_ENV=production\n                    LABEL maintainer=\"test@example.com\" version=\"1.0.0\"\n                    \"\"\"\n                try f.createContext(dir: dir, dockerfile: dockerfile)\n                let imageName = \"test-alpine-env:\\(UUID().uuidString)\"\n                try f.build(tag: imageName, contextDir: dir)\n                try f.assertImageBuilt(imageName)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderEnvOnlySerial.swift",
+            "location" : {
+              "end_position" : 2668,
+              "start_position" : 1885
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testBuildEnvironmentOnlyImageFromAlpine",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                let baseDir = try f.createTempDir()\n                let baseDockerfile =\n                    \"\"\"\n                    FROM scratch\n                    ARG JOBS=6\n                    ARG ARCH=amd64\n                    ENV MAKEOPTS=\"-j${JOBS}\" ARCH=\"${ARCH}\" PATH=/usr/local/bin:/usr/bin\n                    \"\"\"\n                try f.createContext(dir: baseDir, dockerfile: baseDockerfile)\n                let baseImageName = \"test-env-base:\\(UUID().uuidString)\"\n                try f.build(tag: baseImageName, contextDir: baseDir, buildArgs: [\"JOBS=8\", \"ARCH=arm64\"])\n                try f.assertImageBuilt(baseImageName)\n\n                let downstreamDir = try f.createTempDir()\n                let downstreamDockerfile =\n                    \"\"\"\n                    FROM \\(baseImageName)\n                    LABEL test=\"env-inherited\"\n                    \"\"\"\n                try f.createContext(dir: downstreamDir, dockerfile: downstreamDockerfile)\n                let downstreamImageName = \"test-env-child:\\(UUID().uuidString)\"\n                try f.build(tag: downstreamImageName, contextDir: downstreamDir)\n                try f.assertImageBuilt(downstreamImageName)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderEnvOnlySerial.swift",
+            "location" : {
+              "end_position" : 4042,
+              "start_position" : 2668
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testMultiStageBuildWithEnvOnlyBase",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                let dir = try f.createTempDir()\n                let dockerfile =\n                    \"\"\"\n                    FROM scratch\n                    ARG JOBS=6\n                    ARG MAXLOAD=7.00\n                    ARG ARCH=amd64\n                    ARG PROFILE_PATH=23.0/split-usr/no-multilib\n                    ARG CHOST=x86_64-pc-linux-gnu\n                    ARG CFLAGS=-O2 -pipe\n                    ENV JOBS=\"${JOBS}\" MAXLOAD=\"${MAXLOAD}\" \\\\\n                        GENTOO_PROFILE=\"default/linux/${ARCH}/${PROFILE_PATH}\" \\\\\n                        CHOST=\"${CHOST}\" MAKEOPTS=\"-j${JOBS}\" \\\\\n                        CFLAGS=\"${CFLAGS}\" CXXFLAGS=\"${CFLAGS}\"\n                    LABEL maintainer=\"test@example.com\"\n                    \"\"\"\n                try f.createContext(dir: dir, dockerfile: dockerfile)\n                let imageName = \"test-complex-env:\\(UUID().uuidString)\"\n                try f.build(tag: imageName, contextDir: dir, buildArgs: [\"JOBS=12\", \"ARCH=arm64\"])\n                try f.assertImageBuilt(imageName)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderEnvOnlySerial.swift",
+            "location" : {
+              "end_position" : 5269,
+              "start_position" : 4042
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testComplexArgAndEnvCombinations",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                let dir = try f.createTempDir()\n                let dockerfile =\n                    \"\"\"\n                    FROM scratch\n                    LABEL maintainer=\"test@example.com\" version=\"1.0.0\" \\\\\n                          description=\"Test image with only labels\" \\\\\n                          org.opencontainers.image.title=\"Test Image\"\n                    \"\"\"\n                try f.createContext(dir: dir, dockerfile: dockerfile)\n                let imageName = \"test-label-only:\\(UUID().uuidString)\"\n                try f.build(tag: imageName, contextDir: dir)\n                try f.assertImageBuilt(imageName)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderEnvOnlySerial.swift",
+            "location" : {
+              "end_position" : 6076,
+              "start_position" : 5269
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testLabelOnlyDockerfile",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderEnvOnlySerial.swift",
+        "location" : {
+          "end_position" : 6078,
+          "start_position" : 819
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIBuilderEnvOnlySerial",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 10,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Build/TestCLIBuilderEnvOnlySerial.swift"
+  ]
+}

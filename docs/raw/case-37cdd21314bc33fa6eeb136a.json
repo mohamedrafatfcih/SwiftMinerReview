@@ -1,0 +1,480 @@
+{
+  "caseID" : "case-37cdd21314bc33fa6eeb136a",
+  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds" : 31.880328059196472,
+  "entityNames" : [
+    "RequestInstanceInterceptorTests",
+    "instanceAdapterIsCalled",
+    "instanceAdaptersAreCalledInAddedOrder",
+    "instanceAndSessionEventMonitorsAreCalledInCorrectOrder",
+    "instanceEventMonitorIsCalled",
+    "instanceInterceptorIsCalled",
+    "instanceRetrierIsCalled",
+    "multipleInstanceEventMonitorsAreCalledInAddedOrder"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let session = Session()\n        let adapter = InspectorInterceptor(.adapter { @Sendable request, _, completion in completion(.success(request)) })\n\n        // When\n        let response = await session\n            .request(.get)\n            .adapt(using: adapter)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        #expect(adapter.adaptations.count == 1)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 56150,
+              "start_position" : 55642
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "instanceAdapterIsCalled",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let session = Session()\n        let firstAdapter = InspectorInterceptor(.adapter { @Sendable request, _, completion in completion(.success(request)) })\n        let secondAdapter = InspectorInterceptor(.adapter { @Sendable request, _, completion in completion(.success(request)) })\n\n        // When\n        let response = await session\n            .request(.get)\n            .adapt(using: firstAdapter)\n            .adapt(using: secondAdapter)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        #expect(firstAdapter.adaptations.count == 1)\n        #expect(secondAdapter.adaptations.count == 1)\n        #expect(firstAdapter.adaptations[0].date < secondAdapter.adaptations[0].date)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 56998,
+              "start_position" : 56150
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "instanceAdaptersAreCalledInAddedOrder",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let sessionInterceptor = InspectorInterceptor(.adapter { @Sendable request, _, completion in\n            var request = request\n            request.headers[\"session\"] = \"\\(Date.now.timeIntervalSince1970)\"\n            completion(.success(request))\n        })\n        let session = Session(interceptor: sessionInterceptor)\n        let instanceInterceptor = InspectorInterceptor(.adapter { @Sendable request, _, completion in\n            var request = request\n            request.headers[\"instance\"] = \"\\(Date.now.timeIntervalSince1970)\"\n            completion(.success(request))\n        })\n\n        // When\n        let response = await session\n            .request(.get)\n            .adapt(using: instanceInterceptor)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        if let sessionTime = response.request?.headers[\"session\"].flatMap(Double.init),\n           let instanceTime = response.request?.headers[\"instance\"].flatMap(Double.init) {\n            #expect(sessionTime < instanceTime)\n        }\n        #expect(sessionInterceptor.adaptations.count == 1)\n        #expect(instanceInterceptor.adaptations.count == 1)\n        #expect(sessionInterceptor.adaptations[0].date < instanceInterceptor.adaptations[0].date)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 58385,
+              "start_position" : 56998
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "sessionAdapterIsCalledBeforeInstanceAdapter",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let session = Session()\n        let interceptor = InspectorInterceptor(\n            .interceptor { @Sendable request, _, completion in\n                completion(.success(request))\n            } retrier: { @Sendable _, _, _, completion in\n                completion(.retry)\n            }\n        )\n\n        // When\n        let response = await session\n            .request(.endpoints(.delay(1).modifying(\\.timeout, to: 0.0001), .get))\n            .interceptor(interceptor)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        #expect(interceptor.adaptations.count == 2)\n        #expect(interceptor.retries.count == 1)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 59160,
+              "start_position" : 58385
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "instanceInterceptorIsCalled",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let session = Session()\n        let firstInterceptor = InspectorInterceptor(\n            .interceptor { @Sendable request, _, completion in\n                completion(.success(request))\n            } retrier: { @Sendable _, _, _, completion in\n                completion(.doNotRetry)\n            }\n        )\n        let secondInterceptor = InspectorInterceptor(\n            .interceptor { @Sendable request, _, completion in\n                completion(.success(request))\n            } retrier: { @Sendable _, _, _, completion in\n                completion(.retry)\n            }\n        )\n\n        // When\n        let response = await session\n            .request(.endpoints(.delay(1).modifying(\\.timeout, to: 0.0001), .get))\n            .interceptor(firstInterceptor)\n            .interceptor(secondInterceptor)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        #expect(firstInterceptor.adaptations.count == 2)\n        #expect(firstInterceptor.retries.count == 1)\n        #expect(secondInterceptor.adaptations.count == 2)\n        #expect(secondInterceptor.retries.count == 1)\n        #expect(firstInterceptor.adaptations[0].date < secondInterceptor.adaptations[0].date)\n        #expect(firstInterceptor.adaptations[1].date < secondInterceptor.adaptations[1].date)\n        #expect(firstInterceptor.retries[0].date < secondInterceptor.retries[0].date)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 60692,
+              "start_position" : 59160
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "multipleInstanceInterceptorsAreCalledInAddedOrder",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let session = Session()\n        let interceptor = InspectorInterceptor(.retrier { @Sendable _, _, _, completion in completion(.retry) })\n\n        // When\n        let response = await session\n            .request(.endpoints(.delay(1).modifying(\\.timeout, to: 0.0001), .get))\n            .retry(using: interceptor)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        #expect(interceptor.retries.count == 1)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 61251,
+              "start_position" : 60692
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "instanceRetrierIsCalled",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let session = Session()\n        let firstRetrier = InspectorInterceptor(.retrier { @Sendable _, _, _, completion in completion(.doNotRetry) })\n        let secondRetrier = InspectorInterceptor(.retrier { @Sendable _, _, _, completion in completion(.retry) })\n\n        // When\n        let response = await session\n            .request(.endpoints(.delay(1).modifying(\\.timeout, to: 0.0001), .get))\n            .retry(using: firstRetrier)\n            .retry(using: secondRetrier)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        #expect(firstRetrier.retries.count == 1)\n        #expect(secondRetrier.retries.count == 1)\n        #expect(firstRetrier.retries[0].date < secondRetrier.retries[0].date)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 62124,
+              "start_position" : 61251
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "multipleInstanceRetriersAreCalledInAddedOrder",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let sessionRetrier = InspectorInterceptor(.retrier { @Sendable _, _, _, completion in completion(.doNotRetry) })\n        let session = Session(interceptor: sessionRetrier)\n        let instanceRetrier = InspectorInterceptor(.retrier { @Sendable _, _, _, completion in completion(.retry) })\n\n        // When\n        let response = await session\n            .request(.endpoints(.delay(1).modifying(\\.timeout, to: 0.0001), .get))\n            .retry(using: instanceRetrier)\n            .serializingDecodable(TestResponse.self).response\n\n        #expect(response.result.isSuccess)\n        #expect(instanceRetrier.retries.count == 1)\n        #expect(sessionRetrier.retries.count == 1)\n        #expect(sessionRetrier.retries[0].date < instanceRetrier.retries[0].date)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 62996,
+              "start_position" : 62124
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "sessionRetrierIsCalledBeforeInstanceRetrier",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let queue = DispatchQueue(label: \"org.alamofire.\\(#function)\")\n        let monitor = InspectorEventMonitor(queue: queue)\n        let session = Session(rootQueue: queue, eventMonitors: [])\n\n        // When\n        let response = await session\n            .request(.get)\n            .eventMonitor(monitor)\n            .serializingDecodable(TestResponse.self)\n            .response\n        await monitor.pendingEvents()\n\n        // Then\n\n        #expect(response.result.isSuccess)\n        let expected = [\"requestDidResume(_:)\",\n                        \"request(_:didCreateInitialURLRequest:)\",\n                        \"request(_:didCreateURLRequest:)\",\n                        \"request(_:didCreateTask:)\",\n                        \"request(_:didResumeTask:)\",\n                        \"request(_:didGatherMetrics:)\",\n                        \"requestDidFinish(_:)\",\n                        \"request(_:didParseResponse:)\"]\n        #expect(monitor.events == expected, \"Events didn't match, actual events: \\(monitor.events)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 64111,
+              "start_position" : 62996
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "instanceEventMonitorIsCalled",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let queue = DispatchQueue(label: \"org.alamofire.\\(#function)\")\n        let firstMonitor = InspectorEventMonitor(queue: queue)\n        let secondMonitor = InspectorEventMonitor(queue: queue)\n        let session = Session(rootQueue: queue, eventMonitors: [])\n\n        // When\n        let response = await session\n            .request(.get)\n            .eventMonitor(firstMonitor)\n            .eventMonitor(secondMonitor)\n            .serializingDecodable(TestResponse.self)\n            .response\n        await firstMonitor.pendingEvents()\n\n        // Then\n\n        #expect(response.result.isSuccess)\n        let expected = [\"requestDidResume(_:)\",\n                        \"request(_:didCreateInitialURLRequest:)\",\n                        \"request(_:didCreateURLRequest:)\",\n                        \"request(_:didCreateTask:)\",\n                        \"request(_:didResumeTask:)\",\n                        \"request(_:didGatherMetrics:)\",\n                        \"requestDidFinish(_:)\",\n                        \"request(_:didParseResponse:)\"]\n        #expect(firstMonitor.events == expected, \"firstMonitor events didn't match, actual events: \\(firstMonitor.events)\")\n        #expect(secondMonitor.events == expected, \"secondMonitor events didn't match, actual events: \\(firstMonitor.events)\")\n        for timelines in zip(firstMonitor.timeline, secondMonitor.timeline) {\n            #expect(timelines.0.date <= timelines.1.date)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 65663,
+              "start_position" : 64111
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "multipleInstanceEventMonitorsAreCalledInAddedOrder",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let queue = DispatchQueue(label: \"org.alamofire.\\(#function)\")\n        let sessionMonitor = InspectorEventMonitor(label: \"session\", queue: queue)\n        let instanceMonitor = InspectorEventMonitor(label: \"instance\", queue: queue)\n        let session = Session(rootQueue: queue, eventMonitors: [sessionMonitor])\n\n        // When\n        let response = await session\n            .request(.get)\n            .eventMonitor(instanceMonitor)\n            .serializingDecodable(TestResponse.self)\n            .response\n        await sessionMonitor.pendingEvents()\n        await instanceMonitor.pendingEvents()\n\n        // Then\n\n        #expect(response.result.isSuccess)\n        let expectedInstanceEvents = [\"requestDidResume(_:)\",\n                                      \"request(_:didCreateInitialURLRequest:)\",\n                                      \"request(_:didCreateURLRequest:)\",\n                                      \"request(_:didCreateTask:)\",\n                                      \"request(_:didResumeTask:)\",\n                                      \"request(_:didGatherMetrics:)\",\n                                      \"requestDidFinish(_:)\",\n                                      \"request(_:didParseResponse:)\"]\n        let expectedSessionEvents = [\"requestDidResume(_:)\",\n                                     \"request(_:didCreateInitialURLRequest:)\",\n                                     \"request(_:didCreateURLRequest:)\",\n                                     \"request(_:didCreateTask:)\",\n                                     \"request(_:didResumeTask:)\",\n                                     \"urlSession(_:dataTask:didReceive:)\",\n                                     \"urlSession(_:dataTask:willCacheResponse:)\",\n                                     \"urlSession(_:task:didFinishCollecting:)\",\n                                     \"request(_:didGatherMetrics:)\",\n                                     \"urlSession(_:task:didCompleteWithError:)\",\n                                     \"requestDidFinish(_:)\",\n                                     \"request(_:didParseResponse:)\"]\n        #expect(sessionMonitor.events == expectedSessionEvents, \"Session events didn't match, actual events: \\(sessionMonitor.events)\")\n        #expect(instanceMonitor.events == expectedInstanceEvents, \"Instance events didn't match, actual events: \\(instanceMonitor.events)\")\n        let instanceEvents = instanceMonitor.timeline\n        var sessionEvents = sessionMonitor.timeline\n        sessionEvents = sessionEvents.filter { session in instanceEvents.contains { $0.event == session.event } }\n        #expect(instanceEvents.count == sessionEvents.count)\n        for combinedEvent in zip(sessionEvents, instanceEvents) {\n            #expect(combinedEvent.0.event == combinedEvent.1.event)\n            #expect(combinedEvent.0.date <= combinedEvent.1.date, \"session event wasn't before instance event\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestTests.swift",
+            "location" : {
+              "end_position" : 68674,
+              "start_position" : 65663
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "instanceAndSessionEventMonitorsAreCalledInCorrectOrder",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/RequestTests.swift",
+        "location" : {
+          "end_position" : 68676,
+          "start_position" : 55593
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "RequestInstanceInterceptorTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 252,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/RequestTests.swift"
+  ]
+}

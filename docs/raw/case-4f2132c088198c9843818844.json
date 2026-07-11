@@ -1,0 +1,104 @@
+{
+  "caseID" : "case-4f2132c088198c9843818844",
+  "commitHash" : "76f387e3be2855b84ba411c72ef14c9439a413aa",
+  "commitMessage" : "Restore reverted migrations, migrate last tests. (#1880)\n\n- Part of #1833.\n- CLI progress and registry test migrations were inadventently reverted\nby #1857.\n- Migrate TestCLINoParallelCases to TestCLIImagePruneSerial and\nTestCLINetworkPruneSerial.\n- Clean up test selection patterns in Makefile.\n- Remove all legacy CLITests files.\n- Use swift-testing `withKnownIssue` to run but ignore failures on flaky\n`testCreateNameLongestValid` and `testIsolatedNetwork`.\n- Extracts a fixture helper for tests requiring a retry loop.",
+  "commitURL" : "https://github.com/apple/container/commit/76f387e3be2855b84ba411c72ef14c9439a413aa",
+  "durationSeconds" : 8.0211789608001709,
+  "entityNames" : [
+    "Error?",
+    "lastError",
+    "testNetworkCreateAndUse"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : true,
+        "name" : "Error?"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+        "location" : {
+          "end_position" : 2688,
+          "start_position" : 2671
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "lastError"
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "26"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        },
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Test"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            let c = \"\\(f.testID)-c\"\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n\n            try f.doNetworkCreate(net)\n\n            let listResult = try f.run([\"network\", \"ls\", \"--quiet\"]).check()\n            let networkIds = listResult.output\n                .components(separatedBy: .newlines)\n                .map { $0.trimmingCharacters(in: .whitespaces) }\n                .filter { !$0.isEmpty }\n            #expect(networkIds == networkIds.sorted(), \"network IDs should be sorted\")\n\n            let port = UInt16.random(in: 50000..<60000)\n            try f.doLongRun(\n                name: c, image: \"docker.io/library/python:alpine\",\n                args: [\"--network\", net],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(port)\"],\n                autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemove(c)\n            }\n            try await f.waitForContainerRunning(c)\n\n            let container = try f.inspectContainer(c)\n            #expect(container.networks.count > 0)\n            let ip = container.networks[0].ipv4Address.address\n            let url = \"http://\\(ip):\\(port)\"\n\n            let client = f.makeHTTPClient()\n            defer { _ = client.shutdown() }\n            var request = HTTPClientRequest(url: url)\n            request.method = .GET\n\n            // waitForContainerRunning only tells us init is running; the python http\n            // server inside is still starting, so retry until it accepts connections.\n            var lastError: Error?\n            var response: HTTPClientResponse?\n            for attempt in 1...10 {\n                do {\n                    response = try await client.execute(request, timeout: .seconds(3))\n                    break\n                } catch {\n                    lastError = error\n                    print(\"request to \\(url) failed on attempt \\(attempt): \\(error)\")\n                    try await Task.sleep(for: .seconds(1))\n                }\n            }\n            let final = try #require(response, \"request to \\(url) failed after retries: \\(lastError.map(String.init(describing:)) ?? \"no error\")\")\n            #expect(final.status == .ok, \"request to \\(url) returned \\(final.status)\")\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+        "location" : {
+          "end_position" : 3395,
+          "start_position" : 904
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testNetworkCreateAndUse",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 39,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Network/TestCLINetwork.swift"
+  ]
+}

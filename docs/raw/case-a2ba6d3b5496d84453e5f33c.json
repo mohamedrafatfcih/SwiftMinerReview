@@ -1,0 +1,728 @@
+{
+  "caseID" : "case-a2ba6d3b5496d84453e5f33c",
+  "commitHash" : "184bf068b77ae1790c645a2569a2554020dbca8b",
+  "commitMessage" : "update outdated pods\n",
+  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/184bf068b77ae1790c645a2569a2554020dbca8b",
+  "durationSeconds" : 1072.5666660070419,
+  "entityNames" : [
+    "()",
+    "AnyRecursiveScheduler<()>",
+    "Bag<Disposable>.KeyType",
+    "Cancelable",
+    "DelaySink",
+    "Disposable",
+    "DisposeKey",
+    "Element"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "name" : "Sink<Observer>"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sink<Observer>"
+        },
+        {
+          "name" : "ObserverType"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.lock.lock()    \n        let hasFailed = self.errorEvent != nil\n        if !hasFailed {\n            self.running = true\n        }\n        self.lock.unlock()  \n\n        if hasFailed {\n            return\n        }\n\n        var ranAtLeastOnce = false\n\n        while true {\n            self.lock.lock() \n            let errorEvent = self.errorEvent\n\n            let eventToForwardImmediately = ranAtLeastOnce ? nil : self.queue.dequeue()?.event\n            let nextEventToScheduleOriginalTime: Date? = ranAtLeastOnce && !self.queue.isEmpty ? self.queue.peek().eventTime : nil\n\n            if errorEvent == nil {\n                if eventToForwardImmediately != nil {\n                }\n                else if nextEventToScheduleOriginalTime != nil {\n                    self.running = false\n                }\n                else {\n                    self.running = false\n                    self.active = false\n                }\n            }\n            self.lock.unlock() \n\n            if let errorEvent = errorEvent {\n                self.forwardOn(errorEvent)\n                self.dispose()\n                return\n            }\n            else {\n                if let eventToForwardImmediately = eventToForwardImmediately {\n                    ranAtLeastOnce = true\n                    self.forwardOn(eventToForwardImmediately)\n                    if case .completed = eventToForwardImmediately {\n                        self.dispose()\n                        return\n                    }\n                }\n                else if let nextEventToScheduleOriginalTime = nextEventToScheduleOriginalTime {\n                    scheduler.schedule((), dueTime: self.dueTime.reduceWithSpanBetween(earlierDate: nextEventToScheduleOriginalTime, laterDate: self.scheduler.now))\n                    return\n                }\n                else {\n                    return\n                }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 4265,
+              "start_position" : 1922
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "drainQueue",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "()"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 2300,
+                  "start_position" : 2289
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "state",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AnyRecursiveScheduler<()>"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 2336,
+                  "start_position" : 2300
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "scheduler",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if event.isStopEvent {\n            self.sourceSubscription.dispose()\n        }\n\n        switch event {\n        case .error:\n            self.lock.lock()    \n            let shouldSendImmediately = !self.running\n            self.queue = Queue(capacity: 0)\n            self.errorEvent = event\n            self.lock.unlock()  \n\n            if shouldSendImmediately {\n                self.forwardOn(event)\n                self.dispose()\n            }\n        default:\n            self.lock.lock()    \n            let shouldSchedule = !self.active\n            self.active = true\n            self.queue.enqueue((self.scheduler.now, event))\n            self.lock.unlock()  \n\n            if shouldSchedule {\n                self.cancelable.disposable = self.scheduler.scheduleRecursive((), dueTime: self.dueTime, action: self.drainQueue)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 5177,
+              "start_position" : 4265
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "on",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Event<Element>"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 4306,
+                  "start_position" : 4283
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.sourceSubscription.setDisposable(source.subscribe(self))\n        return Disposables.create(sourceSubscription, cancelable)"
+          },
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 5382,
+              "start_position" : 5177
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "run",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Observable<Element>"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 5223,
+                  "start_position" : 5196
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "source",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Disposable"
+            },
+            "description" : "-> Disposable"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1922,
+              "start_position" : 1688
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Observer"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 1723,
+                  "start_position" : 1703
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "observer",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "RxTimeInterval"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 1748,
+                  "start_position" : 1723
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dueTime",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "SchedulerType"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 1774,
+                  "start_position" : 1748
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "scheduler",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Cancelable"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                "location" : {
+                  "end_position" : 1792,
+                  "start_position" : 1774
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cancel",
+              "order" : 3
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+        "location" : {
+          "end_position" : 5384,
+          "start_position" : 917
+        }
+      },
+      "modifiers" : [
+        "final",
+        "private"
+      ],
+      "name" : "DelaySink",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "Observer.Element"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1056,
+              "start_position" : 1014
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Element"
+        },
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "Observable<Element>"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1099,
+              "start_position" : 1056
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "Source"
+        },
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "Bag<Disposable>.KeyType"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1150,
+              "start_position" : 1099
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "DisposeKey"
+        }
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "RecursiveLock",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                    "location" : {
+                      "end_position" : 1194,
+                      "start_position" : 1179
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1194,
+              "start_position" : 1172
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lock"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "RxTimeInterval"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1235,
+              "start_position" : 1212
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "dueTime"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SchedulerType"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1276,
+              "start_position" : 1252
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "scheduler"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "SingleAssignmentDisposable",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                    "location" : {
+                      "end_position" : 1347,
+                      "start_position" : 1319
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1347,
+              "start_position" : 1298
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sourceSubscription"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "SerialDisposable",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                    "location" : {
+                      "end_position" : 1395,
+                      "start_position" : 1377
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1395,
+              "start_position" : 1364
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "cancelable"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1459,
+              "start_position" : 1445
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "active"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1543,
+              "start_position" : 1528
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "running"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Event<Element>?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1587,
+              "start_position" : 1560
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "errorEvent"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "capacity",
+                      "value" : "0"
+                    }
+                  ],
+                  "call" : "Queue<(eventTime: RxTime, event: Event<Element>)>",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+                    "location" : {
+                      "end_position" : 1688,
+                      "start_position" : 1626
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Pods/RxSwift/RxSwift/Observables/Delay.swift",
+            "location" : {
+              "end_position" : 1688,
+              "start_position" : 1618
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "queue"
+        }
+      ]
+    },
+    "type" : "Add Confromed Type Refactoring"
+  },
+  "refactoringIndex" : 3760,
+  "refactoringType" : "Add Confromed Type Refactoring",
+  "repoID" : "shadowsocks-shadowsocksx-ng",
+  "repoName" : "shadowsocks/ShadowsocksX-NG",
+  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Pods/RxSwift/RxSwift/Observables/Delay.swift"
+  ]
+}

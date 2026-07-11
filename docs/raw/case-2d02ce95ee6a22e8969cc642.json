@@ -1,0 +1,97 @@
+{
+  "caseID" : "case-2d02ce95ee6a22e8969cc642",
+  "commitHash" : "7174b877a445ce78b291175b08cfdf3f7713d166",
+  "commitMessage" : "feat: improvements in the Remote module\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/7174b877a445ce78b291175b08cfdf3f7713d166",
+  "durationSeconds" : 3.142071008682251,
+  "entityNames" : [
+    "@escaping (Bool?) -> Void",
+    "completion",
+    "refreshTokenFunc"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+
+      ],
+      "call" : "lock",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/Remote.swift",
+        "location" : {
+          "end_position" : 20337,
+          "start_position" : 20305
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "self.refreshLock.lock()\n        self.refreshCompletions.append(completion)\n        if self.isRefreshing {\n            self.refreshLock.unlock()\n            return\n        }\n        self.isRefreshing = true\n        self.refreshLock.unlock()\n        \n        guard let url = URL(string: \"\\(Remote.authHost)/token\") else {\n            self.completeRefresh(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"grant_type\", \"refresh_token\"),\n            (\"refresh_token\", self.refreshToken)\n        ])\n        \n        self.session.dataTask(with: request) { [weak self] data, response, error in\n            guard let self else { return }\n            guard error == nil, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,\n                  let data = data, let token = try? JSONDecoder().decode(TokenResponse.self, from: data) else {\n                self.completeRefresh(nil)\n                return\n            }\n            self.accessToken = token.access_token\n            self.refreshToken = token.refresh_token\n            self.completeRefresh(true)\n        }.resume()"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Remote.swift",
+        "location" : {
+          "end_position" : 21655,
+          "start_position" : 20225
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "refreshTokenFunc",
+      "parameters" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping (Bool?) -> Void"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 20302,
+              "start_position" : 20265
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "completion",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 30,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Remote.swift"
+  ]
+}

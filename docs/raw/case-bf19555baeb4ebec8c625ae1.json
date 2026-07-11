@@ -1,0 +1,320 @@
+{
+  "caseID" : "case-bf19555baeb4ebec8c625ae1",
+  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds" : 16.732138991355896,
+  "entityNames" : [
+    "(ContainerConfiguration, Kernel, String?)",
+    "@escaping ProgressUpdateHandler",
+    "ContainerSystemConfig",
+    "Flags.ImageFetch",
+    "Flags.Management",
+    "Flags.Process",
+    "Flags.Registry",
+    "Flags.Resource"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "depth" : 1,
+      "description" : "for attachmentConfiguration in config.networks {\n                _ = try await networkClient.get(id: attachmentConfiguration.network)\n            }",
+      "index" : 3
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let requestedPlatform = try DefaultPlatform.resolveWithDefaults(\n            platform: management.platform,\n            os: management.os,\n            arch: management.arch,\n            log: log\n        )\n        let scheme = try RequestScheme(registry.scheme)\n\n        await progressUpdate([\n            .setDescription(\"Fetching image\"),\n            .setItemsName(\"blobs\"),\n        ])\n        let taskManager = ProgressTaskCoordinator()\n        let fetchTask = await taskManager.startTask()\n        let img = try await ClientImage.fetch(\n            reference: image,\n            platform: requestedPlatform,\n            scheme: scheme,\n            containerSystemConfig: containerSystemConfig,\n            progressUpdate: ProgressTaskCoordinator.handler(for: fetchTask, from: progressUpdate),\n            maxConcurrentDownloads: imageFetch.maxConcurrentDownloads\n        )\n\n        // Unpack a fetched image before use\n        await progressUpdate([\n            .setDescription(\"Unpacking image\"),\n            .setItemsName(\"entries\"),\n        ])\n        let unpackTask = await taskManager.startTask()\n        try await img.getCreateSnapshot(\n            platform: requestedPlatform,\n            progressUpdate: ProgressTaskCoordinator.handler(for: unpackTask, from: progressUpdate))\n\n        await progressUpdate([\n            .setDescription(\"Fetching kernel\"),\n            .setItemsName(\"binary\"),\n        ])\n\n        let kernel = try await self.getKernel(management: management)\n\n        // Pull and unpack the initial filesystem\n        await progressUpdate([\n            .setDescription(\"Fetching init image\"),\n            .setItemsName(\"blobs\"),\n        ])\n        let fetchInitTask = await taskManager.startTask()\n        let initImageRef = management.initImage ?? containerSystemConfig.vminit.image\n        let initImage = try await ClientImage.fetch(\n            reference: initImageRef, platform: .current, scheme: scheme,\n            containerSystemConfig: containerSystemConfig,\n            progressUpdate: ProgressTaskCoordinator.handler(for: fetchInitTask, from: progressUpdate),\n            maxConcurrentDownloads: imageFetch.maxConcurrentDownloads)\n\n        await progressUpdate([\n            .setDescription(\"Unpacking init image\"),\n            .setItemsName(\"entries\"),\n        ])\n        let unpackInitTask = await taskManager.startTask()\n        _ = try await initImage.getCreateSnapshot(\n            platform: .current,\n            progressUpdate: ProgressTaskCoordinator.handler(for: unpackInitTask, from: progressUpdate))\n\n        await taskManager.finish()\n\n        let imageConfig = try await img.config(for: requestedPlatform).config\n        let description = img.description\n        let pc = try Parser.process(\n            arguments: arguments,\n            processFlags: process,\n            managementFlags: management,\n            config: imageConfig\n        )\n\n        var config = ContainerConfiguration(id: id, image: description, process: pc)\n        config.platform = requestedPlatform\n\n        config.resources = try Parser.resources(\n            cpus: resource.cpus,\n            memory: resource.memory,\n            defaultCPUs: containerSystemConfig.container.cpus,\n            defaultMemory: containerSystemConfig.container.memory\n        )\n\n        let tmpfs = try Parser.tmpfsMounts(management.tmpFs)\n        let volumesOrFs = try Parser.volumes(management.volumes)\n        let mountsOrFs = try Parser.mounts(management.mounts)\n\n        var resolvedMounts: [Filesystem] = []\n        resolvedMounts.append(contentsOf: tmpfs)\n\n        // Resolve volumes and filesystems\n        for item in (volumesOrFs + mountsOrFs) {\n            switch item {\n            case .filesystem(let fs):\n                resolvedMounts.append(fs)\n            case .volume(let parsed):\n                let volume = try await getOrCreateVolume(parsed: parsed, log: log)\n                let volumeMount = Filesystem.volume(\n                    name: parsed.name,\n                    format: volume.format,\n                    source: volume.source,\n                    destination: parsed.destination,\n                    options: parsed.options\n                )\n                resolvedMounts.append(volumeMount)\n            }\n        }\n\n        config.mounts = resolvedMounts\n\n        if let shmSizeStr = management.shmSize {\n            let measurement = try Measurement.parse(parsing: shmSizeStr)\n            let bytes = measurement.converted(to: .bytes)\n            config.shmSize = UInt64(bytes.value)\n        }\n\n        config.virtualization = management.virtualization\n\n        // Parse network specifications with properties\n        let parsedNetworks = try management.networks.map { try Parser.network($0) }\n        if management.networks.contains(NetworkClient.noNetworkName) {\n            guard management.networks.count == 1 else {\n                throw ContainerizationError(.unsupported, message: \"no other networks may be created along with network \\(NetworkClient.noNetworkName)\")\n            }\n            config.networks = []\n        } else {\n            let networkClient = NetworkClient()\n            let builtinNetworkId = try await networkClient.builtin?.id\n            config.networks = try getAttachmentConfigurations(\n                containerId: config.id,\n                builtinNetworkId: builtinNetworkId,\n                networks: parsedNetworks,\n                dnsDomain: containerSystemConfig.dns.domain,\n            )\n            for attachmentConfiguration in config.networks {\n                _ = try await networkClient.get(id: attachmentConfiguration.network)\n            }\n        }\n\n        if management.dnsDisabled {\n            config.dns = nil\n        } else {\n            let domain = management.dns.domain ?? containerSystemConfig.dns.domain\n            config.dns = .init(\n                nameservers: management.dns.nameservers,\n                domain: domain,\n                searchDomains: management.dns.searchDomains,\n                options: management.dns.options\n            )\n        }\n\n        config.rosetta = management.rosetta || (Platform.current.architecture == \"arm64\" && requestedPlatform.architecture == \"amd64\")\n\n        if management.rosetta && Platform.current.architecture != \"arm64\" {\n            throw ContainerizationError(.unsupported, message: \"--rosetta flag requires an arm64 host\")\n        }\n\n        config.labels = try Parser.labels(management.labels)\n\n        config.publishedPorts = try Parser.publishPorts(management.publishPorts)\n        guard config.publishedPorts.count <= publishedPortCountLimit else {\n            throw ContainerizationError(.invalidArgument, message: \"cannot exceed more than \\(publishedPortCountLimit) port publish descriptors\")\n        }\n        guard !config.publishedPorts.hasOverlaps() else {\n            throw ContainerizationError(.invalidArgument, message: \"host ports for different publish port specs may not overlap\")\n        }\n\n        // Parse --publish-socket arguments and add to container configuration\n        // to enable socket forwarding from container to host.\n        config.publishedSockets = try Parser.publishSockets(management.publishSockets)\n\n        config.ssh = management.ssh\n        config.readOnly = management.readOnly\n        config.useInit = management.useInit\n\n        let caps = try Parser.capabilities(capAdd: management.capAdd, capDrop: management.capDrop)\n        config.capAdd = caps.capAdd\n        config.capDrop = caps.capDrop\n        config.stopSignal = imageConfig?.stopSignal\n\n        if let runtime = management.runtime {\n            config.runtimeHandler = runtime\n        }\n\n        return (config, kernel, management.initImage)"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+        "location" : {
+          "end_position" : 10716,
+          "start_position" : 2505
+        }
+      },
+      "modifiers" : [
+        "public",
+        "static"
+      ],
+      "name" : "containerConfigFromFlags",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2575,
+              "start_position" : 2555
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "id",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2598,
+              "start_position" : 2575
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "image",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2627,
+              "start_position" : 2598
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "arguments",
+          "order" : 2
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Flags.Process"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2659,
+              "start_position" : 2627
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "process",
+          "order" : 3
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Flags.Management"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2697,
+              "start_position" : 2659
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "management",
+          "order" : 4
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Flags.Resource"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2731,
+              "start_position" : 2697
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "resource",
+          "order" : 5
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Flags.Registry"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2765,
+              "start_position" : 2731
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "registry",
+          "order" : 6
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Flags.ImageFetch"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2803,
+              "start_position" : 2765
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "imageFetch",
+          "order" : 7
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ContainerSystemConfig"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2857,
+              "start_position" : 2803
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "containerSystemConfig",
+          "order" : 8
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "escaping" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "@escaping ProgressUpdateHandler"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2914,
+              "start_position" : 2857
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "progressUpdate",
+          "order" : 9
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Logger"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 2934,
+              "start_position" : 2914
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "log",
+          "order" : 10
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "(ContainerConfiguration, Kernel, String?)"
+        },
+        "description" : "-> (ContainerConfiguration, Kernel, String?)"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 92,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerAPIService/Client/Utility.swift"
+  ]
+}

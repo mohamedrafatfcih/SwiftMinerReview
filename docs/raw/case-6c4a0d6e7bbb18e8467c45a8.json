@@ -1,0 +1,3850 @@
+{
+  "caseID" : "case-6c4a0d6e7bbb18e8467c45a8",
+  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds" : 31.880328059196472,
+  "entityNames" : [
+    "(any Error)?",
+    "@escaping @Sendable (any EventMonitor) -> Void",
+    "AFError",
+    "AFError?",
+    "CachedURLResponse",
+    "CompositeEventMonitor",
+    "Data",
+    "Data?"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "label" : "label",
+                  "value" : "\"org.alamofire.compositeEventMonitor\""
+                }
+              ],
+              "call" : "DispatchQueue",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 18743,
+                  "start_position" : 18684
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Source/Features/EventMonitor.swift",
+        "location" : {
+          "end_position" : 18743,
+          "start_position" : 18676
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "queue"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "EventMonitor"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "queue.async {\n            self.monitors.read { monitors in\n                for monitor in monitors {\n                    monitor.queue.async { event(monitor) }\n                }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 19182,
+              "start_position" : 18884
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "performEvent",
+          "parameters" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "sendable" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping @Sendable (any EventMonitor) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 18963,
+                  "start_position" : 18908
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, didBecomeInvalidWithError: error) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 19370,
+              "start_position" : 19182
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19234,
+                  "start_position" : 19211
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any Error)?"
+              },
+              "is_variadic" : false,
+              "label" : "didBecomeInvalidWithError",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19279,
+                  "start_position" : 19234
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, task: task, didReceive: challenge) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 19638,
+              "start_position" : 19370
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19421,
+                  "start_position" : 19399
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19470,
+                  "start_position" : 19421
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLAuthenticationChallenge"
+              },
+              "is_variadic" : false,
+              "label" : "didReceive",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19546,
+                  "start_position" : 19470
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "challenge",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent {\n            $0.urlSession(session,\n                          task: task,\n                          didSendBodyData: bytesSent,\n                          totalBytesSent: totalBytesSent,\n                          totalBytesExpectedToSend: totalBytesExpectedToSend)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 20213,
+              "start_position" : 19638
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19689,
+                  "start_position" : 19667
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19738,
+                  "start_position" : 19689
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "label" : "didSendBodyData",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19799,
+                  "start_position" : 19738
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bytesSent",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19849,
+                  "start_position" : 19799
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesSent",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 19908,
+                  "start_position" : 19849
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesExpectedToSend",
+              "order" : 4
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent {\n            $0.urlSession(session, taskNeedsNewBodyStream: task)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 20415,
+              "start_position" : 20213
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20265,
+                  "start_position" : 20242
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "taskNeedsNewBodyStream",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20308,
+                  "start_position" : 20265
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent {\n            $0.urlSession(session,\n                          task: task,\n                          willPerformHTTPRedirection: response,\n                          newRequest: request)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 20880,
+              "start_position" : 20415
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20466,
+                  "start_position" : 20444
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20515,
+                  "start_position" : 20466
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "label" : "willPerformHTTPRedirection",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20596,
+                  "start_position" : 20515
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "newRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20654,
+                  "start_position" : 20596
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 3
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, task: task, didFinishCollecting: metrics) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 21103,
+              "start_position" : 20880
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20932,
+                  "start_position" : 20909
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 20954,
+                  "start_position" : 20932
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTaskMetrics"
+              },
+              "is_variadic" : false,
+              "label" : "didFinishCollecting",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21004,
+                  "start_position" : 20954
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "metrics",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, task: task, didCompleteWithError: error) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 21315,
+              "start_position" : 21103
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21155,
+                  "start_position" : 21132
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21177,
+                  "start_position" : 21155
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any Error)?"
+              },
+              "is_variadic" : false,
+              "label" : "didCompleteWithError",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21217,
+                  "start_position" : 21177
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "available" : {
+
+                }
+              },
+              "arguments" : [
+                {
+                  "label" : "macOS",
+                  "value" : "10.13"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "iOS",
+                  "value" : "11.0"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "tvOS",
+                  "value" : "11.0"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "label" : "watchOS",
+                  "value" : "4.0"
+                },
+                {
+                  "value" : ","
+                },
+                {
+                  "value" : "*"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, taskIsWaitingForConnectivity: task) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 21574,
+              "start_position" : 21315
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21432,
+                  "start_position" : 21409
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "taskIsWaitingForConnectivity",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21481,
+                  "start_position" : 21432
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, dataTask: dataTask, didReceive: response) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 21787,
+              "start_position" : 21574
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21626,
+                  "start_position" : 21603
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDataTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21656,
+                  "start_position" : 21626
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLResponse"
+              },
+              "is_variadic" : false,
+              "label" : "didReceive",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21688,
+                  "start_position" : 21656
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, dataTask: dataTask, didReceive: data) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 21985,
+              "start_position" : 21787
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21839,
+                  "start_position" : 21816
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDataTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21869,
+                  "start_position" : 21839
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "didReceive",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 21890,
+                  "start_position" : 21869
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, dataTask: dataTask, willCacheResponse: proposedResponse) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 22288,
+              "start_position" : 21985
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22036,
+                  "start_position" : 22014
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDataTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22093,
+                  "start_position" : 22036
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CachedURLResponse"
+              },
+              "is_variadic" : false,
+              "label" : "willCacheResponse",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22174,
+                  "start_position" : 22093
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "proposedResponse",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent {\n            $0.urlSession(session,\n                          downloadTask: downloadTask,\n                          didResumeAtOffset: fileOffset,\n                          expectedTotalBytes: expectedTotalBytes)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 22775,
+              "start_position" : 22288
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22339,
+                  "start_position" : 22317
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDownloadTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22404,
+                  "start_position" : 22339
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "downloadTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "label" : "didResumeAtOffset",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22468,
+                  "start_position" : 22404
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "fileOffset",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22521,
+                  "start_position" : 22468
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "expectedTotalBytes",
+              "order" : 3
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent {\n            $0.urlSession(session,\n                          downloadTask: downloadTask,\n                          didWriteData: bytesWritten,\n                          totalBytesWritten: totalBytesWritten,\n                          totalBytesExpectedToWrite: totalBytesExpectedToWrite)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 23394,
+              "start_position" : 22775
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22826,
+                  "start_position" : 22804
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDownloadTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22891,
+                  "start_position" : 22826
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "downloadTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "label" : "didWriteData",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 22952,
+                  "start_position" : 22891
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bytesWritten",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23005,
+                  "start_position" : 22952
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesWritten",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23065,
+                  "start_position" : 23005
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesExpectedToWrite",
+              "order" : 4
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.urlSession(session, downloadTask: downloadTask, didFinishDownloadingTo: location) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 23693,
+              "start_position" : 23394
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23445,
+                  "start_position" : 23423
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDownloadTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23510,
+                  "start_position" : 23445
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "downloadTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URL"
+              },
+              "is_variadic" : false,
+              "label" : "didFinishDownloadingTo",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23574,
+                  "start_position" : 23510
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "location",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didCreateInitialURLRequest: urlRequest) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 23882,
+              "start_position" : 23693
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23739,
+                  "start_position" : 23719
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateInitialURLRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23788,
+                  "start_position" : 23739
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didFailToCreateURLRequestWithError: error) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 24074,
+              "start_position" : 23882
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23928,
+                  "start_position" : 23908
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AFError"
+              },
+              "is_variadic" : false,
+              "label" : "didFailToCreateURLRequestWithError",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 23977,
+                  "start_position" : 23928
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didAdaptInitialRequest: initialRequest, to: adaptedRequest) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 24314,
+              "start_position" : 24074
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24120,
+                  "start_position" : 24100
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didAdaptInitialRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24171,
+                  "start_position" : 24120
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "initialRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "to",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24200,
+                  "start_position" : 24171
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adaptedRequest",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didFailToAdaptURLRequest: initialRequest, withError: error) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 24551,
+              "start_position" : 24314
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24360,
+                  "start_position" : 24340
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didFailToAdaptURLRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24413,
+                  "start_position" : 24360
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "initialRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AFError"
+              },
+              "is_variadic" : false,
+              "label" : "withError",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24437,
+                  "start_position" : 24413
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didCreateURLRequest: urlRequest) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 24726,
+              "start_position" : 24551
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24597,
+                  "start_position" : 24577
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateURLRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24639,
+                  "start_position" : 24597
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didCreateTask: task) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 24881,
+              "start_position" : 24726
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24772,
+                  "start_position" : 24752
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateTask",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24806,
+                  "start_position" : 24772
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didGatherMetrics: metrics) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 25055,
+              "start_position" : 24881
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24927,
+                  "start_position" : 24907
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTaskMetrics"
+              },
+              "is_variadic" : false,
+              "label" : "didGatherMetrics",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 24974,
+                  "start_position" : 24927
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "metrics",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didFailTask: task, earlyWithError: error) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 25260,
+              "start_position" : 25055
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25101,
+                  "start_position" : 25081
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didFailTask",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25135,
+                  "start_position" : 25101
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AFError"
+              },
+              "is_variadic" : false,
+              "label" : "earlyWithError",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25164,
+                  "start_position" : 25135
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didCompleteTask: task, with: error) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 25454,
+              "start_position" : 25260
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25306,
+                  "start_position" : 25286
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didCompleteTask",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25344,
+                  "start_position" : 25306
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "AFError?"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25364,
+                  "start_position" : 25344
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.requestIsRetrying(request) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 25572,
+              "start_position" : 25454
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "requestIsRetrying",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25508,
+                  "start_position" : 25490
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.requestDidFinish(request) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 25688,
+              "start_position" : 25572
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "requestDidFinish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25625,
+                  "start_position" : 25607
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.requestDidResume(request) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 25804,
+              "start_position" : 25688
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "requestDidResume",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25741,
+                  "start_position" : 25723
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didResumeTask: task) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 25959,
+              "start_position" : 25804
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25850,
+                  "start_position" : 25830
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didResumeTask",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 25884,
+                  "start_position" : 25850
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.requestDidSuspend(request) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 26077,
+              "start_position" : 25959
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "requestDidSuspend",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26013,
+                  "start_position" : 25995
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didSuspendTask: task) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 26234,
+              "start_position" : 26077
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26123,
+                  "start_position" : 26103
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didSuspendTask",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26158,
+                  "start_position" : 26123
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.requestDidCancel(request) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 26350,
+              "start_position" : 26234
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "requestDidCancel",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26287,
+                  "start_position" : 26269
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didCancelTask: task) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 26505,
+              "start_position" : 26350
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26396,
+                  "start_position" : 26376
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didCancelTask",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26430,
+                  "start_position" : 26396
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request,\n                                  didValidateRequest: urlRequest,\n                                  response: response,\n                                  data: data,\n                                  withResult: result)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 27060,
+              "start_position" : 26505
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26554,
+                  "start_position" : 26531
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URLRequest?"
+              },
+              "is_variadic" : false,
+              "label" : "didValidateRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26622,
+                  "start_position" : 26554
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26673,
+                  "start_position" : 26622
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Data?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26710,
+                  "start_position" : 26673
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request.ValidationResult"
+              },
+              "is_variadic" : false,
+              "label" : "withResult",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 26778,
+                  "start_position" : 26710
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 4
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didParseResponse: response) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 27247,
+              "start_position" : 27060
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27110,
+                  "start_position" : 27086
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataResponse<Data?, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27165,
+                  "start_position" : 27110
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didParseResponse: response) }"
+          },
+          "generic_clause" : "<Value>",
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 27441,
+              "start_position" : 27247
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27304,
+                  "start_position" : 27280
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataResponse<Value, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27359,
+                  "start_position" : 27304
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request,\n                                  didValidateRequest: urlRequest,\n                                  response: response,\n                                  withResult: result)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 27919,
+              "start_position" : 27441
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataStreamRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27496,
+                  "start_position" : 27467
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URLRequest?"
+              },
+              "is_variadic" : false,
+              "label" : "didValidateRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27564,
+                  "start_position" : 27496
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27615,
+                  "start_position" : 27564
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request.ValidationResult"
+              },
+              "is_variadic" : false,
+              "label" : "withResult",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27683,
+                  "start_position" : 27615
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 3
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didParseStream: result) }"
+          },
+          "generic_clause" : "<Value: Sendable>",
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 28115,
+              "start_position" : 27919
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataStreamRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 27992,
+                  "start_position" : 27962
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Result<Value, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseStream",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28037,
+                  "start_position" : 27992
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didCreateUploadable: uploadable) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 28310,
+              "start_position" : 28115
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28167,
+                  "start_position" : 28141
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest.Uploadable"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateUploadable",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28223,
+                  "start_position" : 28167
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "uploadable",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didFailToCreateUploadableWithError: error) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 28508,
+              "start_position" : 28310
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28362,
+                  "start_position" : 28336
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "AFError"
+              },
+              "is_variadic" : false,
+              "label" : "didFailToCreateUploadableWithError",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28411,
+                  "start_position" : 28362
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didProvideInputStream: stream) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 28686,
+              "start_position" : 28508
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28560,
+                  "start_position" : 28534
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "InputStream"
+              },
+              "is_variadic" : false,
+              "label" : "didProvideInputStream",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28601,
+                  "start_position" : 28560
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stream",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didFinishDownloadingUsing: task, with: result) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 28922,
+              "start_position" : 28686
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28740,
+                  "start_position" : 28712
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didFinishDownloadingUsing",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28788,
+                  "start_position" : 28740
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Result<URL, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28821,
+                  "start_position" : 28788
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didCreateDestinationURL: url) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 29092,
+              "start_position" : 28922
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 28976,
+                  "start_position" : 28948
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URL"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateDestinationURL",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29008,
+                  "start_position" : 28976
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "url",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request,\n                                  didValidateRequest: urlRequest,\n                                  response: response,\n                                  fileURL: fileURL,\n                                  withResult: result) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 29651,
+              "start_position" : 29092
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29145,
+                  "start_position" : 29118
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URLRequest?"
+              },
+              "is_variadic" : false,
+              "label" : "didValidateRequest",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29213,
+                  "start_position" : 29145
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29264,
+                  "start_position" : 29213
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URL?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29303,
+                  "start_position" : 29264
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "fileURL",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request.ValidationResult"
+              },
+              "is_variadic" : false,
+              "label" : "withResult",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29371,
+                  "start_position" : 29303
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 4
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didParseResponse: response) }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 29845,
+              "start_position" : 29651
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29705,
+                  "start_position" : 29677
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadResponse<URL?, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29763,
+                  "start_position" : 29705
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "performEvent { $0.request(request, didParseResponse: response) }"
+          },
+          "generic_clause" : "<Value: Sendable>",
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 30057,
+              "start_position" : 29845
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29916,
+                  "start_position" : 29888
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadResponse<Value, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 29975,
+                  "start_position" : 29916
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 18884,
+              "start_position" : 18792
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[any EventMonitor]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Features/EventMonitor.swift",
+                "location" : {
+                  "end_position" : 18831,
+                  "start_position" : 18803
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "monitors",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Features/EventMonitor.swift",
+        "location" : {
+          "end_position" : 30059,
+          "start_position" : 18496
+        }
+      },
+      "modifiers" : [
+        "public",
+        "final"
+      ],
+      "name" : "CompositeEventMonitor",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "label",
+                      "value" : "\"org.alamofire.compositeEventMonitor\""
+                    }
+                  ],
+                  "call" : "DispatchQueue",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Source/Features/EventMonitor.swift",
+                    "location" : {
+                      "end_position" : 18743,
+                      "start_position" : 18684
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 18743,
+              "start_position" : 18676
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "queue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Protected<[any EventMonitor]>"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Features/EventMonitor.swift",
+            "location" : {
+              "end_position" : 18792,
+              "start_position" : 18753
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "monitors"
+        }
+      ]
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 149,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Features/EventMonitor.swift"
+  ]
+}

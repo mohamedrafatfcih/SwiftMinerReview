@@ -1,0 +1,3061 @@
+{
+  "caseID" : "case-9158e122c74956fcef6dde0d",
+  "commitHash" : "027471f835a732eb34633bfdc0e2fec9f23b2cbb",
+  "commitMessage" : "feat: renamed Remote plugin to SystemStats\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/027471f835a732eb34633bfdc0e2fec9f23b2cbb",
+  "durationSeconds" : 10.490770936012268,
+  "entityNames" : [
+    "(() -> Void)?",
+    "((String, Data?) -> Void)?",
+    "Bool",
+    "Data",
+    "DispatchSourceTimer?",
+    "Error",
+    "Int",
+    "MQTTManager"
+  ],
+  "rawRefactoring" : {
+    "category" : "complex",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "NSObject"
+        }
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "self.session?.invalidateAndCancel()\n        self.session = nil"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Kit/plugins/SystemStats.swift",
+          "location" : {
+            "end_position" : 30801,
+            "start_position" : 30706
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.isConnected && !self.isConnecting else { return }\n        self.isConnecting = true\n        \n        SystemStats.shared.auth.isAuthorized { [weak self] status in\n            guard let self else { return }\n            \n            if status {\n                self.webSocket?.cancel(with: .normalClosure, reason: nil)\n                self.webSocket = self.session?.webSocketTask(with: SystemStats.brokerHost, protocols: [\"mqtt\"])\n                self.webSocket?.resume()\n                self.receiveMessage()\n                self.isDisconnected = false\n                debug(\"MQTT WebSocket connecting...\", log: self.log)\n            } else {\n                self.isConnecting = false\n                if SystemStats.shared.isAuthorized {\n                    SystemStats.shared.isAuthorized = false\n                    NotificationCenter.default.post(name: .remoteState, object: nil, userInfo: [\"auth\": false])\n                }\n                debug(\"Authorization failed, retrying connection...\", log: self.log)\n                self.reconnect()\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 31927,
+              "start_position" : 30801
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "connect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if self.webSocket == nil && !self.isConnected { return }\n        self.isDisconnected = true\n        self.isConnecting = false\n        \n        self.sendStatus(false)\n        self.sendDisconnect()\n        \n        self.webSocket?.cancel(with: .normalClosure, reason: nil)\n        self.webSocket = nil\n        self.isConnected = false\n        self.stopPingTimer()\n        debug(\"MQTT disconnected gracefully\", log: self.log)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 32400,
+              "start_position" : 31927
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "disconnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.isDisconnected && !self.isReconnecting else { return }\n        \n        self.isReconnecting = true\n        \n        let delays: [TimeInterval] = [1, 3, 5, 10, 20, 40]\n        let delayIndex = min(self.reconnectAttempts, delays.count - 1)\n        let delay = self.reconnectAttempts >= delays.count ? self.maxReconnectDelay : delays[delayIndex]\n        \n        debug(\"Waiting \\(delay) seconds before next MQTT reconnection attempt...\", log: self.log)\n        \n        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in\n            guard let self else { return }\n            \n            self.isReconnecting = false\n            \n            guard !self.isDisconnected && !self.isConnected else {\n                self.reconnectAttempts = 0\n                return\n            }\n            \n            self.reconnectAttempts += 1\n            debug(\"Attempting MQTT reconnection #\\(self.reconnectAttempts)\", log: self.log)\n            self.connect()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 33440,
+              "start_position" : 32400
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reconnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let status = value ? \"online\" : \"offline\"\n        let topic = \"stats/\\(SystemStats.shared.id.uuidString)/status\"\n        if let payload = status.data(using: .utf8) {\n            self.publish(topic: topic, data: payload)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 33733,
+              "start_position" : 33440
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "sendStatus",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 33486,
+                  "start_position" : 33473
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let connectPacket = createConnectPacket(username: SystemStats.shared.id.uuidString, password: SystemStats.shared.auth.accessToken)\n        self.webSocket?.send(.data(connectPacket)) { error in\n            if let error = error {\n                print(\"Error sending MQTT CONNECT: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 34099,
+              "start_position" : 33733
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sendConnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let disconnectPacket = Data([MQTTPacketType.disconnect.rawValue << 4, 0])\n        self.webSocket?.send(.data(disconnectPacket)) { _ in }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 34291,
+              "start_position" : 34099
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sendDisconnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let pingPacket = Data([MQTTPacketType.pingreq.rawValue << 4, 0])\n        self.webSocket?.send(.data(pingPacket)) { error in\n            if let error = error {\n                print(\"Error sending MQTT PINGREQ: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 34592,
+              "start_position" : 34291
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sendPingRequest",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let topic = \"stats/\\(SystemStats.shared.id.uuidString)/control-ack\"\n        if let payload = cmd.data(using: .utf8) {\n            self.publish(topic: topic, data: payload)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 34837,
+              "start_position" : 34592
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "controlAck",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 34638,
+                  "start_position" : 34625
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cmd",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.isConnected else { return }\n        \n        let publishPacket = createPublishPacket(topic: topic, payload: data, retain: retain)\n        self.webSocket?.send(.data(publishPacket)) { error in\n            if let error = error {\n                print(\"Error publishing MQTT message: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 35258,
+              "start_position" : 34837
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "publish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 34882,
+                  "start_position" : 34867
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 34894,
+                  "start_position" : 34882
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 34914,
+                  "start_position" : 34894
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retain",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.isConnected else { return }\n        \n        let subscribePacket = createSubscribePacket(topic: topic)\n        self.webSocket?.send(.data(subscribePacket)) { error in\n            if let error = error {\n                print(\"Error subscribing to MQTT topic: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 35628,
+              "start_position" : 35258
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "subscribe",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "to",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 35307,
+                  "start_position" : 35291
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var packet = Data()\n        \n        let fixedHeaderByte = MQTTPacketType.connect.rawValue << 4\n        \n        var variableHeader = Data()\n        variableHeader.append(contentsOf: encodeString(\"MQTT\"))\n        variableHeader.append(4)\n        \n        var connectFlags: UInt8 = 0x00\n        connectFlags |= 0x80\n        connectFlags |= 0x40\n        variableHeader.append(connectFlags)\n        variableHeader.append(contentsOf: [0x03, 0x84])\n        \n        var payload = Data()\n        payload.append(contentsOf: encodeString(\"stats-\\(username)\"))\n        payload.append(contentsOf: encodeString(username))\n        payload.append(contentsOf: encodeString(password))\n        \n        let remainingLength = variableHeader.count + payload.count\n        packet.append(fixedHeaderByte)\n        packet.append(contentsOf: encodeRemainingLength(remainingLength))\n        packet.append(variableHeader)\n        packet.append(payload)\n        \n        return packet"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 36689,
+              "start_position" : 35628
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createConnectPacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 35689,
+                  "start_position" : 35671
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "username",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 35705,
+                  "start_position" : 35689
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "password",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var packet = Data()\n        \n        let fixedHeaderByte = (MQTTPacketType.publish.rawValue << 4) | (retain ? 0x01 : 0x00)\n        \n        var variableHeader = Data()\n        variableHeader.append(contentsOf: encodeString(topic))\n        \n        let remainingLength = variableHeader.count + payload.count\n        \n        packet.append(fixedHeaderByte)\n        packet.append(contentsOf: encodeRemainingLength(remainingLength))\n        packet.append(variableHeader)\n        packet.append(payload)\n        \n        return packet"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 37336,
+              "start_position" : 36689
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createPublishPacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 36747,
+                  "start_position" : 36732
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 36762,
+                  "start_position" : 36747
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "payload",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 36782,
+                  "start_position" : 36762
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retain",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var packet = Data()\n        \n        let fixedHeaderByte = (MQTTPacketType.subscribe.rawValue << 4) | 0x02\n        \n        var variableHeader = Data()\n        \n        let packetId = self.getNextPacketId()\n        variableHeader.append(contentsOf: [UInt8(packetId >> 8), UInt8(packetId & 0xFF)])\n        \n        var payload = Data()\n        payload.append(contentsOf: encodeString(topic))\n        payload.append(0x00)\n        \n        let remainingLength = variableHeader.count + payload.count\n        \n        packet.append(fixedHeaderByte)\n        packet.append(contentsOf: encodeRemainingLength(remainingLength))\n        packet.append(variableHeader)\n        packet.append(payload)\n        \n        return packet"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 38137,
+              "start_position" : 37336
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createSubscribePacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 37394,
+                  "start_position" : 37381
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let data = string.data(using: .utf8) ?? Data()\n        let length = data.count\n        return [UInt8(length >> 8), UInt8(length & 0xFF)] + Array(data)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 38368,
+              "start_position" : 38137
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "encodeString",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 38189,
+                  "start_position" : 38173
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "string",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[UInt8]"
+            },
+            "description" : "-> [UInt8]"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var bytes: [UInt8] = []\n        var remainingLength = length\n        \n        repeat {\n            var byte = UInt8(remainingLength % 128)\n            remainingLength /= 128\n            if remainingLength > 0 {\n                byte |= 128\n            }\n            bytes.append(byte)\n        } while remainingLength > 0\n        \n        return bytes"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 38804,
+              "start_position" : 38368
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "encodeRemainingLength",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 38426,
+                  "start_position" : 38413
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "length",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[UInt8]"
+            },
+            "description" : "-> [UInt8]"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.packetIdentifier += 1\n        if self.packetIdentifier == 0 {\n            self.packetIdentifier = 1\n        }\n        return self.packetIdentifier"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 39022,
+              "start_position" : 38804
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getNextPacketId",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "UInt16"
+            },
+            "description" : "-> UInt16"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard data.count >= 2 else { return }\n        \n        let packetType = MQTTPacketType(rawValue: (data[0] >> 4) & 0x0F)\n        \n        switch packetType {\n        case .connack:\n            self.handleConnAck(data)\n        case .pingresp:\n            break\n        case .suback:\n            break\n        case .publish:\n            self.handlePublish(data)\n        default:\n            break\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 39495,
+              "start_position" : 39022
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handleMQTTPacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 39074,
+                  "start_position" : 39062
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard data.count >= 4 else { return }\n        \n        self.isConnecting = false\n        \n        let returnCode = data[3]\n        if returnCode == 0 {\n            self.isConnected = true\n            self.isReconnecting = false\n            self.reconnectAttempts = 0\n            self.startPingTimer()\n            self.subscribeToTopics()\n            self.sendStatus(true)\n            debug(\"MQTT connected successfully\", log: self.log)\n            self.registerCallback?()\n        } else {\n            debug(\"MQTT connection failed with code: \\(returnCode)\", log: self.log)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 40145,
+              "start_position" : 39495
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handleConnAck",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 39544,
+                  "start_position" : 39532
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.subscribe(to: \"stats/\\(SystemStats.shared.id.uuidString)/control/+\")\n        self.subscribe(to: \"stats/\\(SystemStats.shared.id.uuidString)/unregister\")"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 40360,
+              "start_position" : 40145
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "subscribeToTopics",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.webSocket?.receive { [weak self] result in\n            switch result {\n            case .failure(let error):\n                self?.isConnected = false\n                self?.isConnecting = false\n                self?.handleWebSocketError(error)\n            case .success(let message):\n                switch message {\n                case .data(let data):\n                    self?.handleMQTTPacket(data)\n                case .string:\n                    break\n                @unknown default:\n                    break\n                }\n                self?.receiveMessage()\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 41021,
+              "start_position" : 40360
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "receiveMessage",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.stopPingTimer()\n        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))\n        timer.schedule(deadline: .now() + 450, repeating: 450)\n        timer.setEventHandler { [weak self] in\n            self?.sendPingRequest()\n        }\n        timer.resume()\n        self.pingTimer = timer"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 41389,
+              "start_position" : 41021
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "startPingTimer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.pingTimer?.cancel()\n        self.pingTimer = nil"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 41497,
+              "start_position" : 41389
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stopPingTimer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if let urlError = error as? URLError, urlError.code.rawValue == 401 {\n            SystemStats.shared.start()\n        } else {\n            self.reconnect()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 41737,
+              "start_position" : 41497
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handleWebSocketError",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Error"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 41555,
+                  "start_position" : 41541
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var offset = 1\n        while offset < data.count && data[offset] & 0x80 != 0 { offset += 1 }\n        guard offset < data.count else { return }\n        offset += 1\n        \n        guard data.count > offset + 1 else { return }\n        let topicLength = Int(data[offset]) << 8 | Int(data[offset + 1])\n        offset += 2\n        \n        guard data.count >= offset + topicLength else { return }\n        let topicData = data.subdata(in: offset..<(offset + topicLength))\n        guard let topic = String(data: topicData, encoding: .utf8) else { return }\n        offset += topicLength\n        \n        let base = \"stats/\\(SystemStats.shared.id.uuidString)/\"\n        if topic == base + \"unregister\" {\n            self.publish(topic: topic, data: Data(), retain: true)\n            self.unregisterHandler?()\n            return\n        }\n        \n        let controlPrefix = base + \"control/\"\n        guard topic.hasPrefix(controlPrefix) else { return }\n        let commandName = String(topic.dropFirst(controlPrefix.count))\n        guard !commandName.isEmpty, !commandName.contains(\"/\") else { return }\n        let payload = data.subdata(in: offset..<data.count)\n        self.commandCallback?(commandName, payload)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 43010,
+              "start_position" : 41737
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handlePublish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 41786,
+                  "start_position" : 41774
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 30706,
+              "start_position" : 30112
+            }
+          },
+          "modifiers" : [
+            "override"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemStats.swift",
+        "location" : {
+          "end_position" : 43012,
+          "start_position" : 29378
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "MQTTManager",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(() -> Void)?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29462,
+              "start_position" : 29425
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "registerCallback"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "((String, Data?) -> Void)?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29527,
+              "start_position" : 29478
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "commandCallback"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(() -> Void)?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29581,
+              "start_position" : 29543
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "unregisterHandler"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionWebSocketTask?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29638,
+              "start_position" : 29603
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "webSocket"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSession?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29675,
+              "start_position" : 29655
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "session"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29711,
+              "start_position" : 29692
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isConnected"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29748,
+              "start_position" : 29728
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isConnecting"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29787,
+              "start_position" : 29765
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isDisconnected"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29826,
+              "start_position" : 29804
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isReconnecting"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29864,
+              "start_position" : 29843
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reconnectAttempts"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "TimeInterval"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "60.0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29919,
+              "start_position" : 29881
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "maxReconnectDelay"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "DispatchSourceTimer?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 29967,
+              "start_position" : 29936
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pingTimer"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Reachability"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "start",
+                      "value" : "true"
+                    }
+                  ],
+                  "call" : "Reachability",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 30038,
+                      "start_position" : 30013
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 30038,
+              "start_position" : 29984
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reachability"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NextLog"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 30067,
+              "start_position" : 30055
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "log"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "UInt16"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "1"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 30112,
+              "start_position" : 30084
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "packetIdentifier"
+        }
+      ]
+    },
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "NSObject"
+        }
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "self.session?.invalidateAndCancel()\n        self.session = nil"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Kit/plugins/Remote.swift",
+          "location" : {
+            "end_position" : 30493,
+            "start_position" : 30398
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.isConnected && !self.isConnecting else { return }\n        self.isConnecting = true\n        \n        Remote.shared.auth.isAuthorized { [weak self] status in\n            guard let self else { return }\n            \n            if status {\n                self.webSocket?.cancel(with: .normalClosure, reason: nil)\n                self.webSocket = self.session?.webSocketTask(with: Remote.brokerHost, protocols: [\"mqtt\"])\n                self.webSocket?.resume()\n                self.receiveMessage()\n                self.isDisconnected = false\n                debug(\"MQTT WebSocket connecting...\", log: self.log)\n            } else {\n                self.isConnecting = false\n                if Remote.shared.isAuthorized {\n                    Remote.shared.isAuthorized = false\n                    NotificationCenter.default.post(name: .remoteState, object: nil, userInfo: [\"auth\": false])\n                }\n                debug(\"Authorization failed, retrying connection...\", log: self.log)\n                self.reconnect()\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 31599,
+              "start_position" : 30493
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "connect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if self.webSocket == nil && !self.isConnected { return }\n        self.isDisconnected = true\n        self.isConnecting = false\n        \n        self.sendStatus(false)\n        self.sendDisconnect()\n        \n        self.webSocket?.cancel(with: .normalClosure, reason: nil)\n        self.webSocket = nil\n        self.isConnected = false\n        self.stopPingTimer()\n        debug(\"MQTT disconnected gracefully\", log: self.log)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 32072,
+              "start_position" : 31599
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "disconnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.isDisconnected && !self.isReconnecting else { return }\n        \n        self.isReconnecting = true\n        \n        let delays: [TimeInterval] = [1, 3, 5, 10, 20, 40]\n        let delayIndex = min(self.reconnectAttempts, delays.count - 1)\n        let delay = self.reconnectAttempts >= delays.count ? self.maxReconnectDelay : delays[delayIndex]\n        \n        debug(\"Waiting \\(delay) seconds before next MQTT reconnection attempt...\", log: self.log)\n        \n        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in\n            guard let self else { return }\n            \n            self.isReconnecting = false\n            \n            guard !self.isDisconnected && !self.isConnected else {\n                self.reconnectAttempts = 0\n                return\n            }\n            \n            self.reconnectAttempts += 1\n            debug(\"Attempting MQTT reconnection #\\(self.reconnectAttempts)\", log: self.log)\n            self.connect()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 33112,
+              "start_position" : 32072
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reconnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let status = value ? \"online\" : \"offline\"\n        let topic = \"stats/\\(Remote.shared.id.uuidString)/status\"\n        if let payload = status.data(using: .utf8) {\n            self.publish(topic: topic, data: payload)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 33400,
+              "start_position" : 33112
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "sendStatus",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 33158,
+                  "start_position" : 33145
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let connectPacket = createConnectPacket(username: Remote.shared.id.uuidString, password: Remote.shared.auth.accessToken)\n        self.webSocket?.send(.data(connectPacket)) { error in\n            if let error = error {\n                print(\"Error sending MQTT CONNECT: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 33756,
+              "start_position" : 33400
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sendConnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let disconnectPacket = Data([MQTTPacketType.disconnect.rawValue << 4, 0])\n        self.webSocket?.send(.data(disconnectPacket)) { _ in }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 33948,
+              "start_position" : 33756
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sendDisconnect",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let pingPacket = Data([MQTTPacketType.pingreq.rawValue << 4, 0])\n        self.webSocket?.send(.data(pingPacket)) { error in\n            if let error = error {\n                print(\"Error sending MQTT PINGREQ: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 34249,
+              "start_position" : 33948
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sendPingRequest",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let topic = \"stats/\\(Remote.shared.id.uuidString)/control-ack\"\n        if let payload = cmd.data(using: .utf8) {\n            self.publish(topic: topic, data: payload)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 34489,
+              "start_position" : 34249
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "controlAck",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 34295,
+                  "start_position" : 34282
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "cmd",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.isConnected else { return }\n        \n        let publishPacket = createPublishPacket(topic: topic, payload: data, retain: retain)\n        self.webSocket?.send(.data(publishPacket)) { error in\n            if let error = error {\n                print(\"Error publishing MQTT message: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 34910,
+              "start_position" : 34489
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "publish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 34534,
+                  "start_position" : 34519
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 34546,
+                  "start_position" : 34534
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 34566,
+                  "start_position" : 34546
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retain",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard self.isConnected else { return }\n        \n        let subscribePacket = createSubscribePacket(topic: topic)\n        self.webSocket?.send(.data(subscribePacket)) { error in\n            if let error = error {\n                print(\"Error subscribing to MQTT topic: \\(error)\")\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 35280,
+              "start_position" : 34910
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "subscribe",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "to",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 34959,
+                  "start_position" : 34943
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var packet = Data()\n        \n        let fixedHeaderByte = MQTTPacketType.connect.rawValue << 4\n        \n        var variableHeader = Data()\n        variableHeader.append(contentsOf: encodeString(\"MQTT\"))\n        variableHeader.append(4)\n        \n        var connectFlags: UInt8 = 0x00\n        connectFlags |= 0x80\n        connectFlags |= 0x40\n        variableHeader.append(connectFlags)\n        variableHeader.append(contentsOf: [0x03, 0x84])\n        \n        var payload = Data()\n        payload.append(contentsOf: encodeString(\"stats-\\(username)\"))\n        payload.append(contentsOf: encodeString(username))\n        payload.append(contentsOf: encodeString(password))\n        \n        let remainingLength = variableHeader.count + payload.count\n        packet.append(fixedHeaderByte)\n        packet.append(contentsOf: encodeRemainingLength(remainingLength))\n        packet.append(variableHeader)\n        packet.append(payload)\n        \n        return packet"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 36341,
+              "start_position" : 35280
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createConnectPacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 35341,
+                  "start_position" : 35323
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "username",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 35357,
+                  "start_position" : 35341
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "password",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var packet = Data()\n        \n        let fixedHeaderByte = (MQTTPacketType.publish.rawValue << 4) | (retain ? 0x01 : 0x00)\n        \n        var variableHeader = Data()\n        variableHeader.append(contentsOf: encodeString(topic))\n        \n        let remainingLength = variableHeader.count + payload.count\n        \n        packet.append(fixedHeaderByte)\n        packet.append(contentsOf: encodeRemainingLength(remainingLength))\n        packet.append(variableHeader)\n        packet.append(payload)\n        \n        return packet"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 36988,
+              "start_position" : 36341
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createPublishPacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 36399,
+                  "start_position" : 36384
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 36414,
+                  "start_position" : 36399
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "payload",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 36434,
+                  "start_position" : 36414
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "retain",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var packet = Data()\n        \n        let fixedHeaderByte = (MQTTPacketType.subscribe.rawValue << 4) | 0x02\n        \n        var variableHeader = Data()\n        \n        let packetId = self.getNextPacketId()\n        variableHeader.append(contentsOf: [UInt8(packetId >> 8), UInt8(packetId & 0xFF)])\n        \n        var payload = Data()\n        payload.append(contentsOf: encodeString(topic))\n        payload.append(0x00)\n        \n        let remainingLength = variableHeader.count + payload.count\n        \n        packet.append(fixedHeaderByte)\n        packet.append(contentsOf: encodeRemainingLength(remainingLength))\n        packet.append(variableHeader)\n        packet.append(payload)\n        \n        return packet"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 37789,
+              "start_position" : 36988
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createSubscribePacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 37046,
+                  "start_position" : 37033
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "topic",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Data"
+            },
+            "description" : "-> Data"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let data = string.data(using: .utf8) ?? Data()\n        let length = data.count\n        return [UInt8(length >> 8), UInt8(length & 0xFF)] + Array(data)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 38020,
+              "start_position" : 37789
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "encodeString",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 37841,
+                  "start_position" : 37825
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "string",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[UInt8]"
+            },
+            "description" : "-> [UInt8]"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var bytes: [UInt8] = []\n        var remainingLength = length\n        \n        repeat {\n            var byte = UInt8(remainingLength % 128)\n            remainingLength /= 128\n            if remainingLength > 0 {\n                byte |= 128\n            }\n            bytes.append(byte)\n        } while remainingLength > 0\n        \n        return bytes"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 38456,
+              "start_position" : 38020
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "encodeRemainingLength",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 38078,
+                  "start_position" : 38065
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "length",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[UInt8]"
+            },
+            "description" : "-> [UInt8]"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.packetIdentifier += 1\n        if self.packetIdentifier == 0 {\n            self.packetIdentifier = 1\n        }\n        return self.packetIdentifier"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 38674,
+              "start_position" : 38456
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getNextPacketId",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "UInt16"
+            },
+            "description" : "-> UInt16"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard data.count >= 2 else { return }\n        \n        let packetType = MQTTPacketType(rawValue: (data[0] >> 4) & 0x0F)\n        \n        switch packetType {\n        case .connack:\n            self.handleConnAck(data)\n        case .pingresp:\n            break\n        case .suback:\n            break\n        case .publish:\n            self.handlePublish(data)\n        default:\n            break\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 39147,
+              "start_position" : 38674
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handleMQTTPacket",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 38726,
+                  "start_position" : 38714
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard data.count >= 4 else { return }\n        \n        self.isConnecting = false\n        \n        let returnCode = data[3]\n        if returnCode == 0 {\n            self.isConnected = true\n            self.isReconnecting = false\n            self.reconnectAttempts = 0\n            self.startPingTimer()\n            self.subscribeToTopics()\n            self.sendStatus(true)\n            debug(\"MQTT connected successfully\", log: self.log)\n            self.registerCallback?()\n        } else {\n            debug(\"MQTT connection failed with code: \\(returnCode)\", log: self.log)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 39797,
+              "start_position" : 39147
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handleConnAck",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 39196,
+                  "start_position" : 39184
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.subscribe(to: \"stats/\\(Remote.shared.id.uuidString)/control/+\")\n        self.subscribe(to: \"stats/\\(Remote.shared.id.uuidString)/unregister\")"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 40002,
+              "start_position" : 39797
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "subscribeToTopics",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.webSocket?.receive { [weak self] result in\n            switch result {\n            case .failure(let error):\n                self?.isConnected = false\n                self?.isConnecting = false\n                self?.handleWebSocketError(error)\n            case .success(let message):\n                switch message {\n                case .data(let data):\n                    self?.handleMQTTPacket(data)\n                case .string:\n                    break\n                @unknown default:\n                    break\n                }\n                self?.receiveMessage()\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 40663,
+              "start_position" : 40002
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "receiveMessage",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.stopPingTimer()\n        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))\n        timer.schedule(deadline: .now() + 450, repeating: 450)\n        timer.setEventHandler { [weak self] in\n            self?.sendPingRequest()\n        }\n        timer.resume()\n        self.pingTimer = timer"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 41031,
+              "start_position" : 40663
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "startPingTimer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.pingTimer?.cancel()\n        self.pingTimer = nil"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 41139,
+              "start_position" : 41031
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stopPingTimer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if let urlError = error as? URLError, urlError.code.rawValue == 401 {\n            Remote.shared.start()\n        } else {\n            self.reconnect()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 41374,
+              "start_position" : 41139
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handleWebSocketError",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Error"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 41197,
+                  "start_position" : 41183
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var offset = 1\n        while offset < data.count && data[offset] & 0x80 != 0 { offset += 1 }\n        guard offset < data.count else { return }\n        offset += 1\n        \n        guard data.count > offset + 1 else { return }\n        let topicLength = Int(data[offset]) << 8 | Int(data[offset + 1])\n        offset += 2\n        \n        guard data.count >= offset + topicLength else { return }\n        let topicData = data.subdata(in: offset..<(offset + topicLength))\n        guard let topic = String(data: topicData, encoding: .utf8) else { return }\n        offset += topicLength\n        \n        let base = \"stats/\\(Remote.shared.id.uuidString)/\"\n        if topic == base + \"unregister\" {\n            self.publish(topic: topic, data: Data(), retain: true)\n            self.unregisterHandler?()\n            return\n        }\n        \n        let controlPrefix = base + \"control/\"\n        guard topic.hasPrefix(controlPrefix) else { return }\n        let commandName = String(topic.dropFirst(controlPrefix.count))\n        guard !commandName.isEmpty, !commandName.contains(\"/\") else { return }\n        let payload = data.subdata(in: offset..<data.count)\n        self.commandCallback?(commandName, payload)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 42642,
+              "start_position" : 41374
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "handlePublish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 41423,
+                  "start_position" : 41411
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 30398,
+              "start_position" : 29809
+            }
+          },
+          "modifiers" : [
+            "override"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/Remote.swift",
+        "location" : {
+          "end_position" : 42644,
+          "start_position" : 29075
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "MQTTManager",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(() -> Void)?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29159,
+              "start_position" : 29122
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "registerCallback"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "((String, Data?) -> Void)?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29224,
+              "start_position" : 29175
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "commandCallback"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "(() -> Void)?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29278,
+              "start_position" : 29240
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "unregisterHandler"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionWebSocketTask?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29335,
+              "start_position" : 29300
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "webSocket"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSession?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29372,
+              "start_position" : 29352
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "session"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29408,
+              "start_position" : 29389
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isConnected"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29445,
+              "start_position" : 29425
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isConnecting"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29484,
+              "start_position" : 29462
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isDisconnected"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29523,
+              "start_position" : 29501
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "isReconnecting"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29561,
+              "start_position" : 29540
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reconnectAttempts"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "TimeInterval"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "60.0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29616,
+              "start_position" : 29578
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "maxReconnectDelay"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "DispatchSourceTimer?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29664,
+              "start_position" : 29633
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pingTimer"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Reachability"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "start",
+                      "value" : "true"
+                    }
+                  ],
+                  "call" : "Reachability",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Remote.swift",
+                    "location" : {
+                      "end_position" : 29735,
+                      "start_position" : 29710
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29735,
+              "start_position" : 29681
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reachability"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NextLog"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29764,
+              "start_position" : 29752
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "log"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "UInt16"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "1"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 29809,
+              "start_position" : 29781
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "packetIdentifier"
+        }
+      ]
+    },
+    "type" : "Move Class Refactoring"
+  },
+  "refactoringIndex" : 0,
+  "refactoringType" : "Move Class Refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Remote.swift",
+    "Kit/plugins/SystemStats.swift"
+  ]
+}

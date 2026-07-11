@@ -1,0 +1,64 @@
+{
+  "caseID" : "case-5a9587c3a9ce48276ef90cde",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "testThatAppropriateNotificationsAreCalledWithRequestForDataRequest"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "annotation" : {
+        "unsupported" : {
+          "_0" : "MainActor"
+        }
+      },
+      "arguments" : [
+
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let session = Session(startRequestsImmediately: false)\n        let resumedRequest = Protected<Request?>(nil)\n        let resumedTaskRequest = Protected<Request?>(nil)\n        let completedTaskRequest = Protected<Request?>(nil)\n        let completedRequest = Protected<Request?>(nil)\n        var requestResponse: DataResponse<Data?, AFError>?\n        let expect = expectation(description: \"request should complete\")\n\n        // When\n        let request = session.request(.default).response { response in\n            requestResponse = response\n            expect.fulfill()\n        }\n        expectation(forNotification: Request.didResumeNotification, object: nil) { notification in\n            guard let receivedRequest = notification.request, receivedRequest == request else { return false }\n\n            resumedRequest.write(notification.request)\n            return true\n        }\n        expectation(forNotification: Request.didResumeTaskNotification, object: nil) { notification in\n            guard let receivedRequest = notification.request, receivedRequest == request else { return false }\n\n            resumedTaskRequest.write(notification.request)\n            return true\n        }\n        expectation(forNotification: Request.didCompleteTaskNotification, object: nil) { notification in\n            guard let receivedRequest = notification.request, receivedRequest == request else { return false }\n\n            completedTaskRequest.write(notification.request)\n            return true\n        }\n        expectation(forNotification: Request.didFinishNotification, object: nil) { notification in\n            guard let receivedRequest = notification.request, receivedRequest == request else { return false }\n\n            completedRequest.write(notification.request)\n            return true\n        }\n\n        request.resume()\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(resumedRequest)\n        XCTAssertNotNil(resumedTaskRequest)\n        XCTAssertNotNil(completedTaskRequest)\n        XCTAssertNotNil(completedRequest)\n        XCTAssertEqual(resumedRequest, completedRequest)\n        XCTAssertEqual(resumedTaskRequest, completedTaskRequest)\n        XCTAssertEqual(requestResponse?.response?.statusCode, 200)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/SessionDelegateTests.swift",
+        "location" : {
+          "end_position" : 6428,
+          "start_position" : 4010
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatAppropriateNotificationsAreCalledWithRequestForDataRequest",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add attribute refactoring"
+  },
+  "refactoringIndex" : 810,
+  "refactoringType" : "Add attribute refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/SessionDelegateTests.swift"
+  ]
+}

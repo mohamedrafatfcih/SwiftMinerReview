@@ -1,0 +1,868 @@
+{
+  "caseID" : "case-eec1e5a0a242c8d550e56ea5",
+  "commitHash" : "49e78b1ab36b979363de8f2c6b9563f959d87787",
+  "commitMessage" : "vm(qemu): check Vulkan compability\n",
+  "commitURL" : "https://github.com/utmapp/UTM/commit/49e78b1ab36b979363de8f2c6b9563f959d87787",
+  "durationSeconds" : 5.814613938331604,
+  "entityNames" : [
+    "Error?",
+    "String",
+    "String?",
+    "UTMQEMURendererBackend",
+    "UTMQEMUVulkanDriver",
+    "UTMQemuVirtualMachine",
+    "UTMVirtualMachineStartOptions",
+    "UTMVirtualMachineStopMethod"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "expression" : {
+        "other" : {
+          "_0" : "UTMQemuVirtualMachineError.vulkanNotCompatible"
+        }
+      },
+      "location_info" : {
+        "file_path" : "Services/UTMQemuVirtualMachine.swift",
+        "location" : {
+          "end_position" : 7791,
+          "start_position" : 7718
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "UTMQemuVirtualMachine"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "guard let efiVarsURL = config.qemu.efiVarsURL else {\n            return\n        }\n        if !FileManager.default.fileExists(atPath: efiVarsURL.path) {\n            config.qemu.isUefiVariableResetRequested = true\n            config.qemu.hasPreloadedSecureBootKeys = config.qemu.hasTPMDevice\n            _ = try await config.qemu.saveData(to: efiVarsURL.deletingLastPathComponent(), for: config.system)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 8363,
+              "start_position" : 7865
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "qemuEnsureEfiVarsAvailable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if isRunningAsDisposible {\n            return UTMQemuVirtualMachineError.qemuError(NSLocalizedString(\"Suspend state cannot be saved when running in disposible mode.\", comment: \"UTMQemuVirtualMachine\"))\n        }\n        #if arch(x86_64)\n        let hasHypervisor = await config.qemu.hasHypervisor\n        let architecture = await config.system.architecture\n        if hasHypervisor && architecture == .x86_64 {\n            return UTMQemuVirtualMachineError.qemuError(NSLocalizedString(\"Suspend is not supported for virtualization.\", comment: \"UTMQemuVirtualMachine\"))\n        }\n        #endif\n        for display in await config.displays {\n            if display.hardware.rawValue.contains(\"-gl-\") || display.hardware.rawValue.hasSuffix(\"-gl\") {\n                return UTMQemuVirtualMachineError.qemuError(NSLocalizedString(\"Suspend is not supported when GPU acceleration is enabled.\", comment: \"UTMQemuVirtualMachine\"))\n            }\n        }\n        for drive in await config.drives {\n            if drive.interface == .nvme {\n                return UTMQemuVirtualMachineError.qemuError(NSLocalizedString(\"Suspend is not supported when an emulated NVMe device is active.\", comment: \"UTMQemuVirtualMachine\"))\n            }\n        }\n        return nil"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 9731,
+              "start_position" : 8363
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "determineSnapshotSupport",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "Error?"
+            },
+            "description" : "-> Error?"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard await isSupported else {\n            throw UTMQemuVirtualMachineError.emulationNotSupported\n        }\n\n        // create QEMU resource cache if needed\n        try await ensureQemuResourceCacheUpToDate()\n\n        let hasDebugLog = await config.qemu.hasDebugLog\n        // start logging\n        if hasDebugLog, let debugLogURL = await config.qemu.debugLogURL {\n            await qemuVM.setRedirectLog(url: debugLogURL)\n        } else {\n            await qemuVM.setRedirectLog(url: nil)\n        }\n        let isRunningAsDisposible = options.contains(.bootDisposibleMode)\n        let isRemoteSession = options.contains(.remoteSession)\n        #if WITH_SERVER\n        let spicePassword = isRemoteSession ? String.random(length: 32) : nil\n        let spicePort = isRemoteSession ? try SwiftPortmap.Port.TCP(unusedPortStartingAt: UInt16(serverPort)) : nil\n        #else\n        if isRemoteSession {\n            throw UTMVirtualMachineError.notImplemented\n        }\n        #endif\n        await MainActor.run {\n            config.qemu.isDisposable = isRunningAsDisposible\n            #if WITH_SERVER\n            config.qemu.spiceServerPort = spicePort?.internalPort\n            config.qemu.spiceServerPassword = spicePassword\n            config.qemu.isSpiceServerTlsEnabled = true\n            #endif\n        }\n\n        // start TPM\n        if await config.qemu.hasTPMDevice {\n            let swtpm = UTMSWTPM()\n            swtpm.ctrlSocketUrl = await config.swtpmSocketURL\n            swtpm.dataUrl = await config.qemu.tpmDataURL\n            swtpm.currentDirectoryUrl = await config.socketURL\n            try await swtpm.start()\n            self.swtpm = swtpm\n        }\n\n        let allArguments = await config.allArguments\n        let arguments = allArguments.map({ $0.string })\n        let resources = allArguments.compactMap({ $0.fileUrls }).flatMap({ $0 })\n        let remoteBookmarks = await remoteBookmarks\n\n        let system = await UTMQemuSystem(arguments: arguments, architecture: config.system.architecture.rawValue)\n        system.resources = resources\n        system.currentDirectoryUrl = await config.socketURL\n        system.remoteBookmarks = remoteBookmarks\n        system.rendererBackend = rendererBackend\n        system.vulkanDriver = try vulkanDriver\n        system.shmemDirectoryURL = await config.shmemDirectoryURL\n        #if os(macOS) // FIXME: verbose logging is broken on iOS\n        system.hasDebugLog = hasDebugLog\n        #endif\n        try Task.checkCancellation()\n\n        if isShortcut {\n            try await accessShortcut()\n            try Task.checkCancellation()\n        }\n\n        var options = UTMSpiceIOOptions()\n        if await !config.sound.isEmpty {\n            options.insert(.hasAudio)\n        }\n        if await config.sharing.hasClipboardSharing {\n            options.insert(.hasClipboardSharing)\n        }\n        if await config.sharing.isDirectoryShareReadOnly {\n            options.insert(.isShareReadOnly)\n        }\n        #if os(macOS) // FIXME: verbose logging is broken on iOS\n        if hasDebugLog {\n            options.insert(.hasDebugLog)\n        }\n        #endif\n        let spiceSocketUrl = await config.spiceSocketURL\n        let interface: any QEMUInterface\n        let spicePublicKey: Data?\n        if isRemoteSession {\n            let pipeInterface = UTMPipeInterface()\n            await MainActor.run {\n                pipeInterface.monitorInPipeURL = config.monitorPipeURL.appendingPathExtension(\"in\")\n                pipeInterface.monitorOutPipeURL = config.monitorPipeURL.appendingPathExtension(\"out\")\n                pipeInterface.guestAgentInPipeURL = config.guestAgentPipeURL.appendingPathExtension(\"in\")\n                pipeInterface.guestAgentOutPipeURL = config.guestAgentPipeURL.appendingPathExtension(\"out\")\n            }\n            try pipeInterface.start()\n            interface = pipeInterface\n            // generate a TLS key for this session\n            guard let key = GenerateRSACertificate(\"UTM Remote SPICE Server\" as CFString,\n                                                   \"UTM\" as CFString,\n                                                   Int.random(in: 1..<CLong.max) as CFNumber,\n                                                   1 as CFNumber,\n                                                   false as CFBoolean)?.takeUnretainedValue() as? [Data] else {\n                throw UTMQemuVirtualMachineError.keyGenerationFailed\n            }\n            try await key[1].write(to: config.spiceTlsKeyUrl)\n            try await key[2].write(to: config.spiceTlsCertUrl)\n            spicePublicKey = key[3]\n        } else {\n            let ioService = UTMSpiceIO(socketUrl: spiceSocketUrl, options: options)\n            ioService.logHandler = { [weak system] (line: String) -> Void in\n                guard !line.contains(\"spice_make_scancode\") else {\n                    return // do not log key presses for privacy reasons\n                }\n                system?.logging?.writeLine(line)\n            }\n            try ioService.start()\n            interface = ioService\n            spicePublicKey = nil\n        }\n        try Task.checkCancellation()\n        \n        // create EFI variables for legacy config as well as handle UEFI resets\n        try await qemuEnsureEfiVarsAvailable()\n        try Task.checkCancellation()\n        \n        // start QEMU\n        await qemuVM.setDelegate(self)\n        try await qemuVM.start(launcher: system, interface: interface)\n        let monitor = await monitor!\n        try Task.checkCancellation()\n        \n        // load saved state if requested\n        let isSuspended = await registryEntry.isSuspended\n        if !isRunningAsDisposible && isSuspended {\n            try await monitor.qemuRestoreSnapshot(kSuspendSnapshotName)\n            try Task.checkCancellation()\n        }\n        \n        // set up SPICE sharing and removable drives\n        try await self.restoreExternalDrives(withMounting: !isSuspended)\n        if let ioService = interface as? UTMSpiceIO {\n            try await self.restoreSharedDirectory(for: ioService)\n        } else {\n            // TODO: implement shared directory in remote interface\n        }\n        try Task.checkCancellation()\n        \n        // continue VM boot\n        try await monitor.continueBoot()\n        \n        // delete saved state\n        if isSuspended {\n            try? await deleteSnapshot()\n        }\n        \n        // save ioService and let it set the delegate\n        self.ioService = interface as? UTMSpiceIO\n        self.pipeInterface = interface as? UTMPipeInterface\n        self.isRunningAsDisposible = isRunningAsDisposible\n        \n        // test out snapshots\n        self.snapshotUnsupportedError = await determineSnapshotSupport()\n\n        #if WITH_SERVER\n        // save server details\n        if let spicePort = spicePort, let spicePublicKey = spicePublicKey, let spicePassword = spicePassword {\n            self.spiceServerInfo = .init(spicePortInternal: spicePort.internalPort,\n                                         spicePortExternal: try? await spicePort.externalPort,\n                                         spiceHostExternal: try? await spicePort.externalIpv4Address,\n                                         spicePublicKey: spicePublicKey,\n                                         spicePassword: spicePassword)\n            self.spicePort = spicePort\n        }\n        #endif\n\n        // update timestamp\n        if !isRunningAsDisposible {\n            try? updateLastModified()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 17389,
+              "start_position" : 9731
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_start",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UTMVirtualMachineStartOptions"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 9799,
+                  "start_position" : 9761
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "options",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard state == .stopped else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        state = .starting\n        do {\n            startTask = Task {\n                try await _start(options: options)\n            }\n            defer {\n                startTask = nil\n            }\n            try await startTask!.value\n            state = .started\n            if screenshotTimer == nil && !options.contains(.remoteSession) {\n                screenshotTimer = startScreenshotTimer()\n            }\n        } catch {\n            // delete suspend state on error\n            await registryEntry.setIsSuspended(false)\n            await qemuVM.kill()\n            state = .stopped\n            throw error\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 18213,
+              "start_position" : 17389
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "start",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UTMVirtualMachineStartOptions"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 17453,
+                  "start_position" : 17410
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "options",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if method == .request {\n            guard let monitor = await monitor else {\n                throw UTMQemuVirtualMachineError.invalidVmState\n            }\n            try await monitor.qemuPowerDown()\n            return\n        }\n        let kill = method == .kill\n        if kill {\n            // prevent deadlock force stopping during startup\n            ioService?.disconnect()\n        }\n        guard state != .stopped else {\n            return // nothing to do\n        }\n        guard kill || state == .started || state == .paused else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        if !kill {\n            state = .stopping\n        }\n        if kill {\n            await qemuVM.kill()\n        } else {\n            try await qemuVM.stop()\n        }\n        isRunningAsDisposible = false"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 19133,
+              "start_position" : 18213
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "stop",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UTMVirtualMachineStopMethod"
+              },
+              "is_variadic" : false,
+              "label" : "usingMethod",
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 18280,
+                  "start_position" : 18233
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "method",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if await registryEntry.isSuspended {\n            try? await deleteSnapshot()\n        }\n        guard let monitor = await qemuVM.monitor else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        try await monitor.qemuReset()"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 19446,
+              "start_position" : 19133
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_restart",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard state == .started || state == .paused else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        state = .stopping\n        do {\n            try await _restart()\n            state = .started\n        } catch {\n            state = .stopped\n            throw error\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 19802,
+              "start_position" : 19446
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "restart",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let monitor = await monitor else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        if isScreenshotEnabled {\n            await takeScreenshot()\n        }\n        try await monitor.qemuStop()"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 20088,
+              "start_position" : 19802
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_pause",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard state == .started else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        state = .pausing\n        do {\n            try await _pause()\n            state = .paused\n        } catch {\n            state = .stopped\n            throw error\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 20418,
+              "start_position" : 20088
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "pause",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let monitor = await monitor else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        let result = try await monitor.qemuSaveSnapshot(name)\n        if result.localizedCaseInsensitiveContains(\"Error\") {\n            throw UTMQemuVirtualMachineError.qemuError(result)\n        }\n        try? updateLastModified()"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 20839,
+              "start_position" : 20418
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_saveSnapshot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 20467,
+                  "start_position" : 20455
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard state == .paused || state == .started else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        if let snapshotUnsupportedError = snapshotUnsupportedError {\n            throw UTMQemuVirtualMachineError.saveSnapshotFailed(snapshotUnsupportedError)\n        }\n        let prev = state\n        state = .saving\n        defer {\n            state = prev\n        }\n        do {\n            try await _saveSnapshot(name: name ?? kSuspendSnapshotName)\n            if name == nil {\n                await registryEntry.setIsSuspended(true)\n                try saveScreenshot()\n            }\n        } catch {\n            throw UTMQemuVirtualMachineError.saveSnapshotFailed(error)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 21627,
+              "start_position" : 20839
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "saveSnapshot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 20886,
+                  "start_position" : 20867
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if let monitor = await monitor { // if QEMU is running\n            let result = try await monitor.qemuDeleteSnapshot(name)\n            if result.localizedCaseInsensitiveContains(\"Error\") {\n                throw UTMQemuVirtualMachineError.qemuError(result)\n            }\n            try? updateLastModified()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 22026,
+              "start_position" : 21627
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_deleteSnapshot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 21678,
+                  "start_position" : 21666
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if name == nil {\n            await registryEntry.setIsSuspended(false)\n        }\n        try await _deleteSnapshot(name: name ?? kSuspendSnapshotName)"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 22256,
+              "start_position" : 22026
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "deleteSnapshot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 22075,
+                  "start_position" : 22056
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let monitor = await monitor else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        try await monitor.qemuResume()\n        if await registryEntry.isSuspended {\n            try? await deleteSnapshot()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 22562,
+              "start_position" : 22256
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_resume",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard state == .paused else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        state = .resuming\n        do {\n            try await _resume()\n            state = .started\n        } catch {\n            state = .stopped\n            throw error\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 22895,
+              "start_position" : 22562
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "resume",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let monitor = await monitor else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        let result = try await monitor.qemuRestoreSnapshot(name)\n        if result.localizedCaseInsensitiveContains(\"Error\") {\n            throw UTMQemuVirtualMachineError.qemuError(result)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 23288,
+              "start_position" : 22895
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_restoreSnapshot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 22947,
+                  "start_position" : 22935
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard state == .paused || state == .started else {\n            throw UTMQemuVirtualMachineError.invalidVmState\n        }\n        let prev = state\n        state = .restoring\n        do {\n            try await _restoreSnapshot(name: name ?? kSuspendSnapshotName)\n            state = prev\n        } catch {\n            state = .stopped\n            throw error\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 23735,
+              "start_position" : 23288
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "restoreSnapshot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Services/UTMQemuVirtualMachine.swift",
+                "location" : {
+                  "end_position" : 23338,
+                  "start_position" : 23319
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "startTask?.cancel()"
+          },
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 23912,
+              "start_position" : 23735
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "cancelOperation",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Services/UTMQemuVirtualMachine.swift",
+        "location" : {
+          "end_position" : 23914,
+          "start_position" : 6652
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "UTMQEMURendererBackend"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "let rawValue = UserDefaults.standard.integer(forKey: \"QEMURendererBackend\")\n        return UTMQEMURendererBackend(rawValue: rawValue) ?? .qemuRendererBackendDefault"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 6947,
+              "start_position" : 6727
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "rendererBackend"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "let rawValue = UserDefaults.standard.integer(forKey: \"QEMUVulkanDriver\")\n            let driver = UTMQEMUVulkanDriver(rawValue: rawValue) ?? .qemuVulkanDriverDefault\n            if driver == .qemuVulkanDriverKosmicKrisp {\n                if #unavailable(iOS 18, macOS 15, tvOS 18, visionOS 2) {\n                    throw UTMQemuVirtualMachineError.vulkanVersionNotSupported\n                }\n            }\n            if ![.qemuRendererBackendDefault, .qemuRendererBackendAngleMetal].contains(rendererBackend) {\n                if driver == .qemuVulkanDriverDefault || driver == .qemuVulkanDriverDisabled {\n                    return .qemuVulkanDriverDisabled\n                } else {\n                    throw UTMQemuVirtualMachineError.vulkanNotCompatible\n                }\n            }\n            return driver"
+              },
+              "modifier" : "get"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "UTMQEMUVulkanDriver"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Services/UTMQemuVirtualMachine.swift",
+            "location" : {
+              "end_position" : 7865,
+              "start_position" : 6965
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "vulkanDriver"
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 12,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "utmapp-utm",
+  "repoName" : "utmapp/UTM",
+  "repoURL" : "https://github.com/utmapp/UTM.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Services/UTMQemuVirtualMachine.swift"
+  ]
+}

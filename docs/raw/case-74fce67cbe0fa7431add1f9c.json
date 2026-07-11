@@ -1,0 +1,181 @@
+{
+  "caseID" : "case-74fce67cbe0fa7431add1f9c",
+  "commitHash" : "706db92cd2b80f1ab87c00864879cb83e558193e",
+  "commitMessage" : "log: put buffer in Logger, making the log window lazy\n",
+  "commitURL" : "https://github.com/iina/iina/commit/706db92cd2b80f1ab87c00864879cb83e558193e",
+  "durationSeconds" : 2.9296430349349976,
+  "entityNames" : [
+    "() -> String",
+    "Level",
+    "Subsystem",
+    "debug",
+    "general",
+    "level",
+    "log",
+    "message"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+
+      ],
+      "call" : "withLock",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "iina/Logger.swift",
+        "location" : {
+          "end_position" : 12039,
+          "start_position" : 11988
+        }
+      },
+      "trailing_closure" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "$0.append(log)"
+        },
+        "captures" : [
+
+        ],
+        "location_info" : {
+          "file_path" : "iina/Logger.swift",
+          "location" : {
+            "end_position" : 12039,
+            "start_position" : 12011
+          }
+        },
+        "parameters" : [
+
+        ]
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "#if !DEBUG\n    guard enabled else { return }\n    #endif\n\n    guard level.rawValue >= Preference.integer(for: .logLevel) else { return }\n\n    // Now that we know the message will not be discarded, call the closure to construct the message\n    // string to log.\n    let message = message()\n\n    let date = Date()\n    let string = formatMessage(message, level, subsystem, true, date)\n    let log = Log(subsystem: subsystem.rawValue, level: level, message: message, date: dateFormatter.string(from: date), logString: string)\n\n    $buffer.withLock {\n      $0.append(log)\n    }\n    Task { @MainActor in\n      NotificationCenter.default.post(name: .iinaLogAppended, object: nil)\n    }\n\n    print(string, terminator: \"\")\n\n    #if DEBUG\n    guard enabled else { return }\n    #endif\n\n    guard let data = string.data(using: .utf8) else {\n      print(formatMessage(\"Cannot encode log string!\", .error, Logger.loggerSubsystem, false))\n      return\n    }\n    // Lock to prevent the log file from being closed by another thread while writing to it.\n    lock.withLock() {\n      // The logger may be called after it has been closed.\n      guard let logFileHandle = logFileHandle else { return }\n      do {\n        // The deprecated write method is used instead of the replacement method that throws swift\n        // exceptions because testing the new method with macOS 12.5.1 showed that method failed to\n        // turn all objective-c exceptions into swift exceptions. The exception thrown for writing\n        // to a closed channel was not picked up by the catch block.\n        try ObjcUtils.catchException { logFileHandle.write(data) }\n      } catch {\n        print(formatMessage(\"Cannot write to log file: \\(error.localizedDescription)\", .error,\n                            Logger.loggerSubsystem, false))\n      }\n    }"
+      },
+      "location_info" : {
+        "file_path" : "iina/Logger.swift",
+        "location" : {
+          "end_position" : 13280,
+          "start_position" : 10406
+        }
+      },
+      "modifiers" : [
+        "static"
+      ],
+      "name" : "log",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "() -> String"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "iina/Logger.swift",
+            "location" : {
+              "end_position" : 11406,
+              "start_position" : 11381
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "message",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Level"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "debug"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "iina/Logger.swift",
+            "location" : {
+              "end_position" : 11429,
+              "start_position" : 11406
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "level",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Subsystem"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "general"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "iina/Logger.swift",
+            "location" : {
+              "end_position" : 11460,
+              "start_position" : 11429
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "subsystem",
+          "order" : 2
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 9,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "iina-iina",
+  "repoName" : "iina/iina",
+  "repoURL" : "https://github.com/iina/iina.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "iina/Logger.swift"
+  ]
+}

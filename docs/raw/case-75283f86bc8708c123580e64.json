@@ -1,0 +1,97 @@
+{
+  "caseID" : "case-75283f86bc8708c123580e64",
+  "commitHash" : "137b3bdaf0dafad4c74ae3523c34a6695dfe5565",
+  "commitMessage" : "Fix/exec empty arguments crash (#1783)\n\n- `swift-argument-parser` enforces that `arguments` is\n  non-empty before `run()` is invoked, so the force-unwrap\n  of `arguments.first!` is not reachable in practice. However,\n  the guard makes the invariant explicit in the code itself,\n  removes reliance on ArgumentParser's implicit\n  enforcement, and would satisfy force-unwrap lint rules\n  if enabled in the future.",
+  "commitURL" : "https://github.com/apple/container/commit/137b3bdaf0dafad4c74ae3523c34a6695dfe5565",
+  "durationSeconds" : 0.24460899829864502,
+  "entityNames" : [
+    "executable",
+    "first",
+    "guard",
+    "run"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "optional_binding" : {
+              "_0" : {
+                "description" : "let executable = arguments.first",
+                "initializer_clause" : {
+                  "has_self_reference" : false,
+                  "value" : {
+                    "reference" : {
+                      "arguments" : [
+
+                      ],
+                      "name" : "first"
+                    }
+                  }
+                },
+                "is_binding_self" : false,
+                "is_in_out" : false,
+                "is_let" : true,
+                "is_var" : false,
+                "name" : "executable"
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerExec.swift",
+            "location" : {
+              "end_position" : 2025,
+              "start_position" : 1992
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerExec.swift",
+        "location" : {
+          "end_position" : 2149,
+          "start_position" : 1972
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var exitCode: Int32 = 127\n            let client = ContainerClient()\n            let container = try await client.get(id: containerId)\n            try ensureRunning(container: container)\n\n            let stdin = self.processFlags.interactive\n            let tty = self.processFlags.tty\n\n            guard let executable = arguments.first else {\n                throw ContainerizationError(.invalidArgument, message: \"no command specified for exec\")\n            }\n\n            var config = container.configuration.initProcess\n            config.executable = executable\n            config.arguments = [String](self.arguments.dropFirst())\n            config.terminal = tty\n            config.environment.append(\n                contentsOf: try Parser.allEnv(\n                    imageEnvs: [],\n                    envFiles: self.processFlags.envFile,\n                    envs: self.processFlags.env\n                ))\n\n            if let cwd = self.processFlags.cwd {\n                config.workingDirectory = cwd\n            }\n\n            let defaultUser = config.user\n            let (user, additionalGroups) = Parser.user(\n                user: processFlags.user, uid: processFlags.uid,\n                gid: processFlags.gid, defaultUser: defaultUser)\n            config.user = user\n            config.supplementalGroups.append(contentsOf: additionalGroups)\n\n            do {\n                let io = try ProcessIO.create(tty: tty, interactive: stdin, detach: self.detach)\n                defer {\n                    try? io.close()\n                }\n\n                let process = try await client.createProcess(\n                    containerId: container.id,\n                    processId: UUID().uuidString.lowercased(),\n                    configuration: config,\n                    stdio: io.stdio\n                )\n\n                if self.detach {\n                    try await process.start()\n                    try io.closeAfterStart()\n                    print(containerId)\n                    return\n                }\n\n                if !self.processFlags.tty {\n                    var handler = SignalThreshold(threshold: 3, signals: [SIGINT, SIGTERM])\n                    let log = self.log\n                    handler.start {\n                        log.warning(\"Received 3 SIGINT/SIGTERM's, forcefully exiting.\")\n                        Darwin.exit(1)\n                    }\n                }\n\n                exitCode = try await io.handleProcess(process: process, log: log)\n            } catch {\n                if error is ContainerizationError {\n                    throw error\n                }\n                throw ContainerizationError(.internalError, message: \"failed to exec process \\(error)\")\n            }\n            throw ArgumentParser.ExitCode(exitCode)"
+      },
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerExec.swift",
+        "location" : {
+          "end_position" : 4483,
+          "start_position" : 1632
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "run",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 1,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/ContainerCommands/Container/ContainerExec.swift"
+  ]
+}

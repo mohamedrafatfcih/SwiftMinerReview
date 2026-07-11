@@ -1,0 +1,1310 @@
+{
+  "caseID" : "case-a22fc2f27585277730c93741",
+  "commitHash" : "b259d067260ad8334aadd6679626cf53a915d67e",
+  "commitMessage" : "feat: added GPU preview (disabled for now)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/b259d067260ad8334aadd6679626cf53a915d67e",
+  "durationSeconds" : 10.610538005828857,
+  "entityNames" : [
+    "BarChartView?",
+    "Bool",
+    "Double",
+    "Int",
+    "LineChartView?",
+    "ModuleType",
+    "NSCoder",
+    "NSColor"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "Scale"
+      },
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "reference" : {
+            "arguments" : [
+
+            ],
+            "name" : "none"
+          }
+        }
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Modules/RAM/preview.swift",
+        "location" : {
+          "end_position" : 1557,
+          "start_position" : 1528
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "lineChartScale"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "NSStackView"
+        },
+        {
+          "name" : "Preview_v"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.appColorState = SColor.fromString(Store.shared.string(key: \"\\(self.title)_appColor\", defaultValue: self.appColorState.key))\n        self.wiredColorState = SColor.fromString(Store.shared.string(key: \"\\(self.title)_wiredColor\", defaultValue: self.wiredColorState.key))\n        self.compressedColorState = SColor.fromString(Store.shared.string(key: \"\\(self.title)_compressedColor\", defaultValue: self.compressedColorState.key))\n        self.freeColorState = SColor.fromString(Store.shared.string(key: \"\\(self.title)_freeColor\", defaultValue: self.freeColorState.key))\n        self.chartColorState = SColor.fromString(Store.shared.string(key: \"\\(self.title)_chartColor\", defaultValue: self.chartColorState.key))\n        self.lineChartHistory = Store.shared.int(key: \"\\(self.title)_lineChartHistory\", defaultValue: self.lineChartHistory)\n        self.lineChartScale = Scale.fromString(Store.shared.string(key: \"\\(self.title)_lineChartScale\", defaultValue: self.lineChartScale.key))\n        self.lineChartFixedScale = Double(Store.shared.int(key: \"\\(self.title)_lineChartFixedScale\", defaultValue: 100)) / 100"
+          },
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 4253,
+              "start_position" : 3093
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "loadColors",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.distribution = .fill\n        view.orientation = .horizontal\n        view.translatesAutoresizingMaskIntoConstraints = false\n        view.heightAnchor.constraint(equalToConstant: 90).isActive = true\n        view.edgeInsets = NSEdgeInsets(\n            top: Constants.Settings.margin,\n            left: Constants.Settings.margin,\n            bottom: Constants.Settings.margin,\n            right: Constants.Settings.margin\n        )\n        view.spacing = Constants.Settings.margin\n        \n        let circle = PieChartView(drawValue: true)\n        circle.widthAnchor.constraint(equalToConstant: 90).isActive = true\n        circle.toolTip = localizedString(\"Memory usage\")\n        self.usageCircle = circle\n        \n        let details: NSView = {\n            let view = NSStackView()\n            view.orientation = .vertical\n            view.distribution = .fillEqually\n            view.spacing = 2\n            \n            let titleField = LabelField()\n            self.usedField = titleField\n            \n            let totalStr = Units(bytes: Int64(ProcessInfo.processInfo.physicalMemory)).getReadableMemory(style: .memory)\n            let totalField = LabelField(\"\\(localizedString(\"Total\")): \\(totalStr)\")\n            \n            let title = NSStackView()\n            title.addArrangedSubview(titleField)\n            title.addArrangedSubview(NSView())\n            title.addArrangedSubview(totalField)\n            \n            let bar = BarChartView(size: 11, horizontal: true)\n            self.bar = bar\n            \n            let values: NSStackView = {\n                let container = NSStackView()\n                container.orientation = .vertical\n                container.distribution = .fill\n                container.spacing = 0\n                \n                let topValues = NSStackView()\n                topValues.orientation = .horizontal\n                topValues.distribution = .fill\n                topValues.spacing = Constants.Settings.margin\n                \n                self.appField = previewRow(topValues, space: false, color: self.appColor, title: \"\\(localizedString(\"App\")):\")\n                self.wiredField = previewRow(topValues, space: false, color: self.wiredColor, title: \"\\(localizedString(\"Wired\")):\")\n                topValues.addArrangedSubview(NSView())\n                \n                let bottomValues = NSStackView()\n                bottomValues.orientation = .horizontal\n                bottomValues.distribution = .fill\n                bottomValues.spacing = Constants.Settings.margin\n                \n                self.compressedField = previewRow(bottomValues, space: false, color: self.compressedColor, title: \"\\(localizedString(\"Compressed\")):\")\n                self.freeField = previewRow(bottomValues, space: false, color: self.freeColor, title: \"\\(localizedString(\"Free\")):\")\n                bottomValues.addArrangedSubview(NSView())\n                \n                container.addArrangedSubview(topValues)\n                container.addArrangedSubview(bottomValues)\n                \n                return container\n            }()\n            \n            view.addArrangedSubview(title)\n            view.addArrangedSubview(bar)\n            view.addArrangedSubview(values)\n            \n            return view\n        }()\n        \n        view.addArrangedSubview(circle)\n        view.addArrangedSubview(details)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 7751,
+              "start_position" : 4253
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usageView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSStackView = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = Constants.Settings.margin*2\n        view.heightAnchor.constraint(equalToConstant: 140).isActive = true\n        \n        let chart = LineChartView(num: self.lineChartHistory, scale: self.lineChartScale, fixedScale: self.lineChartFixedScale)\n        chart.setColor(self.chartColor)\n        chart.setLegend(x: true, y: true)\n        self.loadLineChart = chart\n        view.addArrangedSubview(chart)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 8377,
+              "start_position" : 7751
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "historyView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.distribution = .fill\n        view.orientation = .horizontal\n        view.translatesAutoresizingMaskIntoConstraints = false\n        view.heightAnchor.constraint(equalToConstant: 90).isActive = true\n        view.edgeInsets = NSEdgeInsets(\n            top: Constants.Settings.margin,\n            left: Constants.Settings.margin,\n            bottom: Constants.Settings.margin,\n            right: Constants.Settings.margin\n        )\n        view.spacing = Constants.Settings.margin\n        \n        let circle = PieChartView(segments: [\n            ColorValue(1/3, color: NSColor.systemGreen),\n            ColorValue(1/3, color: NSColor.systemYellow),\n            ColorValue(1/3, color: NSColor.systemRed)\n        ], drawValue: true, drawNeedle: true, openCircle: true)\n        circle.widthAnchor.constraint(equalToConstant: 90).isActive = true\n        circle.toolTip = localizedString(\"Memory pressure\")\n        self.pressureCircle = circle\n        \n        let chart = LineChartView(num: self.lineChartHistory, fixedScale: 3)\n        chart.setColor(self.chartColor)\n        chart.setLegend(x: true, y: false)\n        chart.setToolTipFunc { v in\n            let original = v.value * 2\n            let level = RAMPressure(from: Int(original)).rawValue.capitalized\n            return \"\\(level) (\\(Int(original)+1))\"\n        }\n        self.pressureLineChart = chart\n        \n        view.addArrangedSubview(circle)\n        view.addArrangedSubview(chart)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 9954,
+              "start_position" : 8377
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pressureView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.distribution = .fill\n        view.orientation = .horizontal\n        view.translatesAutoresizingMaskIntoConstraints = false\n        view.heightAnchor.constraint(equalToConstant: 90).isActive = true\n        view.edgeInsets = NSEdgeInsets(\n            top: Constants.Settings.margin,\n            left: Constants.Settings.margin,\n            bottom: Constants.Settings.margin,\n            right: Constants.Settings.margin\n        )\n        view.spacing = Constants.Settings.margin\n        \n        let circle = PieChartView(openCircle: true)\n        circle.widthAnchor.constraint(equalToConstant: 90).isActive = true\n        circle.toolTip = localizedString(\"Swap\")\n        self.swapCircle = circle\n        \n        let chart = LineChartView(num: self.lineChartHistory)\n        chart.setColor(self.chartColor)\n        chart.setLegend(x: true, y: false)\n        chart.setToolTipFunc { v in\n            return Units(bytes: Int64(v.value)).getReadableMemory(style: .memory)\n        }\n        self.swapLineChart = chart\n        \n        view.addArrangedSubview(circle)\n        view.addArrangedSubview(chart)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 11180,
+              "start_position" : 9954
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "swapView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "DispatchQueue.main.async(execute: {\n            if (self.window?.isVisible ?? false) || !self.initialized {\n                self.appField?.stringValue = Units(bytes: Int64(value.app)).getReadableMemory(style: .memory)\n                self.wiredField?.stringValue = Units(bytes: Int64(value.wired)).getReadableMemory(style: .memory)\n                self.compressedField?.stringValue = Units(bytes: Int64(value.compressed)).getReadableMemory(style: .memory)\n                self.freeField?.stringValue = Units(bytes: Int64(value.free)).getReadableMemory(style: .memory)\n                self.swapField?.stringValue = Units(bytes: Int64(value.swap.used)).getReadableMemory(style: .memory)\n                \n                let usedStr = Units(bytes: Int64(value.used)).getReadableMemory(style: .memory)\n                self.usedField?.stringValue = \"\\(localizedString(\"Used\")): \\(usedStr)\"\n                \n                let values = [\n                    ColorValue(value.app/value.total, color: self.appColor),\n                    ColorValue(value.wired/value.total, color: self.wiredColor),\n                    ColorValue(value.compressed/value.total, color: self.compressedColor)\n                ]\n                \n                self.usageCircle?.toolTip = \"\\(localizedString(\"Memory usage\")): \\(Int(value.usage*100))%\"\n                self.usageCircle?.setValue(value.usage)\n                self.usageCircle?.setSegments(values)\n                self.usageCircle?.setNonActiveSegmentColor(self.freeColor)\n                \n                self.bar?.setValues(values)\n                \n                self.pressureCircle?.setActiveSegment(value.pressure.value.number())\n                self.pressureCircle?.toolTip = \"\\(localizedString(\"Memory pressure\")): \\(value.pressure.value.rawValue)\"\n                self.pressureField?.stringValue = localizedString(value.pressure.value.rawValue.capitalized)\n                \n                self.swapCircle?.setValue(value.swap.total > 0 ? (value.swap.used*100)/value.swap.total : 0)\n                self.swapCircle?.setText(Units(bytes: Int64(value.swap.used)).getReadableMemory(style: .memory))\n                \n                self.initialized = true\n            }\n            self.loadLineChart?.addValue(value.usage)\n            self.pressureLineChart?.addValue(Double(value.pressure.value.number())/2)\n            self.swapLineChart?.addValue(value.swap.used)\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 13670,
+              "start_position" : 11180
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "loadCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "RAM_Usage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/RAM/preview.swift",
+                "location" : {
+                  "end_position" : 11233,
+                  "start_position" : 11215
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 2985,
+              "start_position" : 1994
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ModuleType"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/RAM/preview.swift",
+                "location" : {
+                  "end_position" : 2036,
+                  "start_position" : 2016
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "module",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 3093,
+              "start_position" : 2985
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/RAM/preview.swift",
+                "location" : {
+                  "end_position" : 3024,
+                  "start_position" : 3010
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/RAM/preview.swift",
+        "location" : {
+          "end_position" : 13672,
+          "start_position" : 221
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "Preview",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 301,
+              "start_position" : 288
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "title"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "PieChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 355,
+              "start_position" : 323
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usageCircle"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "BarChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 396,
+              "start_position" : 372
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "bar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 448,
+              "start_position" : 413
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "loadLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "PieChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 500,
+              "start_position" : 465
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pressureCircle"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 556,
+              "start_position" : 517
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pressureLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "PieChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 604,
+              "start_position" : 573
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "swapCircle"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 656,
+              "start_position" : 621
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "swapLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondBlue"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 713,
+              "start_position" : 678
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "appColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.appColorState.additional as? NSColor ?? NSColor.systemRed"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 814,
+              "start_position" : 730
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "appColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondOrange"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 870,
+              "start_position" : 831
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "wiredColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.wiredColorState.additional as? NSColor ?? NSColor.systemBlue"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 976,
+              "start_position" : 887
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "wiredColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "pink"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1029,
+              "start_position" : 993
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "compressedColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.compressedColorState.additional as? NSColor ?? NSColor.lightGray"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1144,
+              "start_position" : 1046
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "compressedColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "lightGray"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1196,
+              "start_position" : 1161
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "freeColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.freeColorState.additional as? NSColor ?? NSColor.systemBlue"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1300,
+              "start_position" : 1213
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "freeColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "systemAccent"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1356,
+              "start_position" : 1317
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "chartColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.chartColorState.additional as? NSColor ?? NSColor.systemBlue"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1462,
+              "start_position" : 1373
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "chartColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "180"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1511,
+              "start_position" : 1484
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lineChartHistory"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Scale"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "none"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1557,
+              "start_position" : 1528
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lineChartScale"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Double"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "1"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1605,
+              "start_position" : 1574
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lineChartFixedScale"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1656,
+              "start_position" : 1627
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usedField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1706,
+              "start_position" : 1678
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "appField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1753,
+              "start_position" : 1723
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "wiredField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1805,
+              "start_position" : 1770
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "compressedField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1851,
+              "start_position" : 1822
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "freeField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1897,
+              "start_position" : 1868
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "swapField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1947,
+              "start_position" : 1914
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pressureField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/RAM/preview.swift",
+            "location" : {
+              "end_position" : 1994,
+              "start_position" : 1969
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "initialized"
+        }
+      ]
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 51,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/RAM/preview.swift"
+  ]
+}

@@ -1,0 +1,1671 @@
+{
+  "caseID" : "case-bf4b4dbf9431c4e2e9889424",
+  "commitHash" : "6317a832d400b39786b5fe750bdf49f99950511f",
+  "commitMessage" : "Adds build fixture and migrates build CLI tests. (#1848)\n\n- Part of #1833.\n- Also changes test directory names to include test ID so that they are\neasily identifiable.",
+  "commitURL" : "https://github.com/apple/container/commit/6317a832d400b39786b5fe750bdf49f99950511f",
+  "durationSeconds" : 7.3106390237808228,
+  "entityNames" : [
+    "CLIBuilderTest",
+    "TestCLIBuildBase",
+    "deinit",
+    "init",
+    "testBuildAddAll",
+    "testBuildAddFromSpecialDirs",
+    "testBuildAfterContextChange",
+    "testBuildAndRun"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+            {
+              "name" : "TestCLIBuildBase"
+            }
+          ],
+          "deinitializer" : {
+            "attributes" : [
+
+            ],
+            "body" : {
+              "content" : "try? builderDelete(force: true)"
+            },
+            "has_async_specifier" : false,
+            "location_info" : {
+              "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+              "location" : {
+                "end_position" : 1070,
+                "start_position" : 998
+              }
+            },
+            "modifiers" : [
+
+            ],
+            "name" : "deinit"
+          },
+          "enums" : [
+
+          ],
+          "functions" : [
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD emptyFile /\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"emptyFile\", content: .zeroFilled(size: 1)),\n                .file(\".dockerignore\", content: .data(\".dockerignore\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"registry.local/dot-file:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 1894,
+                  "start_position" : 1070
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildDotFileSucceeds",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20 AS layer1\n                RUN sh -c \"echo 'layer1' > /layer1.txt\"\n\n                FROM layer1\n                CMD [\"cat\", \"/layer1.txt\"]\n                \"\"\"\n\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            let imageName = \"registry.local/from-previous-layer:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully build \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 2616,
+                  "start_position" : 1894
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildFromPreviousStage",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD emptyFile /\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"emptyFile\", content: .zeroFilled(size: 0)),\n                .file(\".dockerignore\", content: .data(\".dockerignore\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"local-only:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")\n\n            let newTempDir: URL = try createTempDir()\n            let newDockerfile: String =\n                \"\"\"\n                 FROM \\(imageName)\n                \"\"\"\n            let newContext: [FileSystemEntry] = []\n            try createContext(tempDir: newTempDir, dockerfile: newDockerfile, context: newContext)\n            let newImageName = \"from-local:\\(UUID().uuidString)\"\n            try self.build(tag: newImageName, tempDir: newTempDir)\n            #expect(try self.inspectImage(newImageName) == newImageName, \"expected to have successfully built \\(newImageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 4006,
+                  "start_position" : 2616
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildFromLocalImage",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir = URL(filePath: \"/tmp/container/.clitests/\\(testSuite)/\\(testName)\")\n            try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)\n\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD emptyFile /\n                \"\"\"\n            let context: [FileSystemEntry] = [.file(\"emptyFile\", content: .zeroFilled(size: 1))]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"registry.local/scratch-add-special-dir:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 4966,
+                  "start_position" : 4006
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildAddFromSpecialDirs",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD emptyFile /\n                \"\"\"\n            let context: [FileSystemEntry] = [.file(\"emptyFile\", content: .zeroFilled(size: 1))]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"registry.local/scratch-add:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 5662,
+                  "start_position" : 4966
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildScratchAdd",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                ADD . .\n\n                RUN cat emptyFile\n                RUN cat Test/testempty\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .directory(\"Test\"),\n                .file(\"Test/testempty\", content: .zeroFilled(size: 1)),\n                .file(\"emptyFile\", content: .zeroFilled(size: 1)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName: String = \"registry.local/add-all:\\(UUID().uuidString)\"\n            let outputRef = try self.build(tag: imageName, tempDir: tempDir)\n            #expect(outputRef.contains(imageName), \"expected stdout to container image reference\")\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 6706,
+                  "start_position" : 5662
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildAddAll",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                ARG TAG=unknown\n                FROM ghcr.io/linuxcontainers/alpine:${TAG}\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            let imageName: String = \"registry.local/build-arg:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir, buildArgs: [\"TAG=3.20\"])\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 7340,
+                  "start_position" : 6706
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildArg",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                RUN --mount=type=secret,id=ENV1 \\\n                    --mount=type=secret,id=env2 \\\n                    --mount=type=secret,id=env3 \\\n                    test xyyzzz = \"`cat /run/secrets/ENV1 /run/secrets/env2 /run/secrets/env3`\"\n                RUN --mount=type=secret,id=file \\\n                    awk 'BEGIN {for(i=0; i<17; i++) for(c=0; c<256; c++) printf(\"%c\", c)}' > /tmp/foo && \\\n                    cmp /tmp/foo /run/secrets/file && \\\n                    rm /tmp/foo\n                RUN --mount=type=secret,id=empty \\\n                    test \\\\! -e /run/secrets/file && \\\n                    test -e /run/secrets/empty && \\\n                    cmp /dev/null /run/secrets/empty\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            setenv(\"ENV1\", \"x\", 1)\n            setenv(\"ENV_VAR\", \"yy\", 1)\n            setenv(\"env3\", \"zzz\", 1)\n            let testData = Data((0..<17).flatMap { _ in Array(0...255) })\n            let tempFile: URL = try createTempFile(suffix: \" _f,i=l.e+ \", contents: testData)\n            let tempFile2: URL = try createTempFile(suffix: \"file2\", contents: Data())\n            let imageName: String = \"registry.local/secrets:\\(UUID().uuidString)\"\n            try self.build(\n                tag: imageName, tempDir: tempDir,\n                otherArgs: [\n                    \"--secret\", \"id=ENV1\",\n                    \"--secret\", \"id=env2,env=ENV_VAR\",\n                    \"--secret\", \"id=env3,env=env3\",\n                    \"--secret\", \"id=file,src=\" + tempFile.path,\n                    \"--secret\", \"id=empty,src=\" + tempFile2.path,\n                ])\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 9329,
+                  "start_position" : 7340
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildSecret",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ARG HTTP_PROXY\n                ARG HTTPS_PROXY\n                ARG NO_PROXY\n                ARG http_proxy\n                ARG https_proxy\n                ARG no_proxy\n                RUN apk add --no-cache curl\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n            let imageName = \"registry.local/build-network-access:\\(UUID().uuidString)\"\n\n            var buildArgs: [String] = []\n            for key in [\"HTTP_PROXY\", \"HTTPS_PROXY\", \"NO_PROXY\", \"http_proxy\", \"https_proxy\", \"no_proxy\"] {\n                if let value = ProcessInfo.processInfo.environment[key] {\n                    buildArgs.append(\"\\(key)=\\(value)\")\n                }\n            }\n            try self.build(tag: imageName, tempDir: tempDir, buildArgs: buildArgs)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 10479,
+                  "start_position" : 9329
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildNetworkAccess",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                # stage 1 Meta ARG\n                ARG TAG=3.20\n                FROM ghcr.io/linuxcontainers/alpine:${TAG}\n\n                # stage 2 RUN\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                RUN echo \"Hello, World!\" > /hello.txt\n\n                # stage 3 - RUN []\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                RUN [\"sh\", \"-c\", \"echo 'Exec form' > /exec.txt\"]\n\n                # stage 4 - CMD\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                CMD [\"echo\", \"Exec default\"]\n\n                # stage 5 - CMD []\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                CMD [\"echo\", \"Exec'ing\"]\n\n                #stage 6 - LABEL\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                LABEL version=\"1.0\" description=\"Test image\"\n\n                # stage 7 - EXPOSE\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                EXPOSE 8080\n\n                # stage 8 - ENV\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ENV MY_ENV=hello\n                RUN echo $MY_ENV > /env.txt\n\n                # stage 9 - ADD\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ADD emptyFile /\n\n                # stage 10 - COPY\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                COPY toCopy /toCopy\n\n                # stage 11 - ENTRYPOINT\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ENTRYPOINT [\"echo\", \"entrypoint!\"]\n\n                # stage 12 - VOLUME\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                VOLUME /data\n\n                # stage 13 - USER\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                RUN adduser -D myuser\n                USER myuser\n                CMD whoami\n\n                # stage 14 - WORKDIR\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                RUN pwd > /pwd.out\n\n                # stage 15 - ARG\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ARG MY_VAR=default\n                RUN echo $MY_VAR > /var.out\n\n                # stage 16 - ONBUILD\n                # FROM ghcr.io/linuxcontainers/alpine:3.20\n                # ONBUILD RUN echo \"onbuild triggered\" > /onbuild.out\n\n                # stage 17 - STOPSIGNAL\n                # FROM ghcr.io/linuxcontainers/alpine:3.20\n                # STOPSIGNAL SIGTERM\n\n                # stage 18 - HEALTHCHECK\n                # FROM ghcr.io/linuxcontainers/alpine:3.20\n                # HEALTHCHECK CMD echo \"healthy\" || exit 1\n\n                # stage 19 - SHELL\n                # FROM ghcr.io/linuxcontainers/alpine:3.20\n                # SHELL [\"/bin/sh\", \"-c\"]\n                # RUN echo $0 > /shell.txt\n                \"\"\"\n\n            let context: [FileSystemEntry] = [\n                .file(\"emptyFile\", content: .zeroFilled(size: 1)),\n                .file(\"toCopy\", content: .zeroFilled(size: 1)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let imageName = \"registry.local/dockerfile-keywords:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 14030,
+                  "start_position" : 10479
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildDockerfileKeywords",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                # Test 1: Test basic symlinking\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                ADD Test1Source Test1Source\n                ADD Test1Source2 Test1Source2\n\n                RUN cat Test1Source2/test.yaml\n\n                # Test2: Test symlinks in nested directories\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                ADD Test2Source Test2Source\n                ADD Test2Source2 Test2Source2\n\n                RUN cat Test2Source2/Test/test.txt\n\n                # Test 3: Test symlinks to directories work\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                ADD Test3Source Test3Source\n                ADD Test3Source2 Test3Source2\n\n                RUN cat Test3Source2/Dest/test.txt\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                // test 1\n                .directory(\"Test1Source\"),\n                .directory(\"Test1Source2\"),\n                .file(\"Test1Source/test.yaml\", content: .zeroFilled(size: 200)),\n                .symbolicLink(\"Test1Source2/test.yaml\", target: \"Test1Source/test.yaml\"),\n\n                // test 2\n                .directory(\"Test2Source\"),\n                .directory(\"Test2Source2\"),\n                .file(\"Test2Source/Test/Test/test.yaml\", content: .zeroFilled(size: 300)),\n                .symbolicLink(\"Test2Source2/Test/test.yaml\", target: \"Test2Source/Test/Test/test.yaml\"),\n\n                // test 3\n                .directory(\"Test3Source/Source\"),\n                .directory(\"Test3Source2\"),\n                .file(\"Test3Source/Source/test.txt\", content: .zeroFilled(size: 1)),\n                .symbolicLink(\"Test3Source2/Dest\", target: \"Test3Source/Source\"),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"registry.local/build-symlinks:\\(UUID().uuidString)\"\n\n            #expect(throws: Never.self) {\n                try self.build(tag: imageName, tempDir: tempDir)\n            }\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 16338,
+                  "start_position" : 14030
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildSymlink",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let name: String = \"test-build-and-run\"\n\n            let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                RUN echo \"foobar\" > /file\n                \"\"\"\n            let context: [FileSystemEntry] = []\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"\\(name):latest\"\n            let containerName = \"\\(name)-container\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")\n            // Check if the image we built is actually in the image store, and can be used.\n            try self.doLongRun(name: containerName, image: imageName)\n            defer {\n                try? self.doStop(name: containerName)\n            }\n            var output = try doExec(name: containerName, cmd: [\"cat\", \"/file\"])\n            output = output.trimmingCharacters(in: .whitespacesAndNewlines)\n            let expected = \"foobar\"\n            try self.doStop(name: containerName)\n            #expect(output == expected, \"expected file contents to be \\(expected), instead got \\(output)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 17688,
+                  "start_position" : 16338
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildAndRun",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let buildContextDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                RUN ls ./\n                COPY . /root\n\n                RUN cat /root/Test/test.txt\n                \"\"\"\n            let buildContext: [FileSystemEntry] = [\n                .directory(\".git\"),\n                .file(\".git/FETCH\", content: .zeroFilled(size: 1)),\n                .directory(\"Test\"),\n                .file(\"Test/test.txt\", content: .zeroFilled(size: 1)),\n            ]\n            try createContext(tempDir: buildContextDir, dockerfile: dockerfile, context: buildContext)\n\n            let imageName = \"registry.local/build-diff-context:\\(UUID().uuidString)\"\n            #expect(throws: Never.self) {\n                try self.build(tags: [imageName], tempDir: buildContextDir)\n            }\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 18764,
+                  "start_position" : 17688
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildDifferentPaths",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                ADD . .\n\n                RUN cat emptyFile\n                RUN cat Test/testempty\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .directory(\"Test\"),\n                .file(\"Test/testempty\", content: .zeroFilled(size: 1)),\n                .file(\"emptyFile\", content: .zeroFilled(size: 1)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName: String = \"registry.local/multi-arch:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir, otherArgs: [\"--arch\", \"amd64,arm64\"])\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")\n\n            let output = try doInspectImages(image: imageName)\n            #expect(output.count == 1, \"expected a single image inspect output, got \\(output)\")\n\n            let expected = Set([\n                Platform(arch: \"amd64\", os: \"linux\", variant: nil),\n                Platform(arch: \"arm64\", os: \"linux\", variant: nil),\n            ])\n            let actual = Set(\n                output[0].variants.map { v in\n                    Platform(arch: v.platform.architecture, os: v.platform.os, variant: nil)\n                })\n            #expect(\n                actual == expected,\n                \"expected platforms \\(expected), got \\(actual)\"\n            )"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 20405,
+                  "start_position" : 18764
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildMultiArch",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD emptyFile /\n                \"\"\"\n            let context: [FileSystemEntry] = [.file(\"emptyFile\", content: .zeroFilled(size: 1))]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let uuid = UUID().uuidString\n            let tag1 = \"registry.local/multi-tag-test:\\(uuid)\"\n            let tag2 = \"registry.local/multi-tag-test:latest\"\n            let tag3 = \"registry.local/multi-tag-test:v1.0.0\"\n\n            let outputRef = try self.build(tags: [tag1, tag2, tag3], tempDir: tempDir)\n\n            #expect(outputRef.contains(tag1), \"expected tag in output\")\n            #expect(outputRef.contains(tag2), \"expected tag in output\")\n            #expect(outputRef.contains(tag3), \"expected tag in output\")\n\n            // Verify all three tags exist and point to the same image\n            #expect(try self.inspectImage(tag1) == tag1, \"expected to have successfully built \\(tag1)\")\n            #expect(try self.inspectImage(tag2) == tag2, \"expected to have successfully built \\(tag2)\")\n            #expect(try self.inspectImage(tag3) == tag3, \"expected to have successfully built \\(tag3)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 21763,
+                  "start_position" : 20405
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildMultipleTags",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let name = \"test-build-context-change\"\n            let tempDir: URL = try createTempDir()\n\n            // Create initial context with file \"foo\" containing \"initial\"\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                COPY foo /foo\n                COPY bar /bar\n                \"\"\"\n            let initialContent = \"initial\".data(using: .utf8)!\n            let context: [FileSystemEntry] = [\n                .file(\"foo\", content: .data(Data((0..<4 * 1024 * 1024).map { UInt8($0 % 256) }))),\n                .file(\"bar\", content: .data(initialContent)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            // Build first image\n            let imageName1 = \"\\(name):v1\"\n            let containerName1 = \"\\(name)-container-v1\"\n            try self.build(tag: imageName1, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName1) == imageName1, \"expected to have successfully built \\(imageName1)\")\n\n            // Run container and verify content is \"initial\"\n            try self.doLongRun(name: containerName1, image: imageName1)\n            defer {\n                try? self.doStop(name: containerName1)\n            }\n            var output = try doExec(name: containerName1, cmd: [\"cat\", \"/bar\"])\n            #expect(output == \"initial\", \"expected file contents to be 'initial', instead got '\\(output)'\")\n\n            // Update the file \"foo\" to contain \"updated\"\n            let updatedContent = \"updated\".data(using: .utf8)!\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let barPath = contextDir.appendingPathComponent(\"bar\")\n            try updatedContent.write(to: barPath, options: .atomic)\n\n            // Build second image\n            let imageName2 = \"\\(name):v2\"\n            let containerName2 = \"\\(name)-container-v2\"\n            try self.build(tag: imageName2, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName2) == imageName2, \"expected to have successfully built \\(imageName2)\")\n\n            // Run container and verify content is \"updated\"\n            try self.doLongRun(name: containerName2, image: imageName2)\n            defer {\n                try? self.doStop(name: containerName2)\n            }\n            output = try doExec(name: containerName2, cmd: [\"cat\", \"/bar\"])\n            #expect(output == \"updated\", \"expected file contents to be 'updated', instead got '\\(output)'\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 24350,
+                  "start_position" : 21763
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildAfterContextChange",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM scratch\n\n                ADD emptyFile /\n                \"\"\"\n            let context: [FileSystemEntry] = [.file(\"emptyFile\", content: .zeroFilled(size: 1))]\n            try createContext(tempDir: tempDir, dockerfile: \"\", context: context)\n            let imageName = \"registry.local/stdin-file:\\(UUID().uuidString)\"\n            try buildWithStdin(tags: [imageName], tempContext: tempDir, dockerfileContents: dockerfile)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 25085,
+                  "start_position" : 24350
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildWithDockerfileFromStdin",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir1: URL = try createTempDir()\n            let dockerfile1 =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                COPY . /app\n                RUN test -f /app/testfile.txt\n                \"\"\"\n            let context1: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"test\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir1, dockerfile: dockerfile1, context: context1)\n            let imageName1 = \"registry.local/copy-uppercase:\\(UUID().uuidString)\"\n            try self.build(tag: imageName1, tempDir: tempDir1)\n            #expect(try self.inspectImage(imageName1) == imageName1, \"expected COPY to work\")\n\n            // Test 2: copy with lowercase\n            let tempDir2: URL = try createTempDir()\n            let dockerfile2 =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                copy . /app\n                RUN test -f /app/testfile.txt\n                \"\"\"\n            let context2: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"test\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir2, dockerfile: dockerfile2, context: context2)\n            let imageName2 = \"registry.local/copy-lowercase:\\(UUID().uuidString)\"\n            try self.build(tag: imageName2, tempDir: tempDir2)\n            #expect(try self.inspectImage(imageName2) == imageName2, \"expected copy to work\")\n\n            // Test 3: ADD with uppercase\n            let tempDir3: URL = try createTempDir()\n            let dockerfile3 =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ADD . /app\n                RUN test -f /app/testfile.txt\n                \"\"\"\n            let context3: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"test\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir3, dockerfile: dockerfile3, context: context3)\n            let imageName3 = \"registry.local/add-uppercase:\\(UUID().uuidString)\"\n            try self.build(tag: imageName3, tempDir: tempDir3)\n            #expect(try self.inspectImage(imageName3) == imageName3, \"expected ADD to work\")\n\n            // Test 4: add with lowercase\n            let tempDir4: URL = try createTempDir()\n            let dockerfile4 =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                add . /app\n                RUN test -f /app/testfile.txt\n                \"\"\"\n            let context4: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"test\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir4, dockerfile: dockerfile4, context: context4)\n            let imageName4 = \"registry.local/add-lowercase:\\(UUID().uuidString)\"\n            try self.build(tag: imageName4, tempDir: tempDir4)\n            #expect(try self.inspectImage(imageName4) == imageName4, \"expected add to work\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 28233,
+                  "start_position" : 25085
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testLowercaseDockerfile",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                # Use bind mount to access build context during RUN\n                RUN --mount=type=bind,source=.,target=/mnt/context \\\n                    set -e; \\\n                    echo \"Checking files in bind mount...\"; \\\n                    ls -la /mnt/context/; \\\n                    \\\n                    echo \"Verifying files are accessible in mount...\"; \\\n                    if [ ! -f /mnt/context/app.py ]; then \\\n                        echo \"ERROR: app.py should be in bind mount!\"; \\\n                        exit 1; \\\n                    fi; \\\n                    if [ ! -f /mnt/context/config.yaml ]; then \\\n                        echo \"ERROR: config.yaml should be in bind mount!\"; \\\n                        exit 1; \\\n                    fi; \\\n                    \\\n                    echo \"RUN --mount bind check passed!\"; \\\n                    cp /mnt/context/app.py /app.py\n\n                RUN cat /app.py\n                \"\"\"\n\n            let context: [FileSystemEntry] = [\n                .file(\"app.py\", content: .data(\"print('Hello from bind mount')\".data(using: .utf8)!)),\n                .file(\"config.yaml\", content: .data(\"key: value\".data(using: .utf8)!)),\n            ]\n\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"registry.local/bind-mount-test:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 30010,
+                  "start_position" : 28233
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testRunWithBindMount",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n\n                # Copy all files - should respect .dockerignore\n                COPY . /app\n\n                # Verify specific files are excluded\n                RUN set -e; \\\n                    echo \"Checking specific file exclusion...\"; \\\n                    if [ -f /app/secret.txt ]; then \\\n                        echo \"ERROR: secret.txt should be excluded!\"; \\\n                        exit 1; \\\n                    fi\n\n                # Verify wildcard *.log files are excluded\n                RUN set -e; \\\n                    echo \"Checking *.log exclusion...\"; \\\n                    if [ -f /app/debug.log ]; then \\\n                        echo \"ERROR: debug.log should be excluded by *.log pattern!\"; \\\n                        exit 1; \\\n                    fi; \\\n                    if ls /app/logs/*.log 2>/dev/null; then \\\n                        echo \"ERROR: logs/*.log files should be excluded!\"; \\\n                        exit 1; \\\n                    fi\n\n                # Verify exception pattern (!important.log) works\n                RUN set -e; \\\n                    echo \"Checking exception pattern...\"; \\\n                    if [ ! -f /app/important.log ]; then \\\n                        echo \"ERROR: important.log should be included (exception with !)\"; \\\n                        exit 1; \\\n                    fi\n\n                # Verify *.tmp files are excluded\n                RUN set -e; \\\n                    echo \"Checking *.tmp exclusion...\"; \\\n                    if find /app -name \"*.tmp\" | grep .; then \\\n                        echo \"ERROR: .tmp files should be excluded!\"; \\\n                        exit 1; \\\n                    fi\n\n                # Verify directories are excluded\n                RUN set -e; \\\n                    echo \"Checking directory exclusion...\"; \\\n                    if [ -d /app/temp ]; then \\\n                        echo \"ERROR: temp/ directory should be excluded!\"; \\\n                        exit 1; \\\n                    fi; \\\n                    if [ -d /app/node_modules ]; then \\\n                        echo \"ERROR: node_modules/ should be excluded!\"; \\\n                        exit 1; \\\n                    fi\n\n                # Verify included files ARE present\n                RUN set -e; \\\n                    echo \"Checking included files...\"; \\\n                    if [ ! -f /app/main.go ]; then \\\n                        echo \"ERROR: main.go should be included!\"; \\\n                        exit 1; \\\n                    fi; \\\n                    if [ ! -f /app/README.md ]; then \\\n                        echo \"ERROR: README.md should be included!\"; \\\n                        exit 1; \\\n                    fi; \\\n                    if [ ! -f /app/src/app.go ]; then \\\n                        echo \"ERROR: src/app.go should be included!\"; \\\n                        exit 1; \\\n                    fi; \\\n                    echo \"All .dockerignore checks passed!\"\n                \"\"\"\n\n            let dockerignore =\n                \"\"\"\n                # Exclude specific files\n                secret.txt\n\n                # Exclude all log files\n                *.log\n                **/*.log\n\n                # But make an exception for important.log\n                !important.log\n\n                # Exclude all temporary files\n                *.tmp\n                **/*.tmp\n\n                # Exclude directories\n                temp/\n                node_modules/\n                \"\"\"\n\n            let context: [FileSystemEntry] = [\n                .file(\".dockerignore\", content: .data(dockerignore.data(using: .utf8)!)),\n                .file(\"secret.txt\", content: .data(\"secret content\".data(using: .utf8)!)),\n                .file(\"debug.log\", content: .data(\"debug log content\".data(using: .utf8)!)),\n                .file(\"important.log\", content: .data(\"important log content\".data(using: .utf8)!)),\n                .file(\"cache.tmp\", content: .data(\"cache\".data(using: .utf8)!)),\n                .file(\"main.go\", content: .data(\"package main\".data(using: .utf8)!)),\n                .file(\"README.md\", content: .data(\"# README\".data(using: .utf8)!)),\n                .directory(\"temp\"),\n                .file(\"temp/cache.tmp\", content: .data(\"temp cache\".data(using: .utf8)!)),\n                .directory(\"logs\"),\n                .file(\"logs/app.log\", content: .data(\"app log\".data(using: .utf8)!)),\n                .directory(\"node_modules\"),\n                .file(\"node_modules/package.json\", content: .data(\"{}\".data(using: .utf8)!)),\n                .directory(\"src\"),\n                .file(\"src/app.go\", content: .data(\"package src\".data(using: .utf8)!)),\n                .file(\"src/test.tmp\", content: .data(\"temp\".data(using: .utf8)!)),\n            ]\n\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n            let imageName = \"registry.local/dockerignore-test:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 35331,
+                  "start_position" : 30010
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildDockerIgnore",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\"included.txt\", content: .data(\"This file should be included in the build context.\\n\".data(using: .utf8)!)),\n                .file(\"ignored.txt\", content: .data(\"This file should be ignored by .dockerignore.\\n\".data(using: .utf8)!)),\n                .file(\".dockerignore\", content: .data(\"ignored.txt\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let dockerfilePath = contextDir.appendingPathComponent(\"Dockerfile\")\n            let imageName = \"registry.local/dockerignore-basic:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", dockerfilePath.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-basic-\\(UUID().uuidString)\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let includedResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/included.txt\"])\n            #expect(includedResult.status == 0, \"included.txt should be present in the image\")\n\n            let ignoredResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/ignored.txt\"])\n            #expect(ignoredResult.status != 0, \"ignored.txt should NOT be present in the image\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 37521,
+                  "start_position" : 35331
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreBasic",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            // .dockerignore ignores general.txt; Dockerfile.dockerignore ignores specific.txt.\n            // When both exist, Dockerfile.dockerignore takes precedence, so general.txt is included.\n            // Dockerfile and its .dockerignore must be co-located; here both live in the context root.\n            let context: [FileSystemEntry] = [\n                .file(\"Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\".dockerignore\", content: .data(\"general.txt\\n\".data(using: .utf8)!)),\n                .file(\"Dockerfile.dockerignore\", content: .data(\"specific.txt\\n\".data(using: .utf8)!)),\n                .file(\"general.txt\", content: .data(\"This file should be included (Dockerfile.dockerignore takes precedence over .dockerignore).\\n\".data(using: .utf8)!)),\n                .file(\"specific.txt\", content: .data(\"This file should be ignored by Dockerfile.dockerignore.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let dockerfilePath = contextDir.appendingPathComponent(\"Dockerfile\")\n            let imageName = \"registry.local/dockerignore-specific:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", dockerfilePath.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-specific-\\(UUID().uuidString)\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let specificResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/specific.txt\"])\n            #expect(specificResult.status != 0, \"specific.txt should NOT be present (ignored by Dockerfile.dockerignore)\")\n\n            let generalResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/general.txt\"])\n            #expect(generalResult.status == 0, \"general.txt should be present (only in .dockerignore, not Dockerfile.dockerignore)\")\n\n            let listResult = try run(arguments: [\"exec\", containerName, \"ls\", \"-a\"])\n            let listFiles = listResult.output.components(separatedBy: \"\\n\").filter { !$0.isEmpty && $0 != \".\" && $0 != \"..\" }\n            #expect(Set(listFiles) == Set([\"Dockerfile\", \".dockerignore\", \"Dockerfile.dockerignore\", \"general.txt\"]), \"temporary directory must not be detected\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 40699,
+                  "start_position" : 37521
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreDockerfileSpecific",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            // .dockerignore ignores general.txt; Dockerfile.dockerignore ignores specific.txt.\n            // When both exist, Dockerfile.dockerignore takes precedence, so general.txt is included.\n            // Dockerfile and its .dockerignore must be co-located; here both live in the context root.\n            let context: [FileSystemEntry] = [\n                .file(\".dockerignore\", content: .data(\"general.txt\\n\".data(using: .utf8)!)),\n                .file(\"general.txt\", content: .data(\"This file should be included (Dockerfile.dockerignore takes precedence over .dockerignore).\\n\".data(using: .utf8)!)),\n                .file(\"specific.txt\", content: .data(\"This file should be ignored by Dockerfile.dockerignore.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let dockerignore = \"specific.txt\\n\".data(using: .utf8)!\n            try dockerignore.write(to: tempDir.appendingPathComponent(\"Dockerfile.dockerignore\"), options: .atomic)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let dockerfilePath = tempDir.appendingPathComponent(\"Dockerfile\")\n            let imageName = \"registry.local/dockerignore-specific:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", dockerfilePath.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-specific-\\(UUID().uuidString)\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let specificResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/specific.txt\"])\n            #expect(specificResult.status != 0, \"specific.txt should NOT be present (ignored by Dockerfile.dockerignore)\")\n\n            let generalResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/general.txt\"])\n            #expect(generalResult.status == 0, \"general.txt should be present (only in .dockerignore, not Dockerfile.dockerignore)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 43379,
+                  "start_position" : 40699
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreOutsideContext",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            // Dockerfile is listed in .dockerignore but build must still succeed.\n            // Dockerfile lives in the context root so the ignore rule applies to it.\n            let context: [FileSystemEntry] = [\n                .file(\"Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\".dockerignore\", content: .data(\"Dockerfile\\n.dockerignore\\n\".data(using: .utf8)!)),\n                .file(\"test.txt\", content: .data(\"This file should be included even though Dockerfile is ignored.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let dockerfilePath = contextDir.appendingPathComponent(\"Dockerfile\")\n            let imageName = \"registry.local/dockerignore-ignored-dockerfile:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", dockerfilePath.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-ignored-dockerfile\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let dockerfileResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/Dockerfile\"])\n            #expect(dockerfileResult.status != 0, \"Dockerfile should NOT be present in the image\")\n\n            let dockerignoreResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/.dockerignore\"])\n            #expect(dockerignoreResult.status != 0, \".dockerignore should NOT be present in the image\")\n\n            let testFileResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/test.txt\"])\n            #expect(testFileResult.status == 0, \"test.txt should be present in the image\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 45915,
+                  "start_position" : 43379
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreIgnoredDockerfile",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "async_specifier" : "async",
+                "description" : "async throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            // Root .dockerignore ignores included.txt; nested Dockerfile.dockerignore ignores secret.txt\n            // When Dockerfile is in nested/project/, Dockerfile.dockerignore next to it takes precedence\n            let context: [FileSystemEntry] = [\n                .file(\".dockerignore\", content: .data(\"included.txt\\n\".data(using: .utf8)!)),\n                .file(\"included.txt\", content: .data(\"This file should be included (Dockerfile.dockerignore takes precedence).\\n\".data(using: .utf8)!)),\n                .file(\"secret.txt\", content: .data(\"This file should be ignored by Dockerfile.dockerignore.\\n\".data(using: .utf8)!)),\n                .file(\"nested/secret.txt\", content: .data(\"This file should be ignored by Dockerfile.dockerignore.\\n\".data(using: .utf8)!)),\n                .file(\"nested/project/Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\"nested/project/Dockerfile.dockerignore\", content: .data(\"secret.txt\\n**/secret.txt\\n\".data(using: .utf8)!)),\n                .file(\"nested/project/config.txt\", content: .data(\"This config file should be included.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let nestedDockerfile = contextDir.appendingPathComponent(\"nested/project/Dockerfile\")\n            let imageName = \"registry.local/dockerignore-subdir:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", nestedDockerfile.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-subdir-\\(UUID().uuidString)\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let includedResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/included.txt\"])\n            #expect(includedResult.status == 0, \"included.txt should be present (Dockerfile.dockerignore takes precedence over .dockerignore)\")\n\n            let secretResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/secret.txt\"])\n            #expect(secretResult.status != 0, \"secret.txt should NOT be present (ignored by Dockerfile.dockerignore)\")\n\n            let nestedSecretResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/nested/secret.txt\"])\n            #expect(nestedSecretResult.status != 0, \"nested/secret.txt should NOT be present (ignored by Dockerfile.dockerignore)\")\n\n            let configResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/nested/project/config.txt\"])\n            #expect(configResult.status == 0, \"nested/project/config.txt should be present\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 49430,
+                  "start_position" : 45915
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreSubdirDockerfile",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            // .dockerignore ignores generic.txt; app1.Dockerfile.dockerignore ignores app1-specific.txt\n            // When building with -f app1.Dockerfile, app1.Dockerfile.dockerignore takes precedence\n            let context: [FileSystemEntry] = [\n                .file(\"Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\".dockerignore\", content: .data(\"generic.txt\\n\".data(using: .utf8)!)),\n                .file(\"app1.Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\"app1.Dockerfile.dockerignore\", content: .data(\"app1-specific.txt\\n\".data(using: .utf8)!)),\n                .file(\"app1-specific.txt\", content: .data(\"This file should be ignored by app1.Dockerfile.dockerignore.\\n\".data(using: .utf8)!)),\n                .file(\"generic.txt\", content: .data(\"This file should be included (only in .dockerignore, not app1.Dockerfile.dockerignore).\\n\".data(using: .utf8)!)),\n                .file(\"included.txt\", content: .data(\"This file should always be included.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: \"\", context: context)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let customDockerfile = contextDir.appendingPathComponent(\"app1.Dockerfile\")\n            let imageName = \"registry.local/dockerignore-custom-name:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", customDockerfile.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-custom-name-\\(UUID().uuidString)\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let app1SpecificResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/app1-specific.txt\"])\n            #expect(app1SpecificResult.status != 0, \"app1-specific.txt should NOT be present (ignored by app1.Dockerfile.dockerignore)\")\n\n            let genericResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/generic.txt\"])\n            #expect(genericResult.status == 0, \"generic.txt should be present (only in .dockerignore, not app1.Dockerfile.dockerignore)\")\n\n            let includedResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/included.txt\"])\n            #expect(includedResult.status == 0, \"included.txt should be present\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 52574,
+                  "start_position" : 49430
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreCustomDockerfileName",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            // Root .dockerignore ignores from-root-ignore.txt\n            // nested/project/app2.Dockerfile.dockerignore ignores from-app2-ignore.txt\n            // When building with -f nested/project/app2.Dockerfile, the nested ignore takes precedence\n            let context: [FileSystemEntry] = [\n                .file(\"Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\".dockerignore\", content: .data(\"from-root-ignore.txt\\n\".data(using: .utf8)!)),\n                .file(\"from-root-ignore.txt\", content: .data(\"This file should be included (only in .dockerignore, not app2.Dockerfile.dockerignore).\\n\".data(using: .utf8)!)),\n                .file(\"from-app2-ignore.txt\", content: .data(\"This file should be ignored by app2.Dockerfile.dockerignore.\\n\".data(using: .utf8)!)),\n                .file(\"always-included.txt\", content: .data(\"This file should always be included.\\n\".data(using: .utf8)!)),\n                .file(\"nested/project/app2.Dockerfile\", content: .data(dockerfile.data(using: .utf8)!)),\n                .file(\"nested/project/app2.Dockerfile.dockerignore\", content: .data(\"from-app2-ignore.txt\\n\".data(using: .utf8)!)),\n                .file(\"nested/project/config.yaml\", content: .data(\"Config file in project directory.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: \"\", context: context)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let customDockerfile = contextDir.appendingPathComponent(\"nested/project/app2.Dockerfile\")\n            let imageName = \"registry.local/dockerignore-custom-subdir:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", customDockerfile.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-custom-subdir-\\(UUID().uuidString)\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let app2IgnoreResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/from-app2-ignore.txt\"])\n            #expect(app2IgnoreResult.status != 0, \"from-app2-ignore.txt should NOT be present (ignored by app2.Dockerfile.dockerignore)\")\n\n            let rootIgnoreResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/from-root-ignore.txt\"])\n            #expect(rootIgnoreResult.status == 0, \"from-root-ignore.txt should be present (only in .dockerignore, not app2.Dockerfile.dockerignore)\")\n\n            let alwaysIncludedResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/always-included.txt\"])\n            #expect(alwaysIncludedResult.status == 0, \"always-included.txt should be present\")\n\n            let configResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/nested/project/config.yaml\"])\n            #expect(configResult.status == 0, \"nested/project/config.yaml should be present\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 56242,
+                  "start_position" : 52574
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreCustomNameSubdir",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let appDockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"Dockerfile\", content: .data(\"FROM ghcr.io/linuxcontainers/alpine:3.20\\nWORKDIR /app\\nCOPY . .\\n\".data(using: .utf8)!)),\n                .file(\"Dockerfile.dockerignore\", content: .data(\"dockerfile-specific.txt\\n\".data(using: .utf8)!)),\n                .file(\"app.Dockerfile\", content: .data(appDockerfile.data(using: .utf8)!)),\n                .file(\"app.Dockerfile.dockerignore\", content: .data(\"app-specific.txt\\n\".data(using: .utf8)!)),\n                .file(\n                    \"dockerfile-specific.txt\", content: .data(\"This file should NOT be copied when using Dockerfile, but SHOULD when using app.Dockerfile.\\n\".data(using: .utf8)!)),\n                .file(\"app-specific.txt\", content: .data(\"This file should NOT be copied (ignored by app.Dockerfile.dockerignore).\\n\".data(using: .utf8)!)),\n                .file(\"included.txt\", content: .data(\"This file should be copied.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: \"\", context: context)\n\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            let appDockerfilePath = contextDir.appendingPathComponent(\"app.Dockerfile\")\n            let imageName = \"registry.local/dockerignore-coexisting:\\(UUID().uuidString)\"\n            let args = [\"build\", \"-f\", appDockerfilePath.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-coexisting-\\(UUID().uuidString)\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let appSpecificResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/app-specific.txt\"])\n            #expect(appSpecificResult.status != 0, \"app-specific.txt should NOT be present (ignored by app.Dockerfile.dockerignore)\")\n\n            let dockerfileSpecificResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/dockerfile-specific.txt\"])\n            #expect(dockerfileSpecificResult.status == 0, \"dockerfile-specific.txt should be present (Dockerfile.dockerignore was not used)\")\n\n            let includedResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/included.txt\"])\n            #expect(includedResult.status == 0, \"included.txt should be present\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 59356,
+                  "start_position" : 56242
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreCoexistingDockerfiles",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            let contextDir = tempDir.appendingPathComponent(\"context\")\n            defer {\n                // Restore write permission so the directory can be removed\n                try? FileManager.default.setAttributes(\n                    [.posixPermissions: 0o755],\n                    ofItemAtPath: contextDir.path\n                )\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                WORKDIR /app\n                COPY . .\n                \"\"\"\n            // Context contains two files; Dockerfile and Dockerfile.dockerignore are placed outside\n            // the context directory (co-located in tempDir).\n            let context: [FileSystemEntry] = [\n                .file(\"included.txt\", content: .data(\"This file should be included.\\n\".data(using: .utf8)!)),\n                .file(\"secret.txt\", content: .data(\"This file should be excluded by Dockerfile.dockerignore.\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            // Write Dockerfile.dockerignore next to Dockerfile, both outside the context directory\n            let dockerignoreData = \"secret.txt\\n\".data(using: .utf8)!\n            try dockerignoreData.write(to: tempDir.appendingPathComponent(\"Dockerfile.dockerignore\"), options: .atomic)\n\n            // Make the context directory read-only before building\n            try FileManager.default.setAttributes(\n                [.posixPermissions: 0o555],\n                ofItemAtPath: contextDir.path\n            )\n\n            let dockerfilePath = tempDir.appendingPathComponent(\"Dockerfile\")\n            let imageName = \"registry.local/dockerignore-readonly-context:\\(UUID().uuidString.prefix(6))\"\n            let args = [\"build\", \"-f\", dockerfilePath.path, \"-t\", imageName, contextDir.path]\n            let response = try run(arguments: args)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            let containerName = \"dockerignore-readonly-context-\\(UUID().uuidString.prefix(6))\"\n            try self.doLongRun(name: containerName, image: imageName)\n            defer { try? self.doStop(name: containerName) }\n\n            let includedResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/included.txt\"])\n            #expect(includedResult.status == 0, \"included.txt should be present\")\n\n            let secretResult = try run(arguments: [\"exec\", containerName, \"test\", \"-f\", \"/app/secret.txt\"])\n            #expect(secretResult.status != 0, \"secret.txt should NOT be present (excluded by Dockerfile.dockerignore)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 62410,
+                  "start_position" : 59356
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testDockerIgnoreReadonlyContext",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let imageName = \"registry.local/non-existing-dockerfile:\\(UUID().uuidString)\"\n\n            var args = [\"build\", \"-f\", \"non-existing-path\", \"-t\", imageName, tempDir.path]\n            var response = try run(arguments: args)\n\n            #expect(response.status != 0)\n\n            args = [\"build\", \"-t\", imageName, tempDir.path]\n            response = try run(arguments: args)\n\n            #expect(response.status != 0)"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 63057,
+                  "start_position" : 62410
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testNonExistingDockerfile",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM \\(alpine)\n\n                ADD emptyFile /\n                \"\"\"\n            let context: [FileSystemEntry] = [.file(\"emptyFile\", content: .zeroFilled(size: 1))]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let imageName = \"registry.local/no-cache-pull:\\(UUID().uuidString)\"\n            try self.build(\n                tags: [imageName],\n                tempDir: tempDir,\n                otherArgs: [\"--pull\", \"--no-cache\"]\n            )\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 63964,
+                  "start_position" : 63057
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildNoCachePullLatestImage",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile: String =\n                \"\"\"\n                ARG IMAGE=\"ghcr.io/linuxcontainers/alpine:3.20\"\n                FROM $IMAGE\n                RUN test -f /etc/alpine-release\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/quoted-image-dockerfile-arg:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 64754,
+                  "start_position" : 63964
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildQuotedImageDockerfileArg",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ARG MYSTRING='\"Hello, world!\"'\n                RUN test \"$MYSTRING\" = '\"Hello, world!\"'\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/quoted-string-dockerfile-arg:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 65567,
+                  "start_position" : 64754
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildQuotedStringDockerfileArg",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile: String =\n                \"\"\"\n                ARG ALPINE=\"ghcr.io/linuxcontainers/alpine\"\n                ARG IMAGE=\"${ALPINE}:3.20\"\n                FROM $IMAGE\n                RUN test -f /etc/alpine-release\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/forward-referenced-dockerfile-arg:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(\n                try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\"\n            )"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 66438,
+                  "start_position" : 65567
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildForwardReferencedDockerfileArg",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile: String =\n                \"\"\"\n                ARG IMAGE\n                FROM $IMAGE\n                RUN test -f /etc/alpine-release\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/quoted-image-build-arg:\\(UUID().uuidString)\"\n            try self.build(\n                tag: imageName,\n                tempDir: tempDir,\n                buildArgs: [\n                    \"IMAGE=ghcr.io/linuxcontainers/alpine:3.20\"\n                ]\n            )\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 67338,
+                  "start_position" : 66438
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildQuotedImageBuildArg",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile: String =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                ARG MYSTRING\n                RUN test \"$MYSTRING\" = '\"Hello, world!\"'\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/quoted-string-build-arg:\\(UUID().uuidString)\"\n            try self.build(\n                tag: imageName,\n                tempDir: tempDir,\n                buildArgs: [\n                    \"MYSTRING=\\\"Hello, world!\\\"\"\n                ]\n            )\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 68266,
+                  "start_position" : 67338
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildQuotedStringBuildArg",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile: String =\n                \"\"\"\n                ARG ALPINE\n                ARG IMAGE=\"$ALPINE:3.20\"\n                FROM $IMAGE\n                RUN test -f /etc/alpine-release\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/forward-referenced-build-arg:\\(UUID().uuidString)\"\n            try self.build(\n                tag: imageName,\n                tempDir: tempDir,\n                buildArgs: [\n                    \"ALPINE=ghcr.io/linuxcontainers/alpine\"\n                ]\n            )\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 69216,
+                  "start_position" : 68266
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testBuildForwardReferencedBuildArg",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let baseTempDir: URL = try createTempDir()\n            let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: baseTempDir)\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let baseImageName = \"local-base:\\(UUID().uuidString)\"\n            let baseDockerfile =\n                \"\"\"\n                FROM scratch\n                ADD hello.txt /hello.txt\n                \"\"\"\n            let baseContext: [FileSystemEntry] = [\n                .file(\"hello.txt\", content: .data(\"hello\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: baseTempDir, dockerfile: baseDockerfile, context: baseContext)\n\n            try self.build(tag: baseImageName, tempDir: baseTempDir)\n            #expect(try self.inspectImage(baseImageName) == baseImageName, \"expected to have successfully built \\(baseImageName)\")\n\n            let dockerfile =\n                \"\"\"\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                COPY --from=\\(baseImageName) /hello.txt /copied.txt\n                RUN cat /copied.txt\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/copy-from-local:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 70780,
+                  "start_position" : 69216
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testCopyFromLocalImage",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM scratch AS builder\n                ADD hello.txt /hello.txt\n\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                COPY --from=builder /hello.txt /copied.txt\n                RUN cat /copied.txt\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"hello.txt\", content: .data(\"hello\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let imageName = \"registry.local/copy-from-stage:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 71794,
+                  "start_position" : 70780
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testCopyFromBuildStage",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM scratch AS builder\n                ADD hello.txt /hello.txt\n\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                COPY --from=builder /hello.txt /renamed.txt\n                RUN cat /renamed.txt\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"hello.txt\", content: .data(\"hello\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let imageName = \"registry.local/copy-rename:\\(UUID().uuidString)\"\n            try self.build(tag: imageName, tempDir: tempDir)\n            #expect(try self.inspectImage(imageName) == imageName, \"expected to have successfully built \\(imageName)\")"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 72807,
+                  "start_position" : 71794
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testCopyRenameFromStage",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "unsupported" : {
+                      "_0" : "Test"
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "body" : {
+                "content" : "let tempDir: URL = try createTempDir()\n            defer {\n                try! FileManager.default.removeItem(at: tempDir)\n            }\n\n            let dockerfile =\n                \"\"\"\n                FROM scratch AS builder\n\n                FROM ghcr.io/linuxcontainers/alpine:3.20\n                COPY --from=builder /does-not-exist.txt /copied.txt\n                \"\"\"\n            try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n            let imageName = \"registry.local/copy-missing:\\(UUID().uuidString)\"\n            #expect(throws: Error.self) {\n                try self.build(tag: imageName, tempDir: tempDir)\n            }"
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 73532,
+                  "start_position" : 72807
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "testCopyMissingFileFails",
+              "parameters" : [
+
+              ],
+              "specifiers_decl" : {
+                "description" : "throws",
+                "throws_specifier" : "throws"
+              }
+            }
+          ],
+          "initializers" : [
+            {
+              "attributes" : [
+
+              ],
+              "functions" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+                "location" : {
+                  "end_position" : 998,
+                  "start_position" : 926
+                }
+              },
+              "modifiers" : [
+                "override"
+              ],
+              "name" : "init",
+              "parameters" : [
+
+              ]
+            }
+          ],
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+            "location" : {
+              "end_position" : 73538,
+              "start_position" : 881
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "CLIBuilderTest",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "TestCLIBuildBase"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let tempDir: URL = try createTempDir()\n        defer {\n            try! FileManager.default.removeItem(at: tempDir)\n        }\n\n        let dockerfile =\n            \"\"\"\n            FROM ghcr.io/linuxcontainers/alpine:3.20\n            COPY --from=not_a_stage /hello.txt /copied.txt\n            \"\"\"\n        try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n        let imageName = \"registry.local/copy-invalid-stage:\\(UUID().uuidString)\"\n        #expect(throws: Error.self) {\n            try self.build(tag: imageName, tempDir: tempDir)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+            "location" : {
+              "end_position" : 74160,
+              "start_position" : 73538
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyInvalidStageFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let tempDir: URL = try createTempDir()\n        defer {\n            try! FileManager.default.removeItem(at: tempDir)\n        }\n\n        let dockerfile =\n            \"\"\"\n            FROM ghcr.io/linuxcontainers/alpine:3.20\n            COPY --from=doesnotexist:latest /hello.txt /copied.txt\n            \"\"\"\n        try createContext(tempDir: tempDir, dockerfile: dockerfile)\n\n        let imageName = \"registry.local/copy-bad-image:\\(UUID().uuidString)\"\n        #expect(throws: Error.self) {\n            try self.build(tag: imageName, tempDir: tempDir)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+            "location" : {
+              "end_position" : 74794,
+              "start_position" : 74160
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCopyFromNonexistentImageFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift",
+        "location" : {
+          "end_position" : 74796,
+          "start_position" : 851
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove Extension refactoring"
+  },
+  "refactoringIndex" : 19,
+  "refactoringType" : "Remove Extension refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Build/CLIBuilderTest.swift"
+  ]
+}

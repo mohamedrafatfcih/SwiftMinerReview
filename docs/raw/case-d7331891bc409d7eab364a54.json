@@ -1,0 +1,447 @@
+{
+  "caseID" : "case-d7331891bc409d7eab364a54",
+  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds" : 31.880328059196472,
+  "entityNames" : [
+    "BaseTestCase",
+    "InterceptorTests",
+    "testAdaptHandlerAndRetryHandlerDefaultInitializer",
+    "testAdapterAndRetrierDefaultInitializer",
+    "testAdaptersAndRetriersDefaultInitializer",
+    "testThatInterceptorCanAdaptRequestAsynchronously",
+    "testThatInterceptorCanAdaptRequestWithMultipleAdapters",
+    "testThatInterceptorCanAdaptRequestWithMultipleAdaptersUsingStateAPI"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "BaseTestCase"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let adaptHandler: AdaptHandler = { urlRequest, _, completion in completion(.success(urlRequest)) }\n        let retryHandler: RetryHandler = { _, _, _, completion in completion(.doNotRetry) }\n\n        // When\n        let interceptor = Interceptor(adaptHandler: adaptHandler, retryHandler: retryHandler)\n\n        // Then\n        XCTAssertEqual(interceptor.adapters.count, 1)\n        XCTAssertEqual(interceptor.retriers.count, 1)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 8910,
+              "start_position" : 8389
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testAdaptHandlerAndRetryHandlerDefaultInitializer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let adapter = Adapter { urlRequest, _, completion in completion(.success(urlRequest)) }\n        let retrier = Retrier { _, _, _, completion in completion(.doNotRetry) }\n\n        // When\n        let interceptor = Interceptor(adapter: adapter, retrier: retrier)\n\n        // Then\n        XCTAssertEqual(interceptor.adapters.count, 1)\n        XCTAssertEqual(interceptor.retriers.count, 1)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 9380,
+              "start_position" : 8910
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testAdapterAndRetrierDefaultInitializer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let adapter = Adapter { urlRequest, _, completion in completion(.success(urlRequest)) }\n        let retrier = Retrier { _, _, _, completion in completion(.doNotRetry) }\n\n        // When\n        let interceptor = Interceptor(adapters: [adapter, adapter], retriers: [retrier, retrier])\n\n        // Then\n        XCTAssertEqual(interceptor.adapters.count, 2)\n        XCTAssertEqual(interceptor.retriers.count, 2)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 9876,
+              "start_position" : 9380
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testAdaptersAndRetriersDefaultInitializer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let adapter = Adapter { request, _, completion in completion(.success(request)) }\n        let retrier = Retrier { _, _, _, completion in completion(.doNotRetry) }\n        let inner = Interceptor(adapter: adapter, retrier: retrier)\n\n        // When\n        let interceptor = Interceptor(interceptors: [inner])\n\n        // Then\n        XCTAssertEqual(interceptor.adapters.count, 1)\n        XCTAssertEqual(interceptor.retriers.count, 1)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 10417,
+              "start_position" : 9876
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanBeComposedOfMultipleRequestInterceptors",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let urlRequest = Endpoint().urlRequest\n        let session = Session()\n        let interceptor = Interceptor()\n\n        var result: Result<URLRequest, any Error>!\n\n        // When\n        interceptor.adapt(urlRequest, for: session) { result = $0 }\n\n        // Then\n        XCTAssertTrue(result.isSuccess)\n        XCTAssertEqual(result.success, urlRequest)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 10867,
+              "start_position" : 10417
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanAdaptRequestWithNoAdapters",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let urlRequest = Endpoint().urlRequest\n        let session = Session()\n\n        let adapter = Adapter { _, _, completion in completion(.failure(MockError())) }\n        let interceptor = Interceptor(adapters: [adapter])\n\n        var result: Result<URLRequest, any Error>!\n\n        // When\n        interceptor.adapt(urlRequest, for: session) { result = $0 }\n\n        // Then\n        XCTAssertTrue(result.isFailure)\n        XCTAssertTrue(result.failure is MockError)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 11425,
+              "start_position" : 10867
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanAdaptRequestWithOneAdapter",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let urlRequest = Endpoint().urlRequest\n        let session = Session()\n\n        let adapter1 = Adapter { urlRequest, _, completion in completion(.success(urlRequest)) }\n        let adapter2 = Adapter { _, _, completion in completion(.failure(MockError())) }\n        let interceptor = Interceptor(adapters: [adapter1, adapter2])\n\n        var result: Result<URLRequest, any Error>!\n\n        // When\n        interceptor.adapt(urlRequest, for: session) { result = $0 }\n\n        // Then\n        XCTAssertTrue(result.isFailure)\n        XCTAssertTrue(result.failure is MockError)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 12098,
+              "start_position" : 11425
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanAdaptRequestWithMultipleAdapters",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let urlRequest = Endpoint().urlRequest\n        let session = Session()\n\n        let adapter1 = Adapter { urlRequest, _, completion in completion(.success(urlRequest)) }\n        let adapter2 = Adapter { _, _, completion in completion(.failure(MockError())) }\n        let interceptor = Interceptor(adapters: [adapter1, adapter2])\n        let state = RequestAdapterState(requestID: UUID(), session: session)\n\n        var result: Result<URLRequest, any Error>!\n\n        // When\n        interceptor.adapt(urlRequest, using: state) { result = $0 }\n\n        // Then\n        XCTAssertTrue(result.isFailure)\n        XCTAssertTrue(result.failure is MockError)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 12861,
+              "start_position" : 12098
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanAdaptRequestWithMultipleAdaptersUsingStateAPI",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let urlRequest = Endpoint().urlRequest\n        let session = Session()\n\n        let adapter = Adapter { _, _, completion in\n            DispatchQueue.main.async {\n                completion(.failure(MockError()))\n            }\n        }\n        let interceptor = Interceptor(adapters: [adapter])\n\n        var result: Result<URLRequest, any Error>!\n\n        let completesExpectation = expectation(description: \"interceptor completes\")\n\n        // When\n        interceptor.adapt(urlRequest, for: session) {\n            result = $0\n            completesExpectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertTrue(result.isFailure)\n        XCTAssertTrue(result.failure is MockError)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 13707,
+              "start_position" : 12861
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanAdaptRequestAsynchronously",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        let interceptor = Interceptor()\n\n        var result: RetryResult!\n\n        // When\n        interceptor.retry(request, for: session, dueTo: MockError()) { result = $0 }\n\n        // Then\n        XCTAssertEqual(result, .doNotRetry)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 14142,
+              "start_position" : 13707
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanRetryRequestWithNoRetriers",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        let retrier = Retrier { _, _, _, completion in completion(.retry) }\n        let interceptor = Interceptor(retriers: [retrier])\n\n        var result: RetryResult!\n\n        // When\n        interceptor.retry(request, for: session, dueTo: MockError()) { result = $0 }\n\n        // Then\n        XCTAssertEqual(result, .retry)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 14667,
+              "start_position" : 14142
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanRetryRequestWithOneRetrier",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        let retrier1 = Retrier { _, _, _, completion in completion(.doNotRetry) }\n        let retrier2 = Retrier { _, _, _, completion in completion(.retry) }\n        let interceptor = Interceptor(retriers: [retrier1, retrier2])\n\n        var result: RetryResult!\n\n        // When\n        interceptor.retry(request, for: session, dueTo: MockError()) { result = $0 }\n\n        // Then\n        XCTAssertEqual(result, .retry)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 15292,
+              "start_position" : 14667
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanRetryRequestWithMultipleRetriers",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        let retrier = Retrier { _, _, _, completion in\n            DispatchQueue.main.async {\n                completion(.retry)\n            }\n        }\n        let interceptor = Interceptor(retriers: [retrier])\n\n        var result: RetryResult!\n\n        let completesExpectation = expectation(description: \"interceptor completes\")\n\n        // When\n        interceptor.retry(request, for: session, dueTo: MockError()) {\n            result = $0\n            completesExpectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(result, .retry)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 16105,
+              "start_position" : 15292
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorCanRetryRequestAsynchronously",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        var retrier2Called = false\n\n        let retrier1 = Retrier { _, _, _, completion in completion(.retry) }\n        let retrier2 = Retrier { _, _, _, completion in retrier2Called = true; completion(.doNotRetry) }\n        let interceptor = Interceptor(retriers: [retrier1, retrier2])\n\n        var result: RetryResult!\n\n        // When\n        interceptor.retry(request, for: session, dueTo: MockError()) { result = $0 }\n\n        // Then\n        XCTAssertEqual(result, .retry)\n        XCTAssertFalse(retrier2Called)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 16844,
+              "start_position" : 16105
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorStopsIteratingThroughPendingRetriersWithRetryResult",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        var retrier2Called = false\n\n        let retrier1 = Retrier { _, _, _, completion in completion(.retryWithDelay(1.0)) }\n        let retrier2 = Retrier { _, _, _, completion in retrier2Called = true; completion(.doNotRetry) }\n        let interceptor = Interceptor(retriers: [retrier1, retrier2])\n\n        var result: RetryResult!\n\n        // When\n        interceptor.retry(request, for: session, dueTo: MockError()) { result = $0 }\n\n        // Then\n        XCTAssertEqual(result, .retryWithDelay(1.0))\n        XCTAssertEqual(result.delay, 1.0)\n        XCTAssertFalse(retrier2Called)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 17662,
+              "start_position" : 16844
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorStopsIteratingThroughPendingRetriersWithRetryWithDelayResult",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let session = Session(startRequestsImmediately: false)\n        let request = session.request(.default)\n\n        var retrier2Called = false\n\n        let retrier1 = Retrier { _, _, _, completion in completion(.doNotRetryWithError(RetryError())) }\n        let retrier2 = Retrier { _, _, _, completion in retrier2Called = true; completion(.doNotRetry) }\n        let interceptor = Interceptor(retriers: [retrier1, retrier2])\n\n        var result: RetryResult!\n\n        // When\n        interceptor.retry(request, for: session, dueTo: MockError()) { result = $0 }\n\n        // Then\n        XCTAssertEqual(result, RetryResult.doNotRetryWithError(RetryError()))\n        XCTAssertTrue(result.error is RetryError)\n        XCTAssertFalse(retrier2Called)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/RequestInterceptorTests.swift",
+            "location" : {
+              "end_position" : 18523,
+              "start_position" : 17662
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatInterceptorStopsIteratingThroughPendingRetriersWithDoNotRetryResult",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/RequestInterceptorTests.swift",
+        "location" : {
+          "end_position" : 18525,
+          "start_position" : 8331
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "InterceptorTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 222,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/RequestInterceptorTests.swift"
+  ]
+}

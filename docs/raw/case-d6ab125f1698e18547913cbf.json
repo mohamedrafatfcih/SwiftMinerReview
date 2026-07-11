@@ -1,0 +1,90 @@
+{
+  "caseID" : "case-d6ab125f1698e18547913cbf",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "XPCMessage",
+    "message",
+    "resize"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "self.log.trace(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.trace(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        switch self.state {\n        case .running:\n            let id = try message.id()\n            let ctr = try getContainer()\n            let width = message.uint64(key: RuntimeKeys.width.rawValue)\n            let height = message.uint64(key: RuntimeKeys.height.rawValue)\n\n            if id != ctr.container.id {\n                guard let processInfo = self.processes[id] else {\n                    throw ContainerizationError(\n                        .invalidState,\n                        message: \"process \\(id) does not exist\"\n                    )\n                }\n\n                guard let proc = processInfo.process else {\n                    throw ContainerizationError(\n                        .invalidState,\n                        message: \"process \\(id) not started\"\n                    )\n                }\n\n                try await proc.resize(\n                    to: .init(\n                        width: UInt16(width),\n                        height: UInt16(height))\n                )\n            } else {\n                try await ctr.container.resize(\n                    to: .init(\n                        width: UInt16(width),\n                        height: UInt16(height))\n                )\n            }\n\n            return message.reply()\n        default:\n            throw ContainerizationError(\n                .invalidState,\n                message: \"cannot resize: container is not running\"\n            )\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location" : {
+          "end_position" : 25211,
+          "start_position" : 23191
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "resize",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCMessage"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 23579,
+              "start_position" : 23558
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "message",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "XPCMessage"
+        },
+        "description" : "-> XPCMessage"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 187,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
+  ]
+}

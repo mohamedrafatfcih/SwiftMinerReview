@@ -1,0 +1,805 @@
+{
+  "caseID" : "case-8855e204aaca8cab3761da7d",
+  "commitHash" : "171f563985ab1b09684dcf56d2880b8a3258c327",
+  "commitMessage" : "feat: redesigned Network usage timer (#3175)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/171f563985ab1b09684dcf56d2880b8a3258c327",
+  "durationSeconds" : 5.0351330041885376,
+  "entityNames" : [
+    "Bool",
+    "ConnectivityReader?",
+    "Int",
+    "Module",
+    "Network",
+    "Network_Connectivity?",
+    "Network_Usage?",
+    "Notifications"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "label" : "identifier",
+                  "value" : "\"eu.exelban.Stats.Network.Usage\""
+                }
+              ],
+              "call" : "NSBackgroundActivityScheduler",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Modules/Net/main.swift",
+                "location" : {
+                  "end_position" : 3990,
+                  "start_position" : 3915
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Modules/Net/main.swift",
+        "location" : {
+          "end_position" : 3990,
+          "start_position" : 3900
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "usageReseter"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Module"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var list: [String] = []\n        for interface in SCNetworkInterfaceCopyAll() as NSArray {\n            if let displayName = SCNetworkInterfaceGetLocalizedDisplayName(interface as! SCNetworkInterface) {\n                list.append(displayName as String)\n            }\n        }\n        return !list.isEmpty"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 7639,
+              "start_position" : 7266
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "isAvailable",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let value = raw, self.enabled else { return }\n        \n        self.popupView.usageCallback(value)\n        self.portalView.usageCallback(value)\n        self.notificationsView.usageCallback(value)\n        self.previewView.usageCallback(value)\n        \n        var upload: Int64 = value.bandwidth.upload\n        var download: Int64 = value.bandwidth.download\n        if self.widgetActivationThresholdState {\n            upload = 0\n            download = 0\n            let threshold = self.widgetActivationThresholdSize.toBytes(self.widgetActivationThreshold)\n            if value.bandwidth.upload >= threshold || value.bandwidth.download >= threshold {\n                upload = value.bandwidth.upload\n                download = value.bandwidth.download\n            }\n        }\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as SpeedWidget: widget.setValue(input: download, output: upload)\n            case let widget as NetworkChart: widget.setValue(upload: Double(upload), download: Double(download))\n            case let widget as TextWidget:\n                var text = self.textValue\n                let pairs = TextWidget.parseText(text)\n                pairs.forEach { pair in\n                    var replacement: String? = nil\n                    \n                    switch pair.key {\n                    case \"$addr\":\n                        switch pair.value {\n                        case \"public\": replacement = value.raddr.v4 ?? value.raddr.v6 ?? \"-\"\n                        case \"publicV4\": replacement = value.raddr.v4 ?? \"-\"\n                        case \"publicV6\": replacement = value.raddr.v6 ?? \"-\"\n                        case \"private\": replacement = value.laddr.v4 ?? value.laddr.v6 ?? \"-\"\n                        case \"privateV4\": replacement = value.laddr.v4 ?? \"-\"\n                        case \"privateV6\": replacement = value.laddr.v6 ?? \"-\"\n                        case \"countryCode\": replacement = value.raddr.countryCode ?? \"-\"\n                        case \"flag\": replacement = value.raddr.countryCode != nil ? countryFlag(value.raddr.countryCode!) : \"-\"\n                        default: return\n                        }\n                    case \"$interface\":\n                        switch pair.value {\n                        case \"displayName\": replacement = value.interface?.displayName ?? \"-\"\n                        case \"BSDName\": replacement = value.interface?.BSDName ?? \"-\"\n                        case \"address\": replacement = value.interface?.address ?? \"-\"\n                        case \"transmitRate\": replacement = \"\\(value.interface?.transmitRate ?? 0)\"\n                        default: return\n                        }\n                    case \"$wifi\":\n                        switch pair.value {\n                        case \"ssid\": replacement = value.wifiDetails.ssid ?? \"-\"\n                        case \"bssid\": replacement = value.wifiDetails.bssid ?? \"-\"\n                        case \"RSSI\": replacement = \"\\(value.wifiDetails.RSSI ?? 0)\"\n                        case \"noise\": replacement = \"\\(value.wifiDetails.noise ?? 0)\"\n                        case \"standard\": replacement = value.wifiDetails.standard ?? \"-\"\n                        case \"mode\": replacement = value.wifiDetails.mode ?? \"-\"\n                        case \"security\": replacement = value.wifiDetails.security ?? \"-\"\n                        case \"channel\": replacement = value.wifiDetails.channel ?? \"-\"\n                        case \"channelBand\": replacement = value.wifiDetails.channelBand ?? \"-\"\n                        case \"channelWidth\": replacement = value.wifiDetails.channelWidth ?? \"-\"\n                        case \"channelNumber\": replacement = value.wifiDetails.channelNumber ?? \"-\"\n                        default: return\n                        }\n                    case \"$status\":\n                        replacement = localizedString(value.status ? \"UP\" : \"DOWN\")\n                    case \"$upload\":\n                        switch pair.value {\n                        case \"total\": replacement = Units(bytes: value.total.upload).getReadableMemory()\n                        default: replacement = Units(bytes: value.bandwidth.upload).getReadableMemory()\n                        }\n                    case \"$download\":\n                        switch pair.value {\n                        case \"total\": replacement = Units(bytes: value.total.download).getReadableMemory()\n                        default: replacement = Units(bytes: value.bandwidth.download).getReadableMemory()\n                        }\n                    case \"$type\":\n                        replacement = value.connectionType?.rawValue ?? \"-\"\n                    case \"$icmp\":\n                        guard let connectivity = self.connectivityReader?.value else { return }\n                        switch pair.value {\n                        case \"status\": replacement = localizedString(connectivity.status ? \"UP\" : \"DOWN\")\n                        case \"latency\": replacement = \"\\(Int(connectivity.latency)) ms\"\n                        default: return\n                        }\n                    default: return\n                    }\n                    \n                    if let replacement {\n                        let key = pair.value.isEmpty ? pair.key : \"\\(pair.key).\\(pair.value)\"\n                        text = text.replacingOccurrences(of: key, with: replacement)\n                    }\n                }\n                widget.setValue(text)\n            default: break\n            }\n        }\n        \n        if self.systemWidgetsUpdatesState {\n            if isWidgetActive(self.userDefaults, [Network_entry.kind]), let blobData = try? JSONEncoder().encode(raw) {\n                self.userDefaults?.set(blobData, forKey: \"Network@UsageReader\")\n            }\n            WidgetCenter.shared.reloadTimelines(ofKind: Network_entry.kind)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 13673,
+              "start_position" : 7639
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usageCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Network_Usage?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Net/main.swift",
+                "location" : {
+                  "end_position" : 7697,
+                  "start_position" : 7676
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "raw",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let value = raw, self.enabled else { return }\n        \n        self.popupView.connectivityCallback(value)\n        self.notificationsView.connectivityCallback(value)\n        self.previewView.connectivityCallback(value)\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as DotWidget:\n                let value = value.status ? SColor.secondGreen : SColor.secondRed\n                widget.setValue(value.additional as? NSColor ?? .systemGray)\n            default: break\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 14351,
+              "start_position" : 13673
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "connectivityCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Network_Connectivity?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Net/main.swift",
+                "location" : {
+                  "end_position" : 13745,
+                  "start_position" : 13717
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "raw",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.ipUpdater.invalidate()\n        \n        switch self.publicIPRefreshInterval {\n        case \"hour\":\n            self.ipUpdater.interval = 60 * 60\n        case \"12\":\n            self.ipUpdater.interval = 60 * 60 * 12\n        case \"24\":\n            self.ipUpdater.interval = 60 * 60 * 24\n        default: return\n        }\n        \n        self.ipUpdater.repeats = true\n        self.ipUpdater.schedule { (completion: @escaping NSBackgroundActivityScheduler.CompletionHandler) in\n            guard self.enabled && self.isAvailable() else { return }\n            debug(\"going to automatically refresh IP address...\")\n            NotificationCenter.default.post(name: .refreshPublicIP, object: nil, userInfo: nil)\n            completion(NSBackgroundActivityScheduler.Result.finished)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 15195,
+              "start_position" : 14351
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "setIPUpdater",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.usageReseter.invalidate()\n        \n        switch AppUpdateInterval(rawValue: Store.shared.string(key: \"\\(self.config.name)_usageReset\", defaultValue: AppUpdateInterval.never.rawValue)) {\n        case .oncePerDay: self.usageReseter.interval = 60 * 60 * 24\n        case .oncePerWeek: self.usageReseter.interval = 60 * 60 * 24 * 7\n        case .oncePerMonth: self.usageReseter.interval = 60 * 60 * 24 * 30\n        case .atStart: NotificationCenter.default.post(name: .resetTotalNetworkUsage, object: nil, userInfo: nil)\n        case .never: return\n        default: return\n        }\n        \n        self.usageReseter.repeats = true\n        self.usageReseter.schedule { (completion: @escaping NSBackgroundActivityScheduler.CompletionHandler) in\n            guard self.enabled && self.isAvailable() else {\n                return\n            }\n            \n            debug(\"going to reset the usage...\")\n            NotificationCenter.default.post(name: .resetTotalNetworkUsage, object: nil, userInfo: nil)\n            completion(NSBackgroundActivityScheduler.Result.finished)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 16338,
+              "start_position" : 15195
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "setUsageReset",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 7266,
+              "start_position" : 4947
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Net/main.swift",
+        "location" : {
+          "end_position" : 16340,
+          "start_position" : 3385
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "Network",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Popup"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3450,
+              "start_position" : 3434
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "popupView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Settings"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3489,
+              "start_position" : 3467
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "settingsView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Portal"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3524,
+              "start_position" : 3506
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "portalView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Notifications"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3573,
+              "start_position" : 3541
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "notificationsView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Preview"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3610,
+              "start_position" : 3590
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "previewView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "UsageReader?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3663,
+              "start_position" : 3632
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usageReader"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ProcessReader?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3715,
+              "start_position" : 3680
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "processReader"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ConnectivityReader?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3777,
+              "start_position" : 3732
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "connectivityReader"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "identifier",
+                      "value" : "\"eu.exelban.Stats.Network.IP\""
+                    }
+                  ],
+                  "call" : "NSBackgroundActivityScheduler",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Net/main.swift",
+                    "location" : {
+                      "end_position" : 3883,
+                      "start_position" : 3811
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3883,
+              "start_position" : 3799
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "ipUpdater"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "identifier",
+                      "value" : "\"eu.exelban.Stats.Network.Usage\""
+                    }
+                  ],
+                  "call" : "NSBackgroundActivityScheduler",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Net/main.swift",
+                    "location" : {
+                      "end_position" : 3990,
+                      "start_position" : 3915
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 3990,
+              "start_position" : 3900
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "usageReseter"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.bool(key: \"\\(self.config.name)_widgetActivationThresholdState\", defaultValue: false)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 4162,
+              "start_position" : 4012
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "widgetActivationThresholdState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.int(key: \"\\(self.config.name)_widgetActivationThreshold\", defaultValue: 0)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 4313,
+              "start_position" : 4179
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "widgetActivationThreshold"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SizeUnit"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "SizeUnit.fromString(Store.shared.string(key: \"\\(self.name)_widgetActivationThresholdSize\", defaultValue: SizeUnit.MB.key))"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 4508,
+              "start_position" : 4330
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "widgetActivationThresholdSize"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.string(key: \"\\(self.name)_publicIPRefreshInterval\", defaultValue: \"never\")"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 4660,
+              "start_position" : 4525
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "publicIPRefreshInterval"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.string(key: \"\\(self.name)_textWidgetValue\", defaultValue: \"$addr.public - $status\")"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 4807,
+              "start_position" : 4677
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "textValue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.userDefaults?.bool(forKey: \"systemWidgetsUpdates_state\") ?? false"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Net/main.swift",
+            "location" : {
+              "end_position" : 4947,
+              "start_position" : 4829
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "systemWidgetsUpdatesState"
+        }
+      ]
+    },
+    "type" : "Remove variable refactoring"
+  },
+  "refactoringIndex" : 15,
+  "refactoringType" : "Remove variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Net/main.swift"
+  ]
+}

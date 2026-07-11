@@ -1,0 +1,70 @@
+{
+  "caseID" : "case-b1df2395e737e5e731a635dd",
+  "commitHash" : "1da2d91fa6316690ef97f46b450262286231c261",
+  "commitMessage" : "Add Separate Response Hooks (#3762)\n\n### Issue Link :link:\r\n#3401\r\n\r\n### Goals :soccer:\r\nThis PR adds `onHTTPResponse` closure hooks to `DataRequest` /\r\n`UploadRequest` and `DataStreamRequest` to enable the cancellation of\r\nrequests before data is transferred, requests that need to check\r\nresponse info for later parsing, or peculiar requests that may trigger\r\nmultiple response callbacks, like MJPEG streams.\r\n\r\n### Implementation Details :construction:\r\nLike the other value hooks, this API accepts a single closure. The only\r\nunique bit here is that there's second, disfavored, version of the API\r\nthat allows the user to return `ResponseDisposition` value to cancel or\r\nend the request without the body.\r\n\r\n### Testing Details :mag:\r\nStreaming tests are being updated to check these events always fire\r\nbefore the other events. More tests are needed around cancellation or\r\nending behavior to ensure that's really possible.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/1da2d91fa6316690ef97f46b450262286231c261",
+  "durationSeconds" : 13.914338946342468,
+  "entityNames" : [
+    "testThatDataCanBeStreamedAndDecodedAtTheSameTime"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+        {
+          "value" : "initialResponse"
+        },
+        {
+          "value" : "firstResponse"
+        }
+      ],
+      "call" : "XCTAssertEqual",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 14880,
+          "start_position" : 14808
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var initialResponse: HTTPURLResponse?\n        let onHTTPResponse = expectation(description: \"onHTTPResponse should be called\")\n        var firstAccumulatedData = Data()\n        var firstResponse: HTTPURLResponse?\n        var firstStreamOnMain = false\n        var firstCompleteOnMain = false\n        let firstReceive = expectation(description: \"first stream should receive\")\n        let firstCompletion = expectation(description: \"first stream should complete\")\n        var decodedResponse: TestResponse?\n        var decodingError: AFError?\n        var secondResponse: HTTPURLResponse?\n        var secondStreamOnMain = false\n        var secondCompleteOnMain = false\n        let secondReceive = expectation(description: \"second stream should receive\")\n        let secondCompletion = expectation(description: \"second stream should complete\")\n\n        // When\n        AF.streamRequest(.stream(1))\n            .onHTTPResponse { response in\n                initialResponse = response\n                onHTTPResponse.fulfill()\n            }\n            .responseStream { stream in\n                switch stream.event {\n                case let .stream(result):\n                    firstStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(data):\n                        firstAccumulatedData.append(data)\n                    }\n                    firstReceive.fulfill()\n                case let .complete(completion):\n                    firstCompleteOnMain = Thread.isMainThread\n                    firstResponse = completion.response\n                    firstCompletion.fulfill()\n                }\n            }\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case let .stream(result):\n                    secondStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(value):\n                        decodedResponse = value\n                    case let .failure(error):\n                        decodingError = error\n                    }\n                    secondReceive.fulfill()\n                case let .complete(completion):\n                    secondCompleteOnMain = Thread.isMainThread\n                    secondResponse = completion.response\n                    secondCompletion.fulfill()\n                }\n            }\n\n        wait(for: [onHTTPResponse, firstReceive, firstCompletion], timeout: timeout, enforceOrder: true)\n        wait(for: [secondReceive, secondCompletion], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertEqual(initialResponse, firstResponse)\n        XCTAssertEqual(initialResponse, secondResponse)\n        XCTAssertTrue(firstStreamOnMain)\n        XCTAssertTrue(firstCompleteOnMain)\n        XCTAssertEqual(firstResponse?.statusCode, 200)\n        XCTAssertTrue(!firstAccumulatedData.isEmpty)\n        XCTAssertTrue(secondStreamOnMain)\n        XCTAssertTrue(secondCompleteOnMain)\n        XCTAssertEqual(secondResponse?.statusCode, 200)\n        XCTAssertNotNil(decodedResponse)\n        XCTAssertNil(decodingError)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 15353,
+          "start_position" : 12114
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataCanBeStreamedAndDecodedAtTheSameTime",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 96,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/DataStreamTests.swift"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "caseID" : "case-5db41980cbfb2569e33c79d6",
+  "commitHash" : "6b3296bd3e975fb3e04cdf22761ddf44df7157a5",
+  "commitMessage" : "Bug: Pass queue to `responseStreamDecodable` (#3879)\n\n### Issue Link :link:\r\nFixes #3878\r\n\r\n### Goals :soccer:\r\nThis PR ensures the queue for `responseStreamDecodable` is properly\r\npassed to the underlying serializer.\r\n\r\n### Testing Details :mag:\r\nTests added for methods on arbitrary queues.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/6b3296bd3e975fb3e04cdf22761ddf44df7157a5",
+  "durationSeconds" : 8.6377360820770264,
+  "entityNames" : [
+    "testThatDataStreamsCanBeDecodedOnAnArbitraryQueue"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var response: TestResponse?\n        var httpResponse: HTTPURLResponse?\n        var decodingError: AFError?\n        let streamQueue = DispatchQueue(label: \"com.alamofire.tests.ArbitraryQueue\")\n        let didReceive = expectation(description: \"stream did receive\")\n        let didComplete = expectation(description: \"stream complete\")\n\n        // When\n        AF.streamRequest(.stream(1))\n            .responseStreamDecodable(of: TestResponse.self, on: streamQueue) { stream in\n                dispatchPrecondition(condition: .onQueue(streamQueue))\n                switch stream.event {\n                case let .stream(result):\n                    switch result {\n                    case let .success(value):\n                        response = value\n                    case let .failure(error):\n                        decodingError = error\n                    }\n                    didReceive.fulfill()\n                case let .complete(completion):\n                    httpResponse = completion.response\n                    didComplete.fulfill()\n                }\n            }\n\n        wait(for: [didReceive, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertNotNil(response)\n        XCTAssertEqual(httpResponse?.statusCode, 200)\n        XCTAssertNil(decodingError)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 32089,
+          "start_position" : 30686
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataStreamsCanBeDecodedOnAnArbitraryQueue",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 7,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/DataStreamTests.swift"
+  ]
+}

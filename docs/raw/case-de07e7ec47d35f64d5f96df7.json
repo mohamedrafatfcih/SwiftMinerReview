@@ -1,0 +1,90 @@
+{
+  "caseID" : "case-de07e7ec47d35f64d5f96df7",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "XPCMessage",
+    "createProcess",
+    "message"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        return try await self.lock.withLock { [self] _ in\n            switch await self.state {\n            case .running, .booted:\n                let id = try message.id()\n                let config = try message.processConfig()\n                let stdio = message.stdio()\n\n                try await self.addNewProcess(id, config, stdio)\n\n                try await self.initializeWaiters(for: id)\n                do {\n                    try await self.monitor.registerProcess(\n                        id: id,\n                        onExit: { id, exitStatus in\n                            await self.releaseWaiters(for: id, status: exitStatus)\n\n                            guard let process = await self.processes[id]?.process else {\n                                throw ContainerizationError(\n                                    .invalidState,\n                                    message: \"ProcessInfo missing for process \\(id)\"\n                                )\n                            }\n                            try await process.delete()\n                            try await self.setProcessState(id: id, state: .stopped)\n                        }\n                    )\n                } catch {\n                    await self.releaseWaiters(for: id, status: ExitStatus(exitCode: -1))\n                    throw error\n                }\n\n                return message.reply()\n            default:\n                throw ContainerizationError(\n                    .invalidState,\n                    message: \"cannot exec: container is not running\"\n                )\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+        "location" : {
+          "end_position" : 18462,
+          "start_position" : 16089
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "createProcess",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCMessage"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location" : {
+              "end_position" : 16678,
+              "start_position" : 16657
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "message",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "XPCMessage"
+        },
+        "description" : "-> XPCMessage"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 83,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerSandboxService/Server/SandboxService.swift"
+  ]
+}

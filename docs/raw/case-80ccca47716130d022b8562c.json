@@ -1,0 +1,236 @@
+{
+  "caseID" : "case-80ccca47716130d022b8562c",
+  "commitHash" : "ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "commitMessage" : "Use FilePath for app, install, and log roots. (#1558)\n\n- Closes #1557.\n- Replaces `executableURL` utility function for getting app executable\npath with `executablePath`.\n- Adds `FilePath.resolvingSymlinks()` extension.\n- Also converts for FilePath for types in `ContainerVersion` target.",
+  "commitURL" : "https://github.com/apple/container/commit/ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "durationSeconds" : 3.797727108001709,
+  "entityNames" : [
+    "BundleAppBundleTests",
+    "returnsBundleForAppBundleExecutable",
+    "returnsBundleForSymlinkedExecutable",
+    "returnsNilForUnixInstallPath",
+    "returnsNilWhenThirdAncestorLacksAppExtension",
+    "returnsNilWhenTooShallow"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let path = FilePath(\"/usr/local/bin/container\")\n        #expect(Bundle.appBundle(executablePath: path) == nil)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerVersionTests/Bundle+AppBundleTests.swift",
+            "location" : {
+              "end_position" : 1151,
+              "start_position" : 906
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "returnsNilForUnixInstallPath",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let tmp = FileManager.default.temporaryDirectory\n            .appendingPathComponent(\"BundleTest-\\(UUID().uuidString)\", isDirectory: true)\n        defer { try? FileManager.default.removeItem(at: tmp) }\n\n        let bundleURL = tmp.appendingPathComponent(\"Foo.app\", isDirectory: true)\n        let contentsURL = bundleURL.appendingPathComponent(\"Contents\", isDirectory: true)\n        let macOSURL = contentsURL.appendingPathComponent(\"MacOS\", isDirectory: true)\n        try FileManager.default.createDirectory(at: macOSURL, withIntermediateDirectories: true)\n        try Data(\"<plist version=\\\"1.0\\\"><dict/></plist>\".utf8)\n            .write(to: contentsURL.appendingPathComponent(\"Info.plist\"))\n\n        let executablePath = FilePath(macOSURL.path(percentEncoded: false))\n            .appending(FilePath.Component(\"Foo\"))\n        let bundle = Bundle.appBundle(executablePath: executablePath)\n        #expect(bundle != nil)\n        #expect(bundle?.bundleURL.lastPathComponent == \"Foo.app\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerVersionTests/Bundle+AppBundleTests.swift",
+            "location" : {
+              "end_position" : 2316,
+              "start_position" : 1151
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "returnsBundleForAppBundleExecutable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let tmp = FileManager.default.temporaryDirectory\n            .appendingPathComponent(\"BundleTest-\\(UUID().uuidString)\", isDirectory: true)\n        defer { try? FileManager.default.removeItem(at: tmp) }\n\n        let bundleURL = tmp.appendingPathComponent(\"Foo.app\", isDirectory: true)\n        let contentsURL = bundleURL.appendingPathComponent(\"Contents\", isDirectory: true)\n        let macOSURL = contentsURL.appendingPathComponent(\"MacOS\", isDirectory: true)\n        try FileManager.default.createDirectory(at: macOSURL, withIntermediateDirectories: true)\n        try Data(\"<plist version=\\\"1.0\\\"><dict/></plist>\".utf8)\n            .write(to: contentsURL.appendingPathComponent(\"Info.plist\"))\n        let executableURL = macOSURL.appendingPathComponent(\"Foo\")\n        try Data().write(to: executableURL)\n\n        // Symlink outside the bundle pointing at the real executable\n        let symlinkURL = tmp.appendingPathComponent(\"foo-link\")\n        try FileManager.default.createSymbolicLink(at: symlinkURL, withDestinationURL: executableURL)\n\n        let bundle = Bundle.appBundle(executablePath: FilePath(symlinkURL.path(percentEncoded: false)))\n        #expect(bundle != nil)\n        #expect(bundle?.bundleURL.lastPathComponent == \"Foo.app\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerVersionTests/Bundle+AppBundleTests.swift",
+            "location" : {
+              "end_position" : 3637,
+              "start_position" : 2316
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "returnsBundleForSymlinkedExecutable",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let path = FilePath(\"/Foo.app/binary\")\n        #expect(Bundle.appBundle(executablePath: path) == nil)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerVersionTests/Bundle+AppBundleTests.swift",
+            "location" : {
+              "end_position" : 3867,
+              "start_position" : 3637
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "returnsNilWhenTooShallow",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let path = FilePath(\"/opt/tools/bin/helper\")\n        #expect(Bundle.appBundle(executablePath: path) == nil)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerVersionTests/Bundle+AppBundleTests.swift",
+            "location" : {
+              "end_position" : 4113,
+              "start_position" : 3867
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "returnsNilWhenThirdAncestorLacksAppExtension",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/ContainerVersionTests/Bundle+AppBundleTests.swift",
+        "location" : {
+          "end_position" : 4115,
+          "start_position" : 875
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "BundleAppBundleTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 142,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/ContainerVersionTests/Bundle+AppBundleTests.swift"
+  ]
+}

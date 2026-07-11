@@ -1,0 +1,58 @@
+{
+  "caseID" : "case-1b0908395babc954bad5458d",
+  "commitHash" : "b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "commitMessage" : "Add `container machine` for managing persistent Linux VMs (#1662)\n\n## Type of Change\n- [ ] Bug fix\n- [x] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n`container` runs each workload in an ephemeral VM, so there's no\nbuilt-in way to keep a persistent Linux environment you can log into and\nwork in. `container machine` adds one.\n\nA container machine is a lightweight, persistent, and integrated Linux\nenvironments that feel like an extension of your Mac, created from\nstandard OCI images with a familiar UX. The login user matches your host\naccount with passwordless `sudo`, your home directory is mounted inside\nthe VM, and each machine keeps its filesystem and runs the image's own\ninit system (such as`systemd` or `openrc`).\n\n```bash\ncontainer machine create alpine:3.22 --name my-machine\ncontainer machine run -n my-machine # interactive shell\ncontainer machine set -n my-machine cpus=4 memory=8G\n```\n\nSubcommands: `create`, `run`, `list` (`ls`), `inspect`, `set`,\n`set-default`, `logs`, `stop`, `delete` (`rm`); `m` aliases `machine`.\nDocs added to `docs/command-reference.md` (Machine Management) and\n`docs/how-to.md` (\"Use container machines\").\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [x] Added/updated docs\n\nSigned-off-by: Raj Aryan Singh <rajaryan_singh@apple.com>\nCo-authored-by: Jaewon Hur <jaewon_hur@apple.com>\nCo-authored-by: John Logan <john_logan@apple.com>\nCo-authored-by: Michael Crosby <michael_crosby@apple.com>\nCo-authored-by: Eric Ernst <eric_ernst@apple.com>\nCo-authored-by: Danny Canter <danny_canter@apple.com>",
+  "commitURL" : "https://github.com/apple/container/commit/b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "durationSeconds" : 18.474954962730408,
+  "entityNames" : [
+    "[MachineSnapshot]",
+    "list"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "self.log.debug(\"\\(#function)\")\n        var snapshots: [MachineSnapshot] = []\n        for state in self.machines.values {\n            var snapshot = state.snapshot\n            let path = try self.bundlePath(id: snapshot.id)\n            let bundle = MachineBundle(path: path)\n            snapshot.diskSize = bundle.diskSize\n            snapshots.append(snapshot)\n        }\n        let runningIds = snapshots.compactMap { $0.status == .running ? $0.containerId : nil }\n        if !runningIds.isEmpty {\n            var containers: [ContainerSnapshot]?\n            do {\n                containers = try await self.client.list(filters: ContainerListFilters(ids: runningIds))\n            } catch {\n                self.log.warning(\"failed to fetch container addresses: \\(error)\")\n            }\n            let addressMap = (containers ?? []).reduce(into: [String: String]()) { result, c in\n                if let addr = c.networks.first?.ipv4Address.address.description {\n                    result[c.id] = addr\n                }\n            }\n            for i in snapshots.indices where snapshots[i].status == .running {\n                if let cid = snapshots[i].containerId {\n                    snapshots[i].ipAddress = addressMap[cid]\n                }\n            }\n        }\n        return snapshots"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+        "location" : {
+          "end_position" : 6590,
+          "start_position" : 5216
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "list",
+      "parameters" : [
+
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "[MachineSnapshot]"
+        },
+        "description" : "-> [MachineSnapshot]"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 193,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/MachineAPIService/Server/MachinesService.swift"
+  ]
+}

@@ -1,0 +1,939 @@
+{
+  "caseID" : "case-676e39cfaecac35c4c8b95cd",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "Bool",
+    "ContainerStats",
+    "ContainerStopOptions",
+    "ExitStatus",
+    "FileHandle",
+    "Int64",
+    "ProcessConfiguration",
+    "RuntimeClient"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "RuntimeClient"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.bootstrap.rawValue)\n\n        for (i, h) in stdio.enumerated() {\n            let key: RuntimeKeys = try {\n                switch i {\n                case 0: .stdin\n                case 1: .stdout\n                case 2: .stderr\n                default:\n                    throw ContainerizationError(.invalidArgument, message: \"invalid fd \\(i)\")\n                }\n            }()\n\n            if let h {\n                request.set(key: key.rawValue, value: h)\n            }\n        }\n\n        do {\n            let dynamicEnv = try JSONEncoder().encode(dynamicEnv)\n            request.set(key: RuntimeKeys.dynamicEnv.rawValue, value: dynamicEnv)\n\n            let infosData = try JSONEncoder().encode(networkBootstrapInfos)\n            request.set(key: RuntimeKeys.networkBootstrapInfos.rawValue, value: infosData)\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to bootstrap container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 4269,
+              "start_position" : 2958
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "bootstrap",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[FileHandle?]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 3015,
+                  "start_position" : 2985
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stdio",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[NetworkBootstrapInfo]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 3070,
+                  "start_position" : 3015
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "networkBootstrapInfos",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String: String]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 3113,
+                  "start_position" : 3070
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dynamicEnv",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.state.rawValue)\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get state for container \\(self.id)\",\n                cause: error\n            )\n        }\n        return try response.sandboxSnapshot()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 4772,
+              "start_position" : 4269
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "state",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "SandboxSnapshot"
+            },
+            "description" : "-> SandboxSnapshot"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.createProcess.rawValue)\n        request.set(key: RuntimeKeys.id.rawValue, value: id)\n        let data = try JSONEncoder().encode(config)\n        request.set(key: RuntimeKeys.processConfig.rawValue, value: data)\n\n        for (i, h) in stdio.enumerated() {\n            let key: RuntimeKeys = try {\n                switch i {\n                case 0: .stdin\n                case 1: .stdout\n                case 2: .stderr\n                default:\n                    throw ContainerizationError(.invalidArgument, message: \"invalid fd \\(i)\")\n                }\n            }()\n\n            if let h {\n                request.set(key: key.rawValue, value: h)\n            }\n        }\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to create process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 5909,
+              "start_position" : 4772
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "createProcess",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 4818,
+                  "start_position" : 4804
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ProcessConfiguration"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 4848,
+                  "start_position" : 4818
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "config",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[FileHandle?]"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 4868,
+                  "start_position" : 4848
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stdio",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.start.rawValue)\n        request.set(key: RuntimeKeys.id.rawValue, value: id)\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to start process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 6392,
+              "start_position" : 5909
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "startProcess",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 5952,
+                  "start_position" : 5940
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.stop.rawValue)\n\n        let data = try JSONEncoder().encode(options)\n        request.set(key: RuntimeKeys.stopOptions.rawValue, value: data)\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to stop container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 6931,
+              "start_position" : 6392
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "stop",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ContainerStopOptions"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 6444,
+                  "start_position" : 6415
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "options",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.kill.rawValue)\n        request.set(key: RuntimeKeys.id.rawValue, value: id)\n        request.set(key: RuntimeKeys.signal.rawValue, value: signal)\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to send signal \\(signal) to process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 7509,
+              "start_position" : 6931
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "kill",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 6968,
+                  "start_position" : 6954
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 6981,
+                  "start_position" : 6968
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "signal",
+              "order" : 1
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.resize.rawValue)\n        request.set(key: RuntimeKeys.id.rawValue, value: id)\n        request.set(key: RuntimeKeys.width.rawValue, value: UInt64(size.width))\n        request.set(key: RuntimeKeys.height.rawValue, value: UInt64(size.height))\n\n        do {\n            try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to resize pty for process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 8180,
+              "start_position" : 7509
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "resize",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 7548,
+                  "start_position" : 7534
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Terminal.Size"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 7567,
+                  "start_position" : 7548
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "size",
+              "order" : 1
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.wait.rawValue)\n        request.set(key: RuntimeKeys.id.rawValue, value: id)\n\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to wait for process \\(id) in container \\(self.id)\",\n                cause: error\n            )\n        }\n        let code = response.int64(key: RuntimeKeys.exitCode.rawValue)\n        let date = response.date(key: RuntimeKeys.exitedAt.rawValue)\n        return ExitStatus(exitCode: Int32(code), exitedAt: date)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 8920,
+              "start_position" : 8180
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "wait",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 8215,
+                  "start_position" : 8203
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "ExitStatus"
+            },
+            "description" : "-> ExitStatus"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.dial.rawValue)\n        request.set(key: RuntimeKeys.port.rawValue, value: UInt64(port))\n\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to dial \\(port) on \\(self.id)\",\n                cause: error\n            )\n        }\n        guard let fh = response.fileHandle(key: RuntimeKeys.fd.rawValue) else {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get fd for vsock port \\(port)\"\n            )\n        }\n        return fh"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 9712,
+              "start_position" : 8920
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "dial",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UInt32"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 8957,
+                  "start_position" : 8943
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "port",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "FileHandle"
+            },
+            "description" : "-> FileHandle"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.shutdown.rawValue)\n\n        do {\n            _ = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to shutdown container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 10112,
+              "start_position" : 9712
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "shutdown",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.copyIn.rawValue)\n        request.set(key: RuntimeKeys.sourcePath.rawValue, value: source)\n        request.set(key: RuntimeKeys.destinationPath.rawValue, value: destination)\n        request.set(key: RuntimeKeys.fileMode.rawValue, value: UInt64(mode))\n        request.set(key: RuntimeKeys.createParents.rawValue, value: createParents)\n\n        do {\n            try await self.client.send(request, responseTimeout: .seconds(300))\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to copy into container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 10930,
+              "start_position" : 10112
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "copyIn",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 10153,
+                  "start_position" : 10137
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "source",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 10174,
+                  "start_position" : 10153
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "destination",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UInt32"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 10188,
+                  "start_position" : 10174
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "mode",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 10214,
+                  "start_position" : 10188
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "createParents",
+              "order" : 3
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.copyOut.rawValue)\n        request.set(key: RuntimeKeys.sourcePath.rawValue, value: source)\n        request.set(key: RuntimeKeys.destinationPath.rawValue, value: destination)\n        request.set(key: RuntimeKeys.createParents.rawValue, value: createParents)\n\n        do {\n            try await self.client.send(request, responseTimeout: .seconds(300))\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to copy from container \\(self.id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 11659,
+              "start_position" : 10930
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "copyOut",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 10972,
+                  "start_position" : 10956
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "source",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 10993,
+                  "start_position" : 10972
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "destination",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+                "location" : {
+                  "end_position" : 11019,
+                  "start_position" : 10993
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "createParents",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let request = XPCMessage(route: RuntimeRoutes.statistics.rawValue)\n\n        let response: XPCMessage\n        do {\n            response = try await self.client.send(request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get statistics for container \\(self.id)\",\n                cause: error\n            )\n        }\n\n        guard let data = response.dataNoCopy(key: RuntimeKeys.statistics.rawValue) else {\n            throw ContainerizationError(\n                .internalError,\n                message: \"no statistics data returned\"\n            )\n        }\n\n        return try JSONDecoder().decode(ContainerStats.self, from: data)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+            "location" : {
+              "end_position" : 12448,
+              "start_position" : 11659
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "statistics",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "ContainerStats"
+            },
+            "description" : "-> ContainerStats"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift",
+        "location" : {
+          "end_position" : 12450,
+          "start_position" : 2912
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add Extension refactoring"
+  },
+  "refactoringIndex" : 137,
+  "refactoringType" : "Add Extension refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/Runtime/RuntimeClient/RuntimeClient.swift"
+  ]
+}

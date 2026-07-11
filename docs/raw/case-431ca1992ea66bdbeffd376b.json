@@ -1,0 +1,98 @@
+{
+  "caseID" : "case-431ca1992ea66bdbeffd376b",
+  "commitHash" : "0c721a24c5bb113e73c65ff2d8a2ab5b4a80535f",
+  "commitMessage" : "feat: added Disk preview (disabled for now)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/0c721a24c5bb113e73c65ff2d8a2ab5b4a80535f",
+  "durationSeconds" : 27.635610938072205,
+  "entityNames" : [
+    "[disk_s]?",
+    "fileSystem",
+    "getDiskInfo"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "body" : {
+        "content" : "bootDisk.fileSystem = fileSystem"
+      },
+      "conditions" : [
+        {
+          "condition_value" : {
+            "optional_binding" : {
+              "_0" : {
+                "description" : "let fileSystem = plist[\"FilesystemType\"] as? String",
+                "initializer_clause" : {
+                  "has_self_reference" : false,
+                  "value" : {
+                    "other" : {
+                      "_0" : "FilesystemType"
+                    }
+                  }
+                },
+                "is_binding_self" : false,
+                "is_in_out" : false,
+                "is_let" : true,
+                "is_var" : false,
+                "name" : "fileSystem"
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemKit.swift",
+            "location" : {
+              "end_position" : 23754,
+              "start_position" : 23702
+            }
+          }
+        }
+      ],
+      "description" : "if",
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemKit.swift",
+        "location" : {
+          "end_position" : 23834,
+          "start_position" : 23678
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "var bootableDisks: [disk_s] = []\n        \n        guard let output = process(path: \"/usr/sbin/diskutil\", arguments: [\"list\", \"-plist\"]) else {\n            return nil\n        }\n        \n        do {\n            if let data = output.data(using: .utf8),\n               let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],\n               let allDisksAndPartitions = plist[\"AllDisksAndPartitions\"] as? [[String: Any]] {\n                \n                for disk in allDisksAndPartitions {\n                    if let partitions = disk[\"Partitions\"] as? [[String: Any]] {\n                        for partition in partitions {\n                            if let bootable = partition[\"Bootable\"] as? Bool, bootable {\n                                var bootableDisk = disk_s()\n                                if let id = partition[\"DiskUUID\"] as? String {\n                                    bootableDisk.id = id\n                                } else if let deviceIdentifier = partition[\"DeviceIdentifier\"] as? String {\n                                    bootableDisk.id = \"/dev/\" + deviceIdentifier\n                                }\n                                if let volumeName = partition[\"VolumeName\"] as? String {\n                                    bootableDisk.name = volumeName\n                                }\n                                if let size = partition[\"Size\"] as? Int64 {\n                                    bootableDisk.size = size\n                                }\n                                if bootableDisk.id != nil {\n                                    bootableDisks.append(bootableDisk)\n                                }\n                            }\n                        }\n                    }\n                    \n                    if let contentType = disk[\"Content\"] as? String, contentType == \"Apple_APFS_Container\" || contentType == \"Apple_CoreStorage\" {\n                        if let deviceIdentifier = disk[\"DeviceIdentifier\"] as? String,\n                           let infoOutput = process(path: \"/usr/sbin/diskutil\", arguments: [\"info\", \"-plist\", deviceIdentifier]),\n                           let infoData = infoOutput.data(using: .utf8),\n                           let info = try PropertyListSerialization.propertyList(from: infoData, options: [], format: nil) as? [String: Any] {\n                            if let isBootDisk = info[\"BootableVolume\"] as? Bool, isBootDisk {\n                                var bootableDisk = disk_s()\n                                if let id = info[\"DiskUUID\"] as? String {\n                                    bootableDisk.id = id\n                                } else {\n                                    bootableDisk.id = \"/dev/\" + deviceIdentifier\n                                }\n                                if let name = info[\"VolumeName\"] as? String {\n                                    bootableDisk.name = name\n                                } else if let name = disk[\"DeviceIdentifier\"] as? String {\n                                    bootableDisk.name = name\n                                }\n                                \n                                if let size = disk[\"Size\"] as? Int64 {\n                                    bootableDisk.size = size\n                                } else if let total = info[\"TotalSize\"] as? Int64 {\n                                    bootableDisk.size = total\n                                }\n                                \n                                if bootableDisk.id != nil {\n                                    bootableDisks.append(bootableDisk)\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        } catch {\n            print(\"Error parsing diskutil output: \\(error)\")\n            return nil\n        }\n        \n        if bootableDisks.isEmpty {\n            if let startupDiskInfo = process(path: \"/usr/sbin/diskutil\", arguments: [\"info\", \"-plist\", \"/\"]) {\n                if let data = startupDiskInfo.data(using: .utf8),\n                   let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {\n                    var bootDisk = disk_s()\n                    if let id = plist[\"DiskUUID\"] as? String {\n                        bootDisk.id = id\n                    } else if let deviceNode = plist[\"DeviceNode\"] as? String {\n                        bootDisk.id = deviceNode\n                    }\n                    if let volumeName = plist[\"VolumeName\"] as? String {\n                        bootDisk.name = volumeName\n                    }\n                    if let totalSize = plist[\"TotalSize\"] as? Int64 {\n                        bootDisk.size = totalSize\n                    }\n                    if let fileSystem = plist[\"FilesystemType\"] as? String {\n                        bootDisk.fileSystem = fileSystem\n                    }\n                    if bootDisk.id != nil {\n                        bootableDisks.append(bootDisk)\n                    }\n                }\n            }\n        }\n        \n        return bootableDisks"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemKit.swift",
+        "location" : {
+          "end_position" : 24041,
+          "start_position" : 18756
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "getDiskInfo",
+      "parameters" : [
+
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : true,
+          "name" : "[disk_s]?"
+        },
+        "description" : "-> [disk_s]?"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 35,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/SystemKit.swift"
+  ]
+}

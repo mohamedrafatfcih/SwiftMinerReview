@@ -1,0 +1,79 @@
+{
+  "caseID" : "case-7e5a2a370751cc4005845135",
+  "commitHash" : "bd1916f9b314b9b9e335362bbcfc8ee11f7d860b",
+  "commitMessage" : "Make inspect error handling for missing resources consistent (#1564)\n\n- Closes #1539.\n- All `inspect` commands now consistently return\n  exit 1 with a clear error when a requested resource\n  is missing.",
+  "commitURL" : "https://github.com/apple/container/commit/bd1916f9b314b9b9e335362bbcfc8ee11f7d860b",
+  "durationSeconds" : 4.1272569894790649,
+  "entityNames" : [
+    "run"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "body" : {
+        "content" : "for (name, error) in allErrors {\n                    log.error(\n                        \"image inspect failed\",\n                        metadata: [\n                            \"name\": \"\\(name)\",\n                            \"error\": \"\\(error.localizedDescription)\",\n                        ])\n                }\n\n                throw InspectError(succeeded: succeededImages, failed: allErrors)"
+      },
+      "conditions" : [
+        {
+          "condition_value" : {
+            "boolean_expr" : {
+              "_0" : "!allErrors.isEmpty"
+            }
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Image/ImageInspect.swift",
+            "location" : {
+              "end_position" : 2755,
+              "start_position" : 2736
+            }
+          }
+        }
+      ],
+      "description" : "if",
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Image/ImageInspect.swift",
+        "location" : {
+          "end_position" : 3179,
+          "start_position" : 2719
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let containerSystemConfig: ContainerSystemConfig = try await ConfigurationLoader.load()\n            var printable: [ImageDetail] = []\n            var succeededImages: [String] = []\n            var allErrors: [(String, Error)] = []\n\n            let result = try await ClientImage.get(names: images, containerSystemConfig: containerSystemConfig)\n\n            for image in result.images {\n                guard\n                    !Utility.isInfraImage(\n                        name: image.reference,\n                        builderImage: containerSystemConfig.build.image,\n                        initImage: containerSystemConfig.vminit.image\n                    )\n                else { continue }\n                printable.append(try await image.details())\n                succeededImages.append(image.reference)\n            }\n\n            for missing in result.error {\n                allErrors.append((missing, ContainerizationError(.notFound, message: \"Image not found\")))\n            }\n\n            if !printable.isEmpty {\n                try Output.emit(Output.renderJSON(printable))\n            }\n\n            if !allErrors.isEmpty {\n                for (name, error) in allErrors {\n                    log.error(\n                        \"image inspect failed\",\n                        metadata: [\n                            \"name\": \"\\(name)\",\n                            \"error\": \"\\(error.localizedDescription)\",\n                        ])\n                }\n\n                throw InspectError(succeeded: succeededImages, failed: allErrors)\n            }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Image/ImageInspect.swift",
+        "location" : {
+          "end_position" : 3189,
+          "start_position" : 1562
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "run",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 15,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/ContainerCommands/Image/ImageInspect.swift"
+  ]
+}

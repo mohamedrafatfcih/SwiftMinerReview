@@ -1,0 +1,264 @@
+{
+  "caseID" : "case-7100c99443b625cb7e4846ca",
+  "commitHash" : "76f387e3be2855b84ba411c72ef14c9439a413aa",
+  "commitMessage" : "Restore reverted migrations, migrate last tests. (#1880)\n\n- Part of #1833.\n- CLI progress and registry test migrations were inadventently reverted\nby #1857.\n- Migrate TestCLINoParallelCases to TestCLIImagePruneSerial and\nTestCLINetworkPruneSerial.\n- Clean up test selection patterns in Makefile.\n- Remove all legacy CLITests files.\n- Use swift-testing `withKnownIssue` to run but ignore failures on flaky\n`testCreateNameLongestValid` and `testIsolatedNetwork`.\n- Extracts a fixture helper for tests requiring a retry loop.",
+  "commitURL" : "https://github.com/apple/container/commit/76f387e3be2855b84ba411c72ef14c9439a413aa",
+  "durationSeconds" : 8.0211789608001709,
+  "entityNames" : [
+    "TestCLIImagePruneSerial",
+    "testImageManyConcurrentDownloads",
+    "testImagePruneDanglingImages",
+    "testImagePruneNoImages",
+    "testImagePruneUnusedImages",
+    "testImageSingleConcurrentDownload"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialized"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            _ = try? f.run([\"image\", \"rm\", alpine])\n            f.addCleanup { try? f.doRemoveImages() }\n            try f.doPull(alpine, args: [\"--max-concurrent-downloads\", \"1\"])\n            let present = try f.isImagePresent(alpine)\n            #expect(present, \"expected image to be pulled with --max-concurrent-downloads 1\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Images/TestCLIImagePruneSerial.swift",
+            "location" : {
+              "end_position" : 1553,
+              "start_position" : 1093
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testImageSingleConcurrentDownload",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            _ = try? f.run([\"image\", \"rm\", alpine])\n            f.addCleanup { try? f.doRemoveImages() }\n            try f.doPull(alpine, args: [\"--max-concurrent-downloads\", \"64\"])\n            let present = try f.isImagePresent(alpine)\n            #expect(present, \"expected image to be pulled with --max-concurrent-downloads 64\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Images/TestCLIImagePruneSerial.swift",
+            "location" : {
+              "end_position" : 2014,
+              "start_position" : 1553
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testImageManyConcurrentDownloads",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            try? f.doRemoveImages()\n            let result = try f.run([\"image\", \"prune\"]).check()\n            #expect(result.error.contains(\"Zero KB\"), \"should show no space reclaimed\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Images/TestCLIImagePruneSerial.swift",
+            "location" : {
+              "end_position" : 2320,
+              "start_position" : 2014
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testImagePruneNoImages",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            _ = try? f.run([\"delete\", \"--all\", \"--force\"])\n            try? f.doRemoveImages()\n            f.addCleanup { try? f.doRemoveImages() }\n\n            try f.doPull(alpine)\n            try f.doPull(busybox)\n            #expect(try f.isImagePresent(alpine), \"expected \\(alpine) to be pulled\")\n            #expect(try f.isImagePresent(busybox), \"expected \\(busybox) to be pulled\")\n\n            let result = try f.run([\"image\", \"prune\", \"-a\"]).check()\n            #expect(result.output.contains(alpine), \"should prune alpine image\")\n            #expect(result.output.contains(busybox), \"should prune busybox image\")\n\n            #expect(try !f.isImagePresent(alpine), \"expected \\(alpine) to be removed\")\n            #expect(try !f.isImagePresent(busybox), \"expected \\(busybox) to be removed\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Images/TestCLIImagePruneSerial.swift",
+            "location" : {
+              "end_position" : 3242,
+              "start_position" : 2320
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testImagePruneUnusedImages",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let containerName = \"\\(f.testID)-c\"\n            _ = try? f.run([\"delete\", \"--all\", \"--force\"])\n            try? f.doRemoveImages()\n            f.addCleanup {\n                try? f.doStop(containerName)\n                try? f.doRemove(containerName)\n                try? f.doRemoveImages()\n            }\n\n            try f.doPull(alpine)\n            try f.doPull(busybox)\n            #expect(try f.isImagePresent(alpine), \"expected \\(alpine) to be pulled\")\n            #expect(try f.isImagePresent(busybox), \"expected \\(busybox) to be pulled\")\n\n            // Keep alpine in use via a running container.\n            try f.doLongRun(name: containerName, image: alpine, autoRemove: false)\n            try await f.waitForContainerRunning(containerName)\n\n            let result = try f.run([\"image\", \"prune\", \"-a\"]).check()\n            #expect(result.output.contains(busybox), \"should prune busybox image\")\n            #expect(try !f.isImagePresent(busybox), \"expected \\(busybox) to be removed\")\n            #expect(try f.isImagePresent(alpine), \"expected \\(alpine) to remain (in use)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Images/TestCLIImagePruneSerial.swift",
+            "location" : {
+              "end_position" : 4462,
+              "start_position" : 3242
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testImagePruneDanglingImages",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Images/TestCLIImagePruneSerial.swift",
+        "location" : {
+          "end_position" : 4464,
+          "start_position" : 911
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIImagePruneSerial",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 24,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Images/TestCLIImagePruneSerial.swift"
+  ]
+}

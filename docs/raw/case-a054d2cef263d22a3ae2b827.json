@@ -1,0 +1,119 @@
+{
+  "caseID" : "case-a054d2cef263d22a3ae2b827",
+  "commitHash" : "ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "commitMessage" : "Use FilePath for app, install, and log roots. (#1558)\n\n- Closes #1557.\n- Replaces `executableURL` utility function for getting app executable\npath with `executablePath`.\n- Adds `FilePath.resolvingSymlinks()` extension.\n- Also converts for FilePath for types in `ContainerVersion` target.",
+  "commitURL" : "https://github.com/apple/container/commit/ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "durationSeconds" : 3.797727108001709,
+  "entityNames" : [
+    "logPath",
+    "run"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+
+              ],
+              "call" : "map",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Sources/APIServer/APIServer+Start.swift",
+                "location" : {
+                  "end_position" : 1961,
+                  "start_position" : 1878
+                }
+              },
+              "trailing_closure" : {
+                "attributes" : [
+
+                ],
+                "body" : {
+                  "content" : "$0.appending(FilePath.Component(\"\\(commandName).log\") ?? \"unknown\")"
+                },
+                "captures" : [
+
+                ],
+                "location_info" : {
+                  "file_path" : "Sources/APIServer/APIServer+Start.swift",
+                  "location" : {
+                    "end_position" : 1961,
+                    "start_position" : 1890
+                  }
+                },
+                "parameters" : [
+
+                ]
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Sources/APIServer/APIServer+Start.swift",
+        "location" : {
+          "end_position" : 1961,
+          "start_position" : 1868
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "logPath"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let containerSystemConfig: ContainerSystemConfig = try await ConfigurationLoader.load()\n            let commandName = APIServer._commandName\n            let logPath = logRoot.map { $0.appending(FilePath.Component(\"\\(commandName).log\") ?? \"unknown\") }\n            let log = ServiceLogger.bootstrap(category: \"APIServer\", debug: debug, logPath: logPath)\n            log.info(\"starting helper\", metadata: [\"name\": \"\\(commandName)\"])\n            defer {\n                log.info(\"stopping helper\", metadata: [\"name\": \"\\(commandName)\"])\n            }\n\n            do {\n                log.info(\"configuring XPC server\")\n                var routes = [XPCRoute: XPCServer.RouteHandler]()\n                let pluginLoader = try initializePluginLoader(log: log)\n\n                try await initializePlugins(pluginLoader: pluginLoader, log: log, routes: &routes)\n                let containersService = try initializeContainersService(\n                    pluginLoader: pluginLoader,\n                    containerSystemConfig: containerSystemConfig,\n                    log: log,\n                    routes: &routes\n                )\n                let networkService = try await initializeNetworksService(\n                    pluginLoader: pluginLoader,\n                    containersService: containersService,\n                    containerSystemConfig: containerSystemConfig,\n                    log: log,\n                    routes: &routes\n                )\n                await containersService.setNetworksService(networkService)\n                initializeHealthCheckService(log: log, routes: &routes)\n                try initializeKernelService(log: log, routes: &routes)\n                let volumesService = try initializeVolumeService(containersService: containersService, log: log, routes: &routes)\n                try initializeDiskUsageService(\n                    containersService: containersService,\n                    volumesService: volumesService,\n                    log: log,\n                    routes: &routes\n                )\n\n                let server = XPCServer(\n                    identifier: \"com.apple.container.apiserver\",\n                    routes: routes.reduce(\n                        into: [String: XPCServer.RouteHandler](),\n                        {\n                            $0[$1.key.rawValue] = $1.value\n                        }), log: log)\n\n                await withTaskGroup(of: Result<Void, Error>.self) { group in\n                    group.addTask {\n                        log.info(\"starting XPC server\")\n                        do {\n                            try await server.listen()\n                            return .success(())\n                        } catch {\n                            return .failure(error)\n                        }\n                    }\n\n                    // start up host table DNS\n                    group.addTask {\n                        let hostsResolver = ContainerDNSHandler(networkService: networkService)\n                        let nxDomainResolver = NxDomainResolver()\n                        let compositeResolver = CompositeResolver(handlers: [hostsResolver, nxDomainResolver])\n                        let hostsQueryValidator = StandardQueryValidator(handler: compositeResolver)\n                        let dnsServer: DNSServer = DNSServer(handler: hostsQueryValidator, log: log)\n                        log.info(\n                            \"starting DNS resolver for container hostnames\",\n                            metadata: [\n                                \"host\": \"\\(Self.listenAddress)\",\n                                \"port\": \"\\(Self.dnsPort)\",\n                            ]\n                        )\n                        do {\n                            try await dnsServer.run(host: Self.listenAddress, port: Self.dnsPort)\n                            return .success(())\n                        } catch {\n                            return .failure(error)\n                        }\n\n                    }\n\n                    // start up realhost DNS\n                    group.addTask {\n                        do {\n                            let localhostResolver = LocalhostDNSHandler(log: log)\n                            await localhostResolver.monitorResolvers()\n\n                            let nxDomainResolver = NxDomainResolver()\n                            let compositeResolver = CompositeResolver(handlers: [localhostResolver, nxDomainResolver])\n                            let hostsQueryValidator = StandardQueryValidator(handler: compositeResolver)\n                            let dnsServer: DNSServer = DNSServer(handler: hostsQueryValidator, log: log)\n                            log.info(\n                                \"starting DNS resolver for localhost\",\n                                metadata: [\n                                    \"host\": \"\\(Self.listenAddress)\",\n                                    \"port\": \"\\(Self.localhostDNSPort)\",\n                                ]\n                            )\n                            try await dnsServer.run(host: Self.listenAddress, port: Self.localhostDNSPort)\n                            return .success(())\n                        } catch {\n                            return .failure(error)\n                        }\n                    }\n\n                    for await result in group {\n                        switch result {\n                        case .success():\n                            continue\n                        case .failure(let error):\n                            log.error(\"API server task failed: \\(error)\")\n                        }\n                    }\n                }\n            } catch {\n                log.error(\n                    \"helper failed\",\n                    metadata: [\n                        \"name\": \"\\(commandName)\",\n                        \"error\": \"\\(error)\",\n                    ])\n                APIServer.exit(withError: error)\n            }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/APIServer/APIServer+Start.swift",
+        "location" : {
+          "end_position" : 7701,
+          "start_position" : 1663
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "run",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 13,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/APIServer/APIServer+Start.swift"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "caseID" : "case-2b1ac2bcf58a73362fe8d5c0",
+  "commitHash" : "c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "commitMessage" : "Reorganize Swift package targets for network plugin. (#1615)\n\n- Part of #1404.\n- Updates containerization to 0.33.2.\n- Reorganizes network plugin targets into:\n  - `ContainerNetworkClient` - network plugin client and default types\n- `ContainerNetworkServer` - separate protocols for `Network` which\nmanages the underlying virtual network, `NetworkService`, which takes a\nnetwork and implements the API, and an actor `NetworkHarness` that\nmarshals between the API and the XPC protocol. The service-harness\nseparation will help us ensure XPC protocol compatibility in both\ndirections as we evolve the plugin APIs.\n- Removes `disableAllocator()` which is no longer used since #1545\nswitched over to using XPC connections between runtime and network\nplugin instances to track whether a network has attached containers.",
+  "commitURL" : "https://github.com/apple/container/commit/c5a8d7a8027598ed60f9b27ad83d41a6c5d7ca0c",
+  "durationSeconds" : 8.8029299974441528,
+  "entityNames" : [
+    "Attachment?",
+    "String",
+    "hostname",
+    "lookup"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "sendable" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        let state = await network.state\n        guard case .running(_, let status) = state else {\n            throw ContainerizationError(.invalidState, message: \"invalid network state - network \\(state.id) must be running\")\n        }\n\n        // Invariant: hostname -> index if and only if index -> MAC address\n        let index = try await allocator.lookup(hostname: hostname)\n        guard let index else {\n            return nil\n        }\n        guard let macAddress = macAddresses[index] else {\n            return nil\n        }\n\n        // populate attachment\n        let address = IPv4Address(index)\n        let subnet = status.ipv4Subnet\n        let ipv4Address = try CIDRv4(address, prefix: subnet.prefix)\n        let ipv6Address = try status.ipv6Subnet\n            .map { try CIDRv6(macAddress.ipv6Address(network: $0.lower), prefix: $0.prefix) }\n        let attachment = Attachment(\n            network: state.id,\n            hostname: hostname,\n            ipv4Address: ipv4Address,\n            ipv4Gateway: status.ipv4Gateway,\n            ipv6Address: ipv6Address,\n            macAddress: macAddress\n        )\n        log.debug(\n            \"lookup attachment\",\n            metadata: [\n                \"hostname\": \"\\(hostname)\",\n                \"address\": \"\\(address)\",\n            ])\n\n        return attachment"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
+        "location" : {
+          "end_position" : 6313,
+          "start_position" : 4760
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "lookup",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
+            "location" : {
+              "end_position" : 4815,
+              "start_position" : 4799
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "hostname",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : true,
+          "name" : "Attachment?"
+        },
+        "description" : "-> Attachment?"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 106,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/Network/Server/DefaultNetworkService.swift"
+  ]
+}

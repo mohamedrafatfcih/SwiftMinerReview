@@ -1,0 +1,80 @@
+{
+  "caseID" : "case-78504d7a869adc1645c180d0",
+  "commitHash" : "4c731d3dda5d217fd1c45eaac063fa9f9fe1c46e",
+  "commitMessage" : "Merge pull request #1461 from bdyebd/develop\n\nDelay write of plist file to fix frequent notification issue on Ventura",
+  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/4c731d3dda5d217fd1c45eaac063fa9f9fe1c46e",
+  "durationSeconds" : 1.2529380321502686,
+  "entityNames" : [
+    "Bool",
+    "generateSSLocalLauchAgentPlist"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+        {
+          "label" : "toFile",
+          "value" : "plistTempFilepath"
+        },
+        {
+          "label" : "atomically",
+          "value" : "true"
+        }
+      ],
+      "call" : "write",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "ShadowsocksX-NG/LaunchAgentUtils.swift",
+        "location" : {
+          "end_position" : 2825,
+          "start_position" : 2765
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let sslocalPath = NSHomeDirectory() + APP_SUPPORT_DIR + \"ss-local/ss-local\"\n    let logFilePath = NSHomeDirectory() + \"/Library/Logs/ss-local.log\"\n    let launchAgentDirPath = NSHomeDirectory() + LAUNCH_AGENT_DIR\n    let plistTempFilepath = NSHomeDirectory() + APP_SUPPORT_DIR + LAUNCH_AGENT_CONF_SSLOCAL_NAME\n    let plistFilepath = launchAgentDirPath + LAUNCH_AGENT_CONF_SSLOCAL_NAME\n    \n    // Ensure launch agent directory is existed.\n    let fileMgr = FileManager.default\n    if !fileMgr.fileExists(atPath: launchAgentDirPath) {\n        try! fileMgr.createDirectory(atPath: launchAgentDirPath, withIntermediateDirectories: true, attributes: nil)\n    }\n    \n    let oldSha1Sum = getFileSHA1Sum(plistFilepath)\n    \n    let defaults = UserDefaults.standard\n    let enableUdpRelay = defaults.bool(forKey: \"LocalSocks5.EnableUDPRelay\")\n    let enableVerboseMode = defaults.bool(forKey: \"LocalSocks5.EnableVerboseMode\")\n    \n    var arguments = [sslocalPath, \"-c\", \"ss-local-config.json\"]\n    if enableUdpRelay {\n        arguments.append(\"-u\")\n    }\n    if enableVerboseMode {\n        arguments.append(\"-v\")\n    }\n    arguments.append(\"--reuse-port\")\n    \n    // For a complete listing of the keys, see the launchd.plist manual page.\n    let dyld_library_paths = [\n        NSHomeDirectory() + APP_SUPPORT_DIR + \"ss-local/\",\n        NSHomeDirectory() + APP_SUPPORT_DIR + \"plugins/\",\n    ]\n    \n    let dict: NSMutableDictionary = [\n        \"Label\": \"com.qiuyuzhou.shadowsocksX-NG.local\",\n        \"WorkingDirectory\": NSHomeDirectory() + APP_SUPPORT_DIR,\n        \"StandardOutPath\": logFilePath,\n        \"StandardErrorPath\": logFilePath,\n        \"ProgramArguments\": arguments,\n        \"EnvironmentVariables\": [\"DYLD_LIBRARY_PATH\": dyld_library_paths.joined(separator: \":\")]\n    ]\n    dict.write(toFile: plistTempFilepath, atomically: true)\n    let Sha1Sum = getFileSHA1Sum(plistTempFilepath)\n    if oldSha1Sum != Sha1Sum {\n        dict.write(toFile: plistFilepath, atomically: true)\n        NSLog(\"generateSSLocalLauchAgentPlist - File has been changed.\")\n        return true\n    } else {\n        NSLog(\"generateSSLocalLauchAgentPlist - File has not been changed.\")\n        return false\n    }"
+      },
+      "location_info" : {
+        "file_path" : "ShadowsocksX-NG/LaunchAgentUtils.swift",
+        "location" : {
+          "end_position" : 3180,
+          "start_position" : 739
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "generateSSLocalLauchAgentPlist",
+      "parameters" : [
+
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Bool"
+        },
+        "description" : "-> Bool"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 2,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "shadowsocks-shadowsocksx-ng",
+  "repoName" : "shadowsocks/ShadowsocksX-NG",
+  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "ShadowsocksX-NG/LaunchAgentUtils.swift"
+  ]
+}

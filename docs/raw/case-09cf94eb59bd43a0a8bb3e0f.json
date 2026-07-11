@@ -1,0 +1,496 @@
+{
+  "caseID" : "case-09cf94eb59bd43a0a8bb3e0f",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "Bool",
+    "Destination",
+    "HTTPMethod",
+    "ParameterEncoder",
+    "Parameters?",
+    "Sendable",
+    "URLEncodedFormEncoder",
+    "URLEncodedFormParameterEncoder"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "name" : "Sendable"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sendable"
+        },
+        {
+          "name" : "ParameterEncoder"
+        }
+      ],
+      "enums" : [
+        {
+          "attributes" : [
+
+          ],
+          "cases" : [
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 5423,
+                  "start_position" : 5215
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "methodDependent",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 5545,
+                  "start_position" : 5423
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queryString",
+              "parameters" : [
+
+              ]
+            },
+            {
+              "attributes" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 5651,
+                  "start_position" : 5545
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "httpBody",
+              "parameters" : [
+
+              ]
+            }
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+            {
+              "attributes" : [
+
+              ],
+              "body" : {
+                "content" : "switch self {\n            case .methodDependent: [.get, .head, .delete].contains(method)\n            case .queryString: true\n            case .httpBody: false\n            }"
+              },
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 6185,
+                  "start_position" : 5651
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "encodesParametersInURL",
+              "parameters" : [
+                {
+                  "attributes" : [
+
+                  ],
+                  "data_type" : {
+                    "is_optional" : false,
+                    "name" : "HTTPMethod"
+                  },
+                  "is_variadic" : false,
+                  "label" : "for",
+                  "location_info" : {
+                    "file_path" : "Source/Core/ParameterEncoder.swift",
+                    "location" : {
+                      "end_position" : 5979,
+                      "start_position" : 5957
+                    }
+                  },
+                  "modifiers" : [
+
+                  ],
+                  "name" : "method",
+                  "order" : 0
+                }
+              ],
+              "return_clause" : {
+                "data_type" : {
+                  "is_optional" : false,
+                  "name" : "Bool"
+                },
+                "description" : "-> Bool"
+              }
+            }
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/ParameterEncoder.swift",
+            "location" : {
+              "end_position" : 6191,
+              "start_position" : 5103
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "Destination",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+
+          ]
+        }
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let parameters else { return request }\n\n        var request = request\n\n        guard let url = request.url else {\n            throw AFError.parameterEncoderFailed(reason: .missingRequiredComponent(.url))\n        }\n\n        guard let method = request.method else {\n            let rawValue = request.method?.rawValue ?? \"nil\"\n            throw AFError.parameterEncoderFailed(reason: .missingRequiredComponent(.httpMethod(rawValue: rawValue)))\n        }\n\n        if destination.encodesParametersInURL(for: method),\n           var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {\n            let query: String = try Result<String, any Error> { try encoder.encode(parameters) }\n                .mapError { AFError.parameterEncoderFailed(reason: .encoderFailed(error: $0)) }.get()\n            let newQueryString = [components.percentEncodedQuery, query].compactMap { $0 }.joinedWithAmpersands()\n            components.percentEncodedQuery = newQueryString.isEmpty ? nil : newQueryString\n\n            guard let newURL = components.url else {\n                throw AFError.parameterEncoderFailed(reason: .missingRequiredComponent(.url))\n            }\n\n            request.url = newURL\n        } else {\n            if request.headers[\"Content-Type\"] == nil {\n                request.headers.update(.contentType(\"application/x-www-form-urlencoded; charset=utf-8\"))\n            }\n\n            request.httpBody = try Result<Data, any Error> { try encoder.encode(parameters) }\n                .mapError { AFError.parameterEncoderFailed(reason: .encoderFailed(error: $0)) }.get()\n        }\n\n        return request"
+          },
+          "generic_clause" : "<Parameters: Encodable>",
+          "location_info" : {
+            "file_path" : "Source/Core/ParameterEncoder.swift",
+            "location" : {
+              "end_position" : 8837,
+              "start_position" : 7030
+            }
+          },
+          "modifiers" : [
+            "open"
+          ],
+          "name" : "encode",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Parameters?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 7102,
+                  "start_position" : 7076
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "parameters",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "into",
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 7171,
+                  "start_position" : 7102
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "URLRequest"
+            },
+            "description" : "-> URLRequest"
+          },
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/ParameterEncoder.swift",
+            "location" : {
+              "end_position" : 7030,
+              "start_position" : 6531
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLEncodedFormEncoder"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "URLEncodedFormEncoder",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Core/ParameterEncoder.swift",
+                        "location" : {
+                          "end_position" : 6906,
+                          "start_position" : 6883
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 6908,
+                  "start_position" : 6850
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "encoder",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Destination"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "methodDependent"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/ParameterEncoder.swift",
+                "location" : {
+                  "end_position" : 6951,
+                  "start_position" : 6908
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "destination",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/ParameterEncoder.swift",
+        "location" : {
+          "end_position" : 8839,
+          "start_position" : 4598
+        }
+      },
+      "modifiers" : [
+        "open"
+      ],
+      "name" : "URLEncodedFormParameterEncoder",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLEncodedFormParameterEncoder"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "URLEncodedFormParameterEncoder()"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/ParameterEncoder.swift",
+            "location" : {
+              "end_position" : 6345,
+              "start_position" : 6267
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "`default`"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLEncodedFormEncoder"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/ParameterEncoder.swift",
+            "location" : {
+              "end_position" : 6436,
+              "start_position" : 6406
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "encoder"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Destination"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Core/ParameterEncoder.swift",
+            "location" : {
+              "end_position" : 6531,
+              "start_position" : 6507
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "destination"
+        }
+      ]
+    },
+    "type" : "Add Confromed Type Refactoring"
+  },
+  "refactoringIndex" : 235,
+  "refactoringType" : "Add Confromed Type Refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Core/ParameterEncoder.swift"
+  ]
+}

@@ -1,0 +1,1031 @@
+{
+  "caseID" : "case-9a3eb3da3a486ccd477ef719",
+  "commitHash" : "b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "commitMessage" : "Add `container machine` for managing persistent Linux VMs (#1662)\n\n## Type of Change\n- [ ] Bug fix\n- [x] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n`container` runs each workload in an ephemeral VM, so there's no\nbuilt-in way to keep a persistent Linux environment you can log into and\nwork in. `container machine` adds one.\n\nA container machine is a lightweight, persistent, and integrated Linux\nenvironments that feel like an extension of your Mac, created from\nstandard OCI images with a familiar UX. The login user matches your host\naccount with passwordless `sudo`, your home directory is mounted inside\nthe VM, and each machine keeps its filesystem and runs the image's own\ninit system (such as`systemd` or `openrc`).\n\n```bash\ncontainer machine create alpine:3.22 --name my-machine\ncontainer machine run -n my-machine # interactive shell\ncontainer machine set -n my-machine cpus=4 memory=8G\n```\n\nSubcommands: `create`, `run`, `list` (`ls`), `inspect`, `set`,\n`set-default`, `logs`, `stop`, `delete` (`rm`); `m` aliases `machine`.\nDocs added to `docs/command-reference.md` (Machine Management) and\n`docs/how-to.md` (\"Use container machines\").\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [x] Added/updated docs\n\nSigned-off-by: Raj Aryan Singh <rajaryan_singh@apple.com>\nCo-authored-by: Jaewon Hur <jaewon_hur@apple.com>\nCo-authored-by: John Logan <john_logan@apple.com>\nCo-authored-by: Michael Crosby <michael_crosby@apple.com>\nCo-authored-by: Eric Ernst <eric_ernst@apple.com>\nCo-authored-by: Danny Canter <danny_canter@apple.com>",
+  "commitURL" : "https://github.com/apple/container/commit/b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "durationSeconds" : 18.474954962730408,
+  "entityNames" : [
+    "(MachineConfiguration, MachineResources?)",
+    "@escaping ProgressUpdateHandler",
+    "ContainerSystemConfig",
+    "Duration?",
+    "Flags.ImageFetch",
+    "Flags.MachineManagement",
+    "Flags.Registry",
+    "MachineClient"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sendable"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var requestedPlatform = Parser.platform(os: management.os, arch: management.arch)\n        // Prefer --platform\n        if let platform = management.platform {\n            requestedPlatform = try Parser.platform(from: platform)\n        }\n        let scheme = try RequestScheme(registry.scheme)\n\n        await progressUpdate([\n            .setDescription(\"Fetching image\"),\n            .setItemsName(\"blobs\"),\n        ])\n        let taskManager = ProgressTaskCoordinator()\n        let fetchTask = await taskManager.startTask()\n        let img = try await ClientImage.fetch(\n            reference: image,\n            platform: requestedPlatform,\n            scheme: scheme,\n            containerSystemConfig: containerSystemConfig,\n            progressUpdate: ProgressTaskCoordinator.handler(for: fetchTask, from: progressUpdate),\n            maxConcurrentDownloads: imageFetch.maxConcurrentDownloads\n        )\n\n        // Unpack a fetched image before use\n        await progressUpdate([\n            .setDescription(\"Unpacking image\"),\n            .setItemsName(\"entries\"),\n        ])\n        let unpackTask = await taskManager.startTask()\n        try await img.getCreateSnapshot(\n            platform: requestedPlatform,\n            progressUpdate: ProgressTaskCoordinator.handler(for: unpackTask, from: progressUpdate))\n\n        let userSetup = UserSetup(\n            username: NSUserName(),\n            uid: getuid(),\n            gid: getgid())\n\n        let config = try MachineConfiguration(\n            id: id,\n            image: img.description,\n            platform: requestedPlatform,\n            userSetup: userSetup)\n\n        let resources = try? await Self.fetchMachineArtifact(\n            reference: img.reference, platform: requestedPlatform, scheme: scheme)\n\n        return (config, resources)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 3383,
+              "start_position" : 1179
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "machineConfigFromFlags",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 1247,
+                  "start_position" : 1227
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 1270,
+                  "start_position" : 1247
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "image",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Flags.MachineManagement"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 1315,
+                  "start_position" : 1270
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "management",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Flags.Registry"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 1349,
+                  "start_position" : 1315
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "registry",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Flags.ImageFetch"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 1387,
+                  "start_position" : 1349
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "imageFetch",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ContainerSystemConfig"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 1441,
+                  "start_position" : 1387
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "containerSystemConfig",
+              "order" : 5
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping ProgressUpdateHandler"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 1497,
+                  "start_position" : 1441
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "progressUpdate",
+              "order" : 6
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "(MachineConfiguration, MachineResources?)"
+            },
+            "description" : "-> (MachineConfiguration, MachineResources?)"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "discardable_result" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await xpcClient.send(message, responseTimeout: timeout)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 3746,
+              "start_position" : 3516
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "xpcSend",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 3595,
+                  "start_position" : 3566
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Duration?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+                        {
+                          "value" : "10"
+                        }
+                      ],
+                      "call" : "seconds",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                        "location" : {
+                          "end_position" : 3637,
+                          "start_position" : 3625
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 3637,
+                  "start_position" : 3595
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "timeout",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.listMachine.rawValue)\n\n            let response = try await xpcSend(\n                message: request,\n                timeout: .seconds(10)\n            )\n            let data = response.dataNoCopy(key: MachineKeys.machines.rawValue)\n            guard let data else {\n                return []\n            }\n            return try JSONDecoder().decode([MachineSnapshot].self, from: data)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to list container machines\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 4509,
+              "start_position" : 3746
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "list",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[MachineSnapshot]"
+            },
+            "description" : "-> [MachineSnapshot]"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.createMachine.rawValue)\n\n            let config = try JSONEncoder().encode(configuration)\n            request.set(key: MachineKeys.machineConfig.rawValue, value: config)\n\n            if let resources {\n                let data = try JSONEncoder().encode(resources)\n                request.set(key: MachineKeys.machineResources.rawValue, value: data)\n            }\n\n            let bootData = try JSONEncoder().encode(bootConfig)\n            request.set(key: MachineKeys.bootConfig.rawValue, value: bootData)\n\n            let _ = try await xpcSend(message: request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to create container machine\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 5590,
+              "start_position" : 4509
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "create",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "MachineConfiguration"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 4647,
+                  "start_position" : 4602
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "configuration",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "MachineResources?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 4685,
+                  "start_position" : 4647
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "resources",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "MachineConfig"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 4720,
+                  "start_position" : 4685
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bootConfig",
+              "order" : 2
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.deleteMachine.rawValue)\n            request.set(key: MachineKeys.id.rawValue, value: id)\n\n            let _ = try await xpcSend(message: request, timeout: .seconds(15))\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to delete container machine\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 6157,
+              "start_position" : 5590
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "delete",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 5688,
+                  "start_position" : 5678
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.getDefault.rawValue)\n\n            let response = try await xpcSend(message: request)\n            let id = response.string(key: MachineKeys.id.rawValue)\n            guard let id else {\n                return nil\n            }\n\n            return id\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get the default container machine\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 6797,
+              "start_position" : 6157
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "getDefault",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "String?"
+            },
+            "description" : "-> String?"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.setDefault.rawValue)\n            request.set(key: MachineKeys.id.rawValue, value: id)\n\n            let _ = try await xpcSend(message: request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to set a default container machine\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 7327,
+              "start_position" : 6797
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setDefault",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 6877,
+                  "start_position" : 6867
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.bootMachine.rawValue)\n            if let id {\n                request.set(key: MachineKeys.id.rawValue, value: id)\n            }\n\n            let dynamicEnvData = try JSONEncoder().encode(dynamicEnv)\n            request.set(key: MachineKeys.dynamicEnv.rawValue, value: dynamicEnvData)\n\n            let response = try await xpcSend(message: request)\n            guard let data = response.dataNoCopy(key: MachineKeys.snapshot.rawValue) else {\n                throw ContainerizationError(\n                    .internalError,\n                    message: \"missing snapshot in response\"\n                )\n            }\n            return try JSONDecoder().decode(MachineSnapshot.self, from: data)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to boot container machine\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 8440,
+              "start_position" : 7327
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "boot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "String?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 7397,
+                  "start_position" : 7384
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[String: String]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 7431,
+                  "start_position" : 7397
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dynamicEnv",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "MachineSnapshot"
+            },
+            "description" : "-> MachineSnapshot"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.stopMachine.rawValue)\n            request.set(key: MachineKeys.id.rawValue, value: id)\n\n            let _ = try await xpcSend(message: request, timeout: .seconds(30))\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to stop container machine\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 8980,
+              "start_position" : 8440
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "stop",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 8515,
+                  "start_position" : 8505
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.setConfig.rawValue)\n            request.set(key: MachineKeys.id.rawValue, value: id)\n            let data = try JSONEncoder().encode(bootConfig)\n            request.set(key: MachineKeys.bootConfig.rawValue, value: data)\n            let _ = try await xpcSend(message: request)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to set container machine config\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 9679,
+              "start_position" : 8980
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setConfig",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 9074,
+                  "start_position" : 9062
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "MachineConfig"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 9099,
+                  "start_position" : 9074
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bootConfig",
+              "order" : 1
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.inspectMachine.rawValue)\n            request.set(key: MachineKeys.id.rawValue, value: id)\n\n            let response = try await xpcSend(message: request)\n            guard let data = response.dataNoCopy(key: MachineKeys.snapshot.rawValue) else {\n                throw ContainerizationError(\n                    .internalError,\n                    message: \"missing snapshot in response\"\n                )\n            }\n            return try JSONDecoder().decode(MachineSnapshot.self, from: data)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to inspect container machine\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 10593,
+              "start_position" : 9679
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "inspect",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 9776,
+                  "start_position" : 9766
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "MachineSnapshot"
+            },
+            "description" : "-> MachineSnapshot"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let request = XPCMessage(route: MachineRoutes.logsMachine.rawValue)\n            request.set(key: MachineKeys.id.rawValue, value: id)\n\n            let response = try await xpcSend(message: request)\n            let fds = response.fileHandles(key: MachineKeys.logs.rawValue)\n            guard let fds else {\n                throw ContainerizationError(\n                    .internalError,\n                    message: \"no log fds returned\"\n                )\n            }\n            return fds\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get logs for container machine \\(id)\",\n                cause: error\n            )\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 11458,
+              "start_position" : 10593
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "logs",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+                "location" : {
+                  "end_position" : 10684,
+                  "start_position" : 10674
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "[FileHandle]"
+            },
+            "description" : "-> [FileHandle]"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 3516,
+              "start_position" : 3421
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+        "location" : {
+          "end_position" : 11460,
+          "start_position" : 983
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "MachineClient",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "com.apple.container.core.machine-apiserver"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 1179,
+              "start_position" : 1115
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "serviceIdentifier"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCClient"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Client/MachineClient.swift",
+            "location" : {
+              "end_position" : 3421,
+              "start_position" : 3401
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "xpcClient"
+        }
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 153,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/MachineAPIService/Client/MachineClient.swift"
+  ]
+}

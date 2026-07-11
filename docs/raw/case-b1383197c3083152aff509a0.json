@@ -1,0 +1,264 @@
+{
+  "caseID" : "case-b1383197c3083152aff509a0",
+  "commitHash" : "b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "commitMessage" : "Add `container machine` for managing persistent Linux VMs (#1662)\n\n## Type of Change\n- [ ] Bug fix\n- [x] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n`container` runs each workload in an ephemeral VM, so there's no\nbuilt-in way to keep a persistent Linux environment you can log into and\nwork in. `container machine` adds one.\n\nA container machine is a lightweight, persistent, and integrated Linux\nenvironments that feel like an extension of your Mac, created from\nstandard OCI images with a familiar UX. The login user matches your host\naccount with passwordless `sudo`, your home directory is mounted inside\nthe VM, and each machine keeps its filesystem and runs the image's own\ninit system (such as`systemd` or `openrc`).\n\n```bash\ncontainer machine create alpine:3.22 --name my-machine\ncontainer machine run -n my-machine # interactive shell\ncontainer machine set -n my-machine cpus=4 memory=8G\n```\n\nSubcommands: `create`, `run`, `list` (`ls`), `inspect`, `set`,\n`set-default`, `logs`, `stop`, `delete` (`rm`); `m` aliases `machine`.\nDocs added to `docs/command-reference.md` (Machine Management) and\n`docs/how-to.md` (\"Use container machines\").\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [x] Added/updated docs\n\nSigned-off-by: Raj Aryan Singh <rajaryan_singh@apple.com>\nCo-authored-by: Jaewon Hur <jaewon_hur@apple.com>\nCo-authored-by: John Logan <john_logan@apple.com>\nCo-authored-by: Michael Crosby <michael_crosby@apple.com>\nCo-authored-by: Eric Ernst <eric_ernst@apple.com>\nCo-authored-by: Danny Canter <danny_canter@apple.com>",
+  "commitURL" : "https://github.com/apple/container/commit/b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "durationSeconds" : 18.474954962730408,
+  "entityNames" : [
+    "(\n        outputData: Data, output: String, error: String, status: Int32\n    )",
+    "Bool",
+    "Data?",
+    "URL?",
+    "[String: String]",
+    "[String]",
+    "arguments",
+    "currentDirectory"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "try_stmt" : {
+            "_0" : {
+              "expression" : {
+                "function_call" : {
+                  "_0" : {
+                    "additional_trailing_closures" : [
+
+                    ],
+                    "arguments" : [
+
+                    ],
+                    "call" : "create",
+                    "has_self_reference" : false,
+                    "internal_inline_calls" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+                      "location" : {
+                        "end_position" : 5264,
+                        "start_position" : 5247
+                      }
+                    }
+                  }
+                }
+              },
+              "location_info" : {
+                "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+                "location" : {
+                  "end_position" : 5264,
+                  "start_position" : 5243
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+        "location" : {
+          "end_position" : 5264,
+          "start_position" : 5232
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "terminal"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let seq = CLITest.commandSeq.withLock { counter in\n            defer { counter += 1 }\n            return counter\n        }\n        log.info(\n            \"command start\",\n            metadata: [\n                \"seq\": \"\\(seq)\",\n                \"args\": \"\\(arguments.joined(separator: \" \"))\",\n            ]\n        )\n\n        let process = Process()\n        process.executableURL = try executablePath\n        process.arguments = arguments\n        if let directory = currentDirectory {\n            process.currentDirectoryURL = directory\n        }\n        if !env.isEmpty {\n            var processEnv = ProcessInfo.processInfo.environment\n            for (key, value) in env {\n                processEnv[key] = value\n            }\n            process.environment = processEnv\n        }\n\n        var inputPipe: Pipe?\n        if tty {\n            let terminal = try Terminal.create()\n            process.standardInput = terminal.child.handle\n        } else {\n            let pipe = Pipe()\n            process.standardInput = pipe\n            inputPipe = pipe\n        }\n\n        let outputData: Data\n        let errorData: Data\n        do {\n            // Redirect stdout/stderr to temp files so the child process never\n            // blocks on `write()` when one stream fills the kernel pipe buffer\n            // before the parent drains it (issue #1456).\n            let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)\n            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)\n            defer {\n                try? FileManager.default.removeItem(at: tempDir)\n            }\n\n            let stdoutURL = tempDir.appendingPathComponent(\"stdout\")\n            let stderrURL = tempDir.appendingPathComponent(\"stderr\")\n            FileManager.default.createFile(atPath: stdoutURL.path, contents: nil)\n            FileManager.default.createFile(atPath: stderrURL.path, contents: nil)\n\n            let stdoutHandle = try FileHandle(forWritingTo: stdoutURL)\n            defer { try? stdoutHandle.close() }\n            let stderrHandle = try FileHandle(forWritingTo: stderrURL)\n            defer { try? stderrHandle.close() }\n            process.standardOutput = stdoutHandle\n            process.standardError = stderrHandle\n\n            try process.run()\n            if let data = stdin, let pipe = inputPipe {\n                pipe.fileHandleForWriting.write(data)\n            }\n            inputPipe?.fileHandleForWriting.closeFile()\n            process.waitUntilExit()\n\n            outputData = try Data(contentsOf: stdoutURL)\n            errorData = try Data(contentsOf: stderrURL)\n        } catch {\n            throw CLIError.executionFailed(\"Failed to run CLI: \\(error)\")\n        }\n\n        let output = String(data: outputData, encoding: .utf8) ?? \"\"\n        let error = String(data: errorData, encoding: .utf8) ?? \"\"\n\n        log.info(\n            \"command end\",\n            metadata: [\n                \"seq\": \"\\(seq)\",\n                \"status\": \"\\(process.terminationStatus)\",\n                \"stdout\": \"\\(String(output.prefix(64)).debugDescription)\",\n                \"stderr\": \"\\(String(error.prefix(64)).debugDescription)\",\n            ]\n        )\n\n        return (outputData: outputData, output: output, error: error, status: process.terminationStatus)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+        "location" : {
+          "end_position" : 7730,
+          "start_position" : 4154
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "run",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+            "location" : {
+              "end_position" : 4190,
+              "start_position" : 4169
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "arguments",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Data?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+            "location" : {
+              "end_position" : 4210,
+              "start_position" : 4190
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "stdin",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URL?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+            "location" : {
+              "end_position" : 4240,
+              "start_position" : 4210
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "currentDirectory",
+          "order" : 2
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+            "location" : {
+              "end_position" : 4259,
+              "start_position" : 4240
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "tty",
+          "order" : 3
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String: String]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[:]"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Utilities/CLITest.swift",
+            "location" : {
+              "end_position" : 4286,
+              "start_position" : 4259
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "env",
+          "order" : 4
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "(\n        outputData: Data, output: String, error: String, status: Int32\n    )"
+        },
+        "description" : "-> (\n        outputData: Data, output: String, error: String, status: Int32\n    )"
+      },
+      "specifiers_decl" : {
+        "description" : "throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 260,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Utilities/CLITest.swift"
+  ]
+}

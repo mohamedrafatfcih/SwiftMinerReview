@@ -1,0 +1,618 @@
+{
+  "caseID" : "case-7608b0e65861a9191a17e36d",
+  "commitHash" : "88ab3192f988a780399f9770e25c823eb848aa66",
+  "commitMessage" : "Migrate image, volume and miscellaneous system tests. (#1868)\n\n- Part of #1833.\n- Distributes fixture extensions for images and containers added as part\nof previous builder PR to more sensible locations.",
+  "commitURL" : "https://github.com/apple/container/commit/88ab3192f988a780399f9770e25c823eb848aa66",
+  "durationSeconds" : 5.8030730485916138,
+  "entityNames" : [
+    "TestCLIVolumes",
+    "alpine",
+    "testImplicitNamedVolumeCreation",
+    "testImplicitNamedVolumeReuse",
+    "testJournaledVolumeDataPersistence",
+    "testVolumeBasicOperations",
+    "testVolumeCreateWithInvalidJournalModeErrors",
+    "testVolumeCreateWithJournalAndSize"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            let c1 = \"\\(f.testID)-c1\"\n            let c2 = \"\\(f.testID)-c2\"\n            let image = alpine\n            f.addCleanup {\n                f.doVolumeDeleteIfExists(vol)\n                try? f.doRemoveIfExists(c1, force: true, ignoreFailure: true)\n                try? f.doRemoveIfExists(c2, force: true, ignoreFailure: true)\n            }\n\n            try f.doVolumeCreate(vol)\n            try f.doLongRun(name: c1, image: image, args: [\"-v\", \"\\(vol):/data\"], autoRemove: false)\n            try f.waitForContainerRunning(c1)\n            _ = try f.doExec(c1, cmd: [\"sh\", \"-c\", \"echo 'persistent-data-test' > /data/test.txt\"])\n            try f.doStop(c1)\n            try f.doRemove(c1)\n            try f.doLongRun(name: c2, image: image, args: [\"-v\", \"\\(vol):/data\"], autoRemove: false)\n            try f.waitForContainerRunning(c2)\n            let output = try f.doExec(c2, cmd: [\"cat\", \"/data/test.txt\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"persistent-data-test\")\n            try f.doStop(c2)\n            try f.doRemove(c2)\n            try f.doVolumeDelete(vol)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 2221,
+              "start_position" : 909
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeDataPersistenceAcrossContainers",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            let c1 = \"\\(f.testID)-c1\"\n            let c2 = \"\\(f.testID)-c2\"\n            let image = alpine\n            f.addCleanup {\n                try? f.doStop(c1)\n                try? f.doRemoveIfExists(c1, force: true, ignoreFailure: true)\n                try? f.doRemoveIfExists(c2, force: true, ignoreFailure: true)\n                f.doVolumeDeleteIfExists(vol)\n            }\n\n            try f.doVolumeCreate(vol)\n            try f.doLongRun(name: c1, image: image, args: [\"-v\", \"\\(vol):/data\"], autoRemove: false)\n            try f.waitForContainerRunning(c1)\n\n            let result = try f.run([\"run\", \"--name\", c2, \"-v\", \"\\(vol):/data\", image, \"sleep\", \"infinity\"])\n            #expect(result.status != 0, \"second container should fail when volume is already in use\")\n\n            try f.doStop(c1)\n            try? f.doRemoveIfExists(c1, force: true, ignoreFailure: true)\n            f.doVolumeDeleteIfExists(vol)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 3315,
+              "start_position" : 2221
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeSharedAccessConflict",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            let c = \"\\(f.testID)-c1\"\n            let image = alpine\n            f.addCleanup {\n                try? f.doStop(c)\n                try? f.doRemoveIfExists(c, force: true, ignoreFailure: true)\n                f.doVolumeDeleteIfExists(vol)\n            }\n\n            try f.doVolumeCreate(vol)\n            try f.doLongRun(name: c, image: image, args: [\"-v\", \"\\(vol):/data\"], autoRemove: false)\n            try f.waitForContainerRunning(c)\n\n            #expect(try f.doesVolumeDeleteFail(vol), \"volume delete should fail while in use\")\n\n            try f.doStop(c)\n            try? f.doRemoveIfExists(c, force: true, ignoreFailure: true)\n            try f.doVolumeDelete(vol)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 4173,
+              "start_position" : 3315
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeDeleteProtectionWhileInUse",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            let c = \"\\(f.testID)-c1\"\n            let image = alpine\n            f.addCleanup {\n                try? f.doRemoveIfExists(c, force: true, ignoreFailure: true)\n                f.doVolumeDeleteIfExists(vol)\n            }\n\n            try f.doVolumeCreate(vol)\n            try f.doCreate(name: c, image: image, volumes: [\"\\(vol):/mnt/data\"])\n            try await Task.sleep(for: .seconds(1))\n\n            #expect(try f.doesVolumeDeleteFail(vol), \"volume delete should fail when used by created container\")\n\n            try? f.doRemoveIfExists(c, force: true, ignoreFailure: true)\n            f.doVolumeDeleteIfExists(vol)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 4989,
+              "start_position" : 4173
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeDeleteProtectionWithCreatedContainer",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            f.addCleanup { f.doVolumeDeleteIfExists(vol) }\n\n            try f.doVolumeCreate(vol)\n\n            let listResult = try f.run([\"volume\", \"list\", \"--quiet\"]).check()\n            let volumes = listResult.output.components(separatedBy: .newlines)\n                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }\n                .filter { !$0.isEmpty }\n            #expect(volumes.contains(vol), \"created volume should appear in list\")\n\n            let inspectResult = try f.run([\"volume\", \"inspect\", vol]).check()\n            #expect(inspectResult.output.contains(vol))\n            #expect(inspectResult.output.contains(\"\\\"creationDate\\\"\"))\n            #expect(!inspectResult.output.contains(\"\\\"createdAt\\\"\"))\n\n            try f.doVolumeDelete(vol)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 5920,
+              "start_position" : 4989
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeBasicOperations",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let c = \"\\(f.testID)-c1\"\n            let vol = \"\\(f.testID)-autovolume\"\n            let image = alpine\n            f.addCleanup {\n                try? f.doRemoveIfExists(c, force: true, ignoreFailure: true)\n                f.doVolumeDeleteIfExists(vol)\n            }\n\n            #expect(!(try f.volumeExists(vol)), \"volume should not exist initially\")\n\n            let result = try f.run([\"run\", \"--name\", c, \"-v\", \"\\(vol):/data\", image, \"echo\", \"test\"])\n            #expect(result.status == 0, \"should succeed and auto-create named volume\")\n            #expect(result.output.contains(\"test\"))\n            #expect(try f.volumeExists(vol), \"volume should be created\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 6728,
+              "start_position" : 5920
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testImplicitNamedVolumeCreation",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let c1 = \"\\(f.testID)-c1\"\n            let c2 = \"\\(f.testID)-c2\"\n            let vol = \"\\(f.testID)-sharedvolume\"\n            let image = alpine\n            f.addCleanup {\n                try? f.doRemoveIfExists(c1, force: true, ignoreFailure: true)\n                try? f.doRemoveIfExists(c2, force: true, ignoreFailure: true)\n                f.doVolumeDeleteIfExists(vol)\n            }\n\n            let r1 = try f.run([\"run\", \"--name\", c1, \"-v\", \"\\(vol):/data\", image, \"sh\", \"-c\", \"echo 'first' > /data/test.txt\"])\n            #expect(r1.status == 0)\n            let r2 = try f.run([\"run\", \"--name\", c2, \"-v\", \"\\(vol):/data\", image, \"cat\", \"/data/test.txt\"])\n            #expect(r2.status == 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 7561,
+              "start_position" : 6728
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testImplicitNamedVolumeReuse",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"volume\", \"delete\"])\n            #expect(result.status != 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 7777,
+              "start_position" : 7561
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeDeleteNoArgs",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"volume\", \"delete\", \"--all\", \"some-volume\"])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"conflict\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 8094,
+              "start_position" : 7777
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeDeleteExplicitNamesConflictWithAll",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"volume\", \"inspect\", \"definitely-missing-volume\"])\n            #expect(result.status != 0)\n            #expect(result.error.contains(\"volume not found\"))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 8410,
+              "start_position" : 8094
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeInspectMissingFails",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            f.addCleanup { f.doVolumeDeleteIfExists(vol) }\n            try f.doVolumeCreate(vol, opts: [\"journal=ordered\"])\n            #expect(try f.volumeExists(vol))\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 8750,
+              "start_position" : 8410
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeCreateWithJournalOrdered",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            f.addCleanup { f.doVolumeDeleteIfExists(vol) }\n            try f.doVolumeCreate(vol, opts: [\"journal=writeback:64m\"])\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 9051,
+              "start_position" : 8750
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeCreateWithJournalAndSize",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            f.addCleanup { f.doVolumeDeleteIfExists(vol) }\n            let result = try f.run([\"volume\", \"create\", \"--opt\", \"journal=none\", vol])\n            #expect(result.status != 0)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 9418,
+              "start_position" : 9051
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testVolumeCreateWithInvalidJournalModeErrors",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let vol = \"\\(f.testID)-vol\"\n            let c1 = \"\\(f.testID)-c1\"\n            let c2 = \"\\(f.testID)-c2\"\n            let image = alpine\n            f.addCleanup {\n                try? f.doStop(c1)\n                try? f.doRemoveIfExists(c1, force: true, ignoreFailure: true)\n                try? f.doStop(c2)\n                try? f.doRemoveIfExists(c2, force: true, ignoreFailure: true)\n                f.doVolumeDeleteIfExists(vol)\n            }\n\n            try f.doVolumeCreate(vol, opts: [\"journal=ordered\"])\n            try f.doLongRun(name: c1, image: image, args: [\"-v\", \"\\(vol):/data\"], autoRemove: false)\n            try f.waitForContainerRunning(c1)\n            _ = try f.doExec(c1, cmd: [\"sh\", \"-c\", \"echo 'journaled-data' > /data/test.txt\"])\n            try f.doStop(c1)\n            try f.doRemove(c1)\n            try f.doLongRun(name: c2, image: image, args: [\"-v\", \"\\(vol):/data\"], autoRemove: false)\n            try f.waitForContainerRunning(c2)\n            let output = try f.doExec(c2, cmd: [\"cat\", \"/data/test.txt\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(output == \"journaled-data\")\n            try f.doStop(c2)\n            try f.doRemove(c2)\n            try f.doVolumeDelete(vol)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 10806,
+              "start_position" : 9418
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testJournaledVolumeDataPersistence",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+        "location" : {
+          "end_position" : 10808,
+          "start_position" : 819
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIVolumes",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "warmupImages"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift",
+            "location" : {
+              "end_position" : 909,
+              "start_position" : 868
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "alpine"
+        }
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 60,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Volumes/TestCLIVolumes.swift"
+  ]
+}

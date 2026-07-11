@@ -1,0 +1,107 @@
+{
+  "caseID" : "case-5fa94e197f1fd77a0d519de3",
+  "commitHash" : "9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "commitMessage" : "More Atomic Locking (#3984)\n\n### Issue Link :link:\nAttempts to fix #3978 \n\n### Goals :soccer:\nThis PR is a speculative attempt to fix the continuation resumption\ncrash seen in #3978. However, I was unable to reproduce that issues,\neven with more complicated test cases and over 50 million test\niterations. So this PR makes a few parts of `Request`'s state management\nmore atomic, especially around response serializer handling. It also\nremoves `@dynamicMemberLookup` from `Protected`, which should encourage\nmore atomic usage.\n\n### Implementation Details :construction:\nThis PR attempts to unify what were separate lock access in the same\nflow into single accesses that accomplish the same thing. Behaviorally\nshould be the same but may prevent any intermediate accesses to state\nthat might cause this issue.\n\n### Testing Details :mag:\nNo new test scenarios, as no reproduction could be found.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "durationSeconds" : 10.915109992027283,
+  "entityNames" : [
+    "guard",
+    "processNextResponseSerializer",
+    "responseSerializer"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "optional_binding" : {
+              "_0" : {
+                "description" : "let responseSerializer = nextResponseSerializer()",
+                "initializer_clause" : {
+                  "has_self_reference" : false,
+                  "value" : {
+                    "function_call" : {
+                      "_0" : {
+                        "additional_trailing_closures" : [
+
+                        ],
+                        "arguments" : [
+
+                        ],
+                        "call" : "nextResponseSerializer",
+                        "has_self_reference" : false,
+                        "internal_inline_calls" : [
+
+                        ],
+                        "location_info" : {
+                          "file_path" : "Source/Core/Request.swift",
+                          "location" : {
+                            "end_position" : 24883,
+                            "start_position" : 24858
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "is_binding_self" : false,
+                "is_in_out" : false,
+                "is_let" : true,
+                "is_var" : false,
+                "name" : "responseSerializer"
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/Request.swift",
+            "location" : {
+              "end_position" : 24883,
+              "start_position" : 24833
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/Request.swift",
+        "location" : {
+          "end_position" : 26142,
+          "start_position" : 24818
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard let responseSerializer = nextResponseSerializer() else {\n            // Execute all response serializer completions and clear them\n            var completions: [@Sendable () -> Void] = []\n\n            mutableState.write { mutableState in\n                completions = mutableState.responseSerializerCompletions\n\n                // Clear out all response serializers and response serializer completions in mutable state since the\n                // request is complete. It's important to do this prior to calling the completion closures in case\n                // the completions call back into the request triggering a re-processing of the response serializers.\n                // An example of how this can happen is by calling cancel inside a response completion closure.\n                mutableState.responseSerializers.removeAll()\n                mutableState.responseSerializerCompletions.removeAll()\n\n                if mutableState.state.canTransitionTo(.finished) {\n                    mutableState.state = .finished\n                }\n\n                mutableState.responseSerializerProcessingFinished = true\n                mutableState.isFinishing = false\n            }\n\n            completions.forEach { $0() }\n\n            // Cleanup the request\n            cleanup()\n\n            return\n        }\n\n        serializationQueue.async { responseSerializer() }"
+      },
+      "location_info" : {
+        "file_path" : "Source/Core/Request.swift",
+        "location" : {
+          "end_position" : 26207,
+          "start_position" : 24662
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "processNextResponseSerializer",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 34,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Core/Request.swift"
+  ]
+}

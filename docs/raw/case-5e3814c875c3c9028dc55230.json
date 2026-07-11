@@ -1,0 +1,503 @@
+{
+  "caseID" : "case-5e3814c875c3c9028dc55230",
+  "commitHash" : "027471f835a732eb34633bfdc0e2fec9f23b2cbb",
+  "commitMessage" : "feat: renamed Remote plugin to SystemStats\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/027471f835a732eb34633bfdc0e2fec9f23b2cbb",
+  "durationSeconds" : 10.490770936012268,
+  "entityNames" : [
+    "RemoteKeychain",
+    "String",
+    "String?",
+    "key",
+    "migrateFromUserDefaultsIfNeeded",
+    "read",
+    "service",
+    "value"
+  ],
+  "rawRefactoring" : {
+    "category" : "complex",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "cases" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let query: [String: Any] = [\n            kSecClass as String: kSecClassGenericPassword,\n            kSecAttrService as String: service,\n            kSecAttrAccount as String: key,\n            kSecReturnData as String: true,\n            kSecMatchLimit as String: kSecMatchLimitOne\n        ]\n        var item: CFTypeRef?\n        let status = SecItemCopyMatching(query as CFDictionary, &item)\n        guard status == errSecSuccess, let data = item as? Data else { return nil }\n        return String(data: data, encoding: .utf8)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 45112,
+              "start_position" : 44519
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "read",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 44559,
+                  "start_position" : 44546
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "key",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "String?"
+            },
+            "description" : "-> String?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let query: [String: Any] = [\n            kSecClass as String: kSecClassGenericPassword,\n            kSecAttrService as String: service,\n            kSecAttrAccount as String: key\n        ]\n        \n        if value.isEmpty {\n            SecItemDelete(query as CFDictionary)\n            return\n        }\n        \n        let data = Data(value.utf8)\n        let attributes: [String: Any] = [\n            kSecValueData as String: data,\n            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly\n        ]\n        \n        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)\n        if status == errSecItemNotFound {\n            var addQuery = query\n            for (k, v) in attributes { addQuery[k] = v }\n            SecItemAdd(addQuery as CFDictionary, nil)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 46014,
+              "start_position" : 45112
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "write",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 45157,
+                  "start_position" : 45140
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Kit/plugins/SystemStats.swift",
+                "location" : {
+                  "end_position" : 45172,
+                  "start_position" : 45157
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "key",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        let migratedKey = \"remote_tokens_migrated_to_keychain\"\n        if defaults.bool(forKey: migratedKey) { return }\n        \n        for key in [\"access_token\", \"refresh_token\"] {\n            if let legacy = defaults.string(forKey: key), !legacy.isEmpty {\n                write(legacy, for: key)\n                defaults.removeObject(forKey: key)\n            }\n        }\n        defaults.set(true, forKey: migratedKey)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 46545,
+              "start_position" : 46014
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "migrateFromUserDefaultsIfNeeded",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemStats.swift",
+        "location" : {
+          "end_position" : 46547,
+          "start_position" : 44369
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "RemoteKeychain",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "infix_expr" : {
+                "_0" : {
+                  "description" : "(Bundle.main.bundleIdentifier ?? \"eu.exelban.Stats\") + \".remote\"",
+                  "left_operand" : "(Bundle.main.bundleIdentifier ?? \"eu.exelban.Stats\")",
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/SystemStats.swift",
+                    "location" : {
+                      "end_position" : 44519,
+                      "start_position" : 44455
+                    }
+                  },
+                  "operator_value" : "+",
+                  "right_operand" : {
+                    "other" : {
+                      "_0" : ".remote"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 44519,
+              "start_position" : 44437
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "service"
+        }
+      ]
+    },
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "cases" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let query: [String: Any] = [\n            kSecClass as String: kSecClassGenericPassword,\n            kSecAttrService as String: service,\n            kSecAttrAccount as String: key,\n            kSecReturnData as String: true,\n            kSecMatchLimit as String: kSecMatchLimitOne\n        ]\n        var item: CFTypeRef?\n        let status = SecItemCopyMatching(query as CFDictionary, &item)\n        guard status == errSecSuccess, let data = item as? Data else { return nil }\n        return String(data: data, encoding: .utf8)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 44744,
+              "start_position" : 44151
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "read",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 44191,
+                  "start_position" : 44178
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "key",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "String?"
+            },
+            "description" : "-> String?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let query: [String: Any] = [\n            kSecClass as String: kSecClassGenericPassword,\n            kSecAttrService as String: service,\n            kSecAttrAccount as String: key\n        ]\n        \n        if value.isEmpty {\n            SecItemDelete(query as CFDictionary)\n            return\n        }\n        \n        let data = Data(value.utf8)\n        let attributes: [String: Any] = [\n            kSecValueData as String: data,\n            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly\n        ]\n        \n        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)\n        if status == errSecItemNotFound {\n            var addQuery = query\n            for (k, v) in attributes { addQuery[k] = v }\n            SecItemAdd(addQuery as CFDictionary, nil)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 45646,
+              "start_position" : 44744
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "write",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 44789,
+                  "start_position" : 44772
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "for",
+              "location_info" : {
+                "file_path" : "Kit/plugins/Remote.swift",
+                "location" : {
+                  "end_position" : 44804,
+                  "start_position" : 44789
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "key",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let defaults = UserDefaults.standard\n        let migratedKey = \"remote_tokens_migrated_to_keychain\"\n        if defaults.bool(forKey: migratedKey) { return }\n        \n        for key in [\"access_token\", \"refresh_token\"] {\n            if let legacy = defaults.string(forKey: key), !legacy.isEmpty {\n                write(legacy, for: key)\n                defaults.removeObject(forKey: key)\n            }\n        }\n        defaults.set(true, forKey: migratedKey)"
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 46177,
+              "start_position" : 45646
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "migrateFromUserDefaultsIfNeeded",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/Remote.swift",
+        "location" : {
+          "end_position" : 46179,
+          "start_position" : 44001
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "RemoteKeychain",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "infix_expr" : {
+                "_0" : {
+                  "description" : "(Bundle.main.bundleIdentifier ?? \"eu.exelban.Stats\") + \".remote\"",
+                  "left_operand" : "(Bundle.main.bundleIdentifier ?? \"eu.exelban.Stats\")",
+                  "location_info" : {
+                    "file_path" : "Kit/plugins/Remote.swift",
+                    "location" : {
+                      "end_position" : 44151,
+                      "start_position" : 44087
+                    }
+                  },
+                  "operator_value" : "+",
+                  "right_operand" : {
+                    "other" : {
+                      "_0" : ".remote"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Kit/plugins/Remote.swift",
+            "location" : {
+              "end_position" : 44151,
+              "start_position" : 44069
+            }
+          },
+          "modifiers" : [
+            "private",
+            "static"
+          ],
+          "name" : "service"
+        }
+      ]
+    },
+    "type" : "Move Enum Refactoring"
+  },
+  "refactoringIndex" : 3,
+  "refactoringType" : "Move Enum Refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Remote.swift",
+    "Kit/plugins/SystemStats.swift"
+  ]
+}

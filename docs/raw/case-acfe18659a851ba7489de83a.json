@@ -1,0 +1,911 @@
+{
+  "caseID" : "case-acfe18659a851ba7489de83a",
+  "commitHash" : "ec0237523f3e811c6b0fcf799e1b398044cbb472",
+  "commitMessage" : "fix: fixed stale data on popup reopen across all modules (matches CPU fix)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/ec0237523f3e811c6b0fcf799e1b398044cbb472",
+  "durationSeconds" : 18.442993998527527,
+  "entityNames" : [
+    "Bool",
+    "FanValue",
+    "NSCoder",
+    "NSControl",
+    "NSMenuItem",
+    "NSStackView",
+    "NSView",
+    "NSView?"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+
+              ],
+              "call" : "PopupCache<[Sensor_p]>",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 1116,
+                  "start_position" : 1092
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Modules/Sensors/popup.swift",
+        "location" : {
+          "end_position" : 1116,
+          "start_position" : 1077
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "sensorsCache"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "PopupWrapper"
+        }
+      ],
+      "deinitializer" : {
+        "attributes" : [
+
+        ],
+        "body" : {
+          "content" : "NotificationCenter.default.removeObserver(self)"
+        },
+        "has_async_specifier" : false,
+        "location_info" : {
+          "file_path" : "Modules/Sensors/popup.swift",
+          "location" : {
+            "end_position" : 2769,
+            "start_position" : 2689
+          }
+        },
+        "modifiers" : [
+
+        ],
+        "name" : "deinit"
+      },
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let fanViews = self.list.values.compactMap { $0 as? FanView }\n        guard !fanViews.isEmpty else { return }\n        guard fanViews.allSatisfy({ $0.fan.mode.isAutomatic }) else { return }\n        SMCHelper.shared.resetFanControl()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 3093,
+              "start_position" : 2794
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "checkFanModesAndResetFtst",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let values = reload ? self.sensors : values else { return }\n        let fans = values.filter({ $0.type == .fan && $0.popupState })\n        var sensors = values\n        if !self.unknownSensorsState {\n            sensors = sensors.filter({ $0.group != .unknown })\n        }\n        \n        self.subviews.forEach({ $0.removeFromSuperview() })\n        if !reload {\n            self.settingsView.subviews.filter({ $0.identifier == NSUserInterfaceItemIdentifier(\"sensor\") }).forEach { v in\n                v.removeFromSuperview()\n            }\n        }\n        \n        if !fans.isEmpty {\n            self.addArrangedSubview(self.fansSeparatorView())\n            \n            let container = NSStackView()\n            container.orientation = .vertical\n            container.spacing = Constants.Popup.spacing\n            \n            fans.forEach { (f: Sensor_p) in\n                if let fan = f as? Fan {\n                    if f.isComputed {\n                        let sensor = SensorView(fan, width: self.frame.width, toggleable: false) {}\n                        self.list[fan.key] = sensor\n                        container.addArrangedSubview(sensor)\n                    } else {\n                        let view = FanView(fan, width: self.frame.width) { [weak self] in\n                            let h = container.arrangedSubviews.map({ $0.bounds.height + container.spacing }).reduce(0, +) - container.spacing\n                            if container.frame.size.height != h && h >= 0 {\n                                container.setFrameSize(NSSize(width: container.frame.width, height: h))\n                            }\n                            self?.recalculateHeight()\n                        }\n                        self.list[fan.key] = view\n                        container.addArrangedSubview(view)\n                    }\n                }\n            }\n            \n            let h = container.arrangedSubviews.map({ $0.bounds.height + container.spacing }).reduce(0, +) - container.spacing\n            if container.frame.size.height != h {\n                container.setFrameSize(NSSize(width: container.frame.width, height: h))\n            }\n            self.addArrangedSubview(container)\n        }\n        \n        var types: [SensorType] = []\n        sensors.forEach { (s: Sensor_p) in\n            if !types.contains(s.type) {\n                types.append(s.type)\n            }\n        }\n        \n        types.forEach { (typ: SensorType) in\n            var filtered = sensors.filter{ $0.type == typ }\n            var groups: [SensorGroup] = []\n            filtered.forEach { (s: Sensor_p) in\n                if !groups.contains(s.group) {\n                    groups.append(s.group)\n                }\n            }\n            \n            if !reload {\n                let section = PreferencesSection(title: localizedString(typ.rawValue))\n                section.identifier = NSUserInterfaceItemIdentifier(\"sensor\")\n                groups.forEach { (group: SensorGroup) in\n                    filtered.filter{ $0.group == group }.forEach { (s: Sensor_p) in\n                        let btn = switchView(\n                            action: #selector(self.toggleSensor),\n                            state: s.popupState\n                        )\n                        btn.identifier = NSUserInterfaceItemIdentifier(rawValue: s.key)\n                        section.add(PreferencesRow(localizedString(s.name), component: btn))\n                    }\n                }\n                self.settingsView.addArrangedSubview(section)\n            }\n            \n            if typ == .fan { return }\n            filtered = filtered.filter{ $0.popupState }\n            if filtered.isEmpty { return }\n            \n            self.addArrangedSubview(separatorView(localizedString(typ.rawValue), width: self.frame.width))\n            groups.forEach { (group: SensorGroup) in\n                filtered.filter{ $0.group == group }.forEach { (s: Sensor_p) in\n                    let sensor = SensorView(s, width: self.frame.width) { [weak self] in\n                        self?.recalculateHeight()\n                    }\n                    self.addArrangedSubview(sensor)\n                    self.list[s.key] = sensor\n                }\n            }\n        }\n        \n        if !reload {\n            self.sensors = values\n        }\n        self.recalculateHeight()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 7684,
+              "start_position" : 3212
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "setup",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "[Sensor_p]?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 3271,
+                  "start_position" : 3242
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "values",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "false"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 3291,
+                  "start_position" : 3271
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "reload",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "DispatchQueue.main.async(execute: {\n            values.filter({ $0 is Sensor }).forEach { (s: Sensor_p) in\n                if let sensor = self.list[s.key] as? SensorView {\n                    sensor.addHistoryPoint(s)\n                }\n            }\n            \n            self.sensorsCache.apply(values, visible: self.window?.isVisible ?? false, render: self.renderSensors)\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 8148,
+              "start_position" : 7684
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "usageCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[Sensor_p]"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 7742,
+                  "start_position" : 7722
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "values",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "values.forEach { (s: Sensor_p) in\n            switch self.list[s.key] {\n            case let fan as FanView:\n                if let f = s as? Fan {\n                    fan.update(f)\n                }\n            case let sensor as SensorView:\n                sensor.update(s)\n            case .none, .some:\n                break\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 8575,
+              "start_position" : 8148
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "renderSensors",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[Sensor_p]"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 8205,
+                  "start_position" : 8185
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "values",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.replay(self.sensorsCache, render: self.renderSensors)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 8689,
+              "start_position" : 8575
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "appear",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let h = self.arrangedSubviews.map({ $0.bounds.height + self.spacing }).reduce(0, +) - self.spacing\n        if self.frame.size.height != h {\n            self.setFrameSize(NSSize(width: self.frame.width, height: h))\n            self.sizeCallback?(self.frame.size)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 9019,
+              "start_position" : 8689
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "recalculateHeight",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.settingsView"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 9134,
+              "start_position" : 9019
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "settings",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "NSView?"
+            },
+            "description" : "-> NSView?"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "if let key = sender.representedObject as? String, let value = FanValue(rawValue: key) {\n            self.fanValueState = value\n            Store.shared.set(key: \"Sensors_popup_fanValue\", value: self.fanValueState.rawValue)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 9448,
+              "start_position" : 9134
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleFanValue",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 9198,
+                  "start_position" : 9178
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSStackView = NSStackView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 26))\n        view.widthAnchor.constraint(equalToConstant: view.frame.width).isActive = true\n        view.heightAnchor.constraint(equalToConstant: view.bounds.height).isActive = true\n        view.orientation = .horizontal\n        view.spacing = 0\n        view.distribution = .fillEqually\n        view.alignment = .top\n        \n        let labelView: NSTextField = TextView()\n        labelView.stringValue = localizedString(\"Fans\")\n        labelView.alignment = .center\n        labelView.textColor = .secondaryLabelColor\n        labelView.font = NSFont.systemFont(ofSize: 12, weight: .medium)\n        \n        let btnContainer = NSView()\n        \n        let button = NSButton()\n        button.frame = CGRect(x: (self.frame.width/3)-20, y: 10, width: 15, height: 15)\n        button.bezelStyle = .regularSquare\n        button.isBordered = false\n        button.imageScaling = NSImageScaling.scaleAxesIndependently\n        button.contentTintColor = .lightGray\n        button.action = #selector(self.toggleFanControl)\n        button.target = self\n        button.toolTip = localizedString(\"Control\")\n        button.image = Bundle(for: Module.self).image(forResource: \"tune\")!\n        \n        btnContainer.addSubview(button)\n        \n        view.addArrangedSubview(NSView())\n        view.addArrangedSubview(labelView)\n        view.addArrangedSubview(btnContainer)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 11024,
+              "start_position" : 9448
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "fansSeparatorView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "guard let id = sender.identifier else { return }\n        Store.shared.set(key: \"sensor_\\(id.rawValue)_popup\", value: controlState(sender))\n        self.setup(reload: true)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 11274,
+              "start_position" : 11024
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleSensor",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSControl"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 11085,
+                  "start_position" : 11066
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "self.fanControlState = !self.fanControlState\n        NotificationCenter.default.post(name: .toggleFanControl, object: nil, userInfo: [\"state\": self.fanControlState])"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 11503,
+              "start_position" : 11274
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleFanControl",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 2689,
+              "start_position" : 1325
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 3212,
+              "start_position" : 3104
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Sensors/popup.swift",
+                "location" : {
+                  "end_position" : 3143,
+                  "start_position" : 3129
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Sensors/popup.swift",
+        "location" : {
+          "end_position" : 11505,
+          "start_position" : 705
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "Popup",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String: NSView]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[:]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 788,
+              "start_position" : 760
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "list"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.bool(key: \"Sensors_unknown\", defaultValue: false)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 902,
+              "start_position" : 810
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "unknownSensorsState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "FanValue"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "percentage"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 956,
+              "start_position" : 919
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "fanValueState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[Sensor_p]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 1002,
+              "start_position" : 978
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sensors"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSStackView"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "NSStackView",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Sensors/popup.swift",
+                    "location" : {
+                      "end_position" : 1060,
+                      "start_position" : 1047
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 1060,
+              "start_position" : 1019
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "settingsView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "PopupCache<[Sensor_p]>",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Sensors/popup.swift",
+                    "location" : {
+                      "end_position" : 1116,
+                      "start_position" : 1092
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 1116,
+              "start_position" : 1077
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sensorsCache"
+        },
+        {
+          "accessors" : [
+            {
+              "body" : {
+                "content" : "Store.shared.bool(key: \"Sensors_fanControl\", defaultValue: true)"
+              },
+              "modifier" : "get"
+            },
+            {
+              "body" : {
+                "content" : "Store.shared.set(key: \"Sensors_fanControl\", value: newValue)"
+              },
+              "modifier" : "set"
+            }
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Sensors/popup.swift",
+            "location" : {
+              "end_position" : 1325,
+              "start_position" : 1138
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "fanControlState"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 312,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Sensors/popup.swift"
+  ]
+}

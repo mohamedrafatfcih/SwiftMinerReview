@@ -1,0 +1,345 @@
+{
+  "caseID" : "case-2fbc159f49b6c052ca7dc897",
+  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds" : 52.782080054283142,
+  "entityNames" : [
+    "MIMETypeMatchingTests",
+    "exactMatch",
+    "fullWildcardMatchesAny",
+    "noMatchOnDifferentPair",
+    "sameTypeButDifferentSubtypeNoMatch",
+    "wildcardSubtypeDoesNotMatchDifferentType",
+    "wildcardSubtypeMatchesAnySametype",
+    "wildcardTypeMatchesSameSubtype"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : "MIMEType Matching"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "Exact type/subtype pair matches itself"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let acceptable = try #require(Request.MIMEType(\"text/plain\"))\n        let response = try #require(Request.MIMEType(\"text/plain\"))\n        #expect(acceptable.matches(response))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/MIMETypeTests.swift",
+            "location" : {
+              "end_position" : 3732,
+              "start_position" : 3459
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "exactMatch",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "Wildcard subtype matches any subtype of the same type"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let textWildcard = try #require(Request.MIMEType(\"text/*\"))\n        let textPlain = try #require(Request.MIMEType(\"text/plain\"))\n        let textHTML = try #require(Request.MIMEType(\"text/html\"))\n        #expect(textWildcard.matches(textPlain))\n        #expect(textWildcard.matches(textHTML))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/MIMETypeTests.swift",
+            "location" : {
+              "end_position" : 4161,
+              "start_position" : 3732
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "wildcardSubtypeMatchesAnySametype",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "Wildcard subtype does not match a different type"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let textWildcard = try #require(Request.MIMEType(\"text/*\"))\n        let appJSON = try #require(Request.MIMEType(\"application/json\"))\n        #expect(!textWildcard.matches(appJSON))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/MIMETypeTests.swift",
+            "location" : {
+              "end_position" : 4480,
+              "start_position" : 4161
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "wildcardSubtypeDoesNotMatchDifferentType",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "Wildcard type matches any type with the same subtype"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let wildcardJSON = try #require(Request.MIMEType(\"*/json\"))\n        let appJSON = try #require(Request.MIMEType(\"application/json\"))\n        #expect(wildcardJSON.matches(appJSON))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/MIMETypeTests.swift",
+            "location" : {
+              "end_position" : 4792,
+              "start_position" : 4480
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "wildcardTypeMatchesSameSubtype",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "Full wildcard */* matches any MIME type"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let wildcard = try #require(Request.MIMEType(\"*/*\"))\n        #expect(try wildcard.matches(#require(Request.MIMEType(\"text/plain\"))))\n        #expect(try wildcard.matches(#require(Request.MIMEType(\"application/json\"))))\n        #expect(try wildcard.matches(#require(Request.MIMEType(\"image/png\"))))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/MIMETypeTests.swift",
+            "location" : {
+              "end_position" : 5201,
+              "start_position" : 4792
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "fullWildcardMatchesAny",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "Different type and subtype do not match"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let appJSON = try #require(Request.MIMEType(\"application/json\"))\n        let textPlain = try #require(Request.MIMEType(\"text/plain\"))\n        #expect(!appJSON.matches(textPlain))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/MIMETypeTests.swift",
+            "location" : {
+              "end_position" : 5491,
+              "start_position" : 5201
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "noMatchOnDifferentPair",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+                {
+                  "value" : "Same type but different subtype does not match without a wildcard"
+                }
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let textPlain = try #require(Request.MIMEType(\"text/plain\"))\n        let textHTML = try #require(Request.MIMEType(\"text/html\"))\n        #expect(!textPlain.matches(textHTML))"
+          },
+          "location_info" : {
+            "file_path" : "Tests/MIMETypeTests.swift",
+            "location" : {
+              "end_position" : 5814,
+              "start_position" : 5491
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "sameTypeButDifferentSubtypeNoMatch",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/MIMETypeTests.swift",
+        "location" : {
+          "end_position" : 5816,
+          "start_position" : 3363
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "MIMETypeMatchingTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 405,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/MIMETypeTests.swift"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "caseID" : "case-c35e7ce578b73c80fe64e378",
+  "commitHash" : "4f097eb89171032ec7f547333c1640c8850ee240",
+  "commitMessage" : "[images]: fix image load error to write to stderr and use FilePath (#1570)\n\n- Closes #1535.\n- Closes #1573.",
+  "commitURL" : "https://github.com/apple/container/commit/4f097eb89171032ec7f547333c1640c8850ee240",
+  "durationSeconds" : 2.2922050952911377,
+  "entityNames" : [
+    "guard",
+    "run"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "boolean_expr" : {
+              "_0" : "input.string"
+            }
+          },
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Image/ImageLoad.swift",
+            "location" : {
+              "end_position" : 2365,
+              "start_position" : 2312
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Image/ImageLoad.swift",
+        "location" : {
+          "end_position" : 2550,
+          "start_position" : 2289
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(\"\\(UUID().uuidString).tar\")\n            defer {\n                try? FileManager.default.removeItem(at: tempFile)\n            }\n\n            // Read from stdin; otherwise read from the input file\n            let resolvedPath: FilePath\n            if let input {\n                guard FileManager.default.fileExists(atPath: input.string) else {\n                    log.error(\"file does not exist\", metadata: [\"path\": \"\\(input)\"])\n                    Application.exit(withError: ArgumentParser.ExitCode(1))\n                }\n                resolvedPath = input\n            } else {\n                guard FileManager.default.createFile(atPath: tempFile.path(), contents: nil) else {\n                    throw ContainerizationError(.internalError, message: \"unable to create temporary file\")\n                }\n\n                guard let fileHandle = try? FileHandle(forWritingTo: tempFile) else {\n                    throw ContainerizationError(.internalError, message: \"unable to open temporary file for writing\")\n                }\n\n                let bufferSize = 4096\n                while true {\n                    let chunk = FileHandle.standardInput.readData(ofLength: bufferSize)\n                    if chunk.isEmpty { break }\n                    fileHandle.write(chunk)\n                }\n                try fileHandle.close()\n                resolvedPath = FilePath(tempFile.path())\n            }\n\n            let progressConfig = try ProgressConfig(\n                showTasks: true,\n                showItems: true,\n                totalTasks: 2\n            )\n            let progress = ProgressBar(config: progressConfig)\n            defer {\n                progress.finish()\n            }\n            progress.start()\n\n            progress.set(description: \"Loading tar archive\")\n            let result = try await ClientImage.load(\n                from: resolvedPath.string,\n                force: force)\n            if !result.rejectedMembers.isEmpty {\n                log.warning(\"archive contains invalid members\", metadata: [\"paths\": \"\\(result.rejectedMembers)\"])\n            }\n\n            let taskManager = ProgressTaskCoordinator()\n            let unpackTask = await taskManager.startTask()\n            progress.set(description: \"Unpacking image\")\n            progress.set(itemsName: \"entries\")\n            for image in result.images {\n                try await image.unpack(platform: nil, progressUpdate: ProgressTaskCoordinator.handler(for: unpackTask, from: progress.handler))\n            }\n            await taskManager.finish()\n            progress.finish()\n            print(\"Loaded images:\")\n            for image in result.images {\n                print(image.reference)\n            }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Image/ImageLoad.swift",
+        "location" : {
+          "end_position" : 4749,
+          "start_position" : 1896
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "run",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 4,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/ContainerCommands/Image/ImageLoad.swift"
+  ]
+}

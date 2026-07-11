@@ -1,0 +1,147 @@
+{
+  "caseID" : "case-16c69f8de814f3743f3fa7a5",
+  "commitHash" : "9ce584e5e195990b8953db31f6c5a9d59f6233e8",
+  "commitMessage" : "ui: wrap videoView inside a container\n",
+  "commitURL" : "https://github.com/iina/iina/commit/9ce584e5e195990b8953db31f6c5a9d59f6233e8",
+  "durationSeconds" : 18.359472036361694,
+  "entityNames" : [
+    "Bool",
+    "Preference.OSCPosition",
+    "forced",
+    "guard",
+    "newPosition",
+    "setupOnScreenController"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "comparison" : {
+              "_0" : {
+                "description" : "forced || oscPosition != newPosition",
+                "left_operand" : "forced",
+                "location_info" : {
+                  "file_path" : "iina/MainWindowController.swift",
+                  "location" : {
+                    "end_position" : 31428,
+                    "start_position" : 31391
+                  }
+                },
+                "operator_value" : "||",
+                "right_operand" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "newPosition"
+                  }
+                }
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "iina/MainWindowController.swift",
+            "location" : {
+              "end_position" : 31428,
+              "start_position" : 31391
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "iina/MainWindowController.swift",
+        "location" : {
+          "end_position" : 31443,
+          "start_position" : 31380
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard forced || oscPosition != newPosition else { return }\n\n    let isSwitchingToTop = newPosition == .top\n    let isSwitchingFromTop = oscPosition == .top\n    let isFloating = newPosition == .floating\n\n    // reset\n    [oscFloatingView, oscBottomView].forEach { $0.isHidden = true }\n\n    oscFloatingView.isDragging = false\n\n    // detach all fragment views\n    [oscFloatingView.oscTopView, titleBarView.oscView, oscBottomView.oscView].forEach { stackView in\n      stackView!.views.forEach {\n        stackView!.removeView($0)\n      }\n    }\n    [fragSliderView, fragControlView, fragToolbarView, fragVolumeView].forEach {\n        $0!.removeFromSuperview()\n    }\n\n    let isInFullScreen = fsState.isFullscreen\n    titleBarView.update(hasOSC: isSwitchingToTop, inFullScreen: isInFullScreen)\n\n    if isSwitchingFromTop && isInFullScreen {\n      titleBarView.isHidden = true\n    }\n\n    oscBottomView.updateVerticalConstraint(isDisplaying: newPosition == .bottom)\n\n    oscPosition = newPosition\n\n    // add fragment views\n    switch oscPosition {\n    case .floating:\n      currentControlBar = oscFloatingView\n      fragControlView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragControlViewRightView)\n      oscFloatingView.oscTopView.addView(fragVolumeView, in: .leading)\n      oscFloatingView.oscTopView.addView(fragToolbarView, in: .trailing)\n      oscFloatingView.oscTopView.addView(fragControlView, in: .center)\n\n      // Setting the visibility priority to detach only will cause freeze when resizing the window\n      // (and triggering the detach) in macOS 11.\n      if !isMacOS11 {\n        oscFloatingView.oscTopView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragVolumeView)\n        oscFloatingView.oscTopView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragToolbarView)\n        oscFloatingView.oscTopView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      }\n      oscFloatingView.oscBottomView.addSubview(fragSliderView)\n      Utility.quickConstraints([\"H:|[v]|\", \"V:|[v]|\"], [\"v\": fragSliderView])\n      Utility.quickConstraints([\"H:|-(>=0)-[v]-(>=0)-|\"], [\"v\": fragControlView])\n      oscFloatingView.initPosition()\n    case .top:\n      let oscTopMainView = titleBarView.oscView!\n      currentControlBar = nil\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewRightView)\n      oscTopMainView.addView(fragVolumeView, in: .trailing)\n      oscTopMainView.addView(fragToolbarView, in: .trailing)\n      oscTopMainView.addView(fragControlView, in: .leading)\n      oscTopMainView.addView(fragSliderView, in: .leading)\n      oscTopMainView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      oscTopMainView.setVisibilityPriority(.mustHold, for: fragSliderView)\n      oscTopMainView.setVisibilityPriority(.detachEarly, for: fragVolumeView)\n      oscTopMainView.setVisibilityPriority(.detachEarlier, for: fragToolbarView)\n    case .bottom:\n      oscBottomView.isHidden = false\n      let oscBottomMainView = oscBottomView.oscView!\n      currentControlBar = oscBottomView\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewRightView)\n      oscBottomMainView.addView(fragVolumeView, in: .trailing)\n      oscBottomMainView.addView(fragToolbarView, in: .trailing)\n      oscBottomMainView.addView(fragControlView, in: .leading)\n      oscBottomMainView.addView(fragSliderView, in: .leading)\n      oscBottomMainView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      oscBottomMainView.setVisibilityPriority(.mustHold, for: fragSliderView)\n      oscBottomMainView.setVisibilityPriority(.detachEarly, for: fragVolumeView)\n      oscBottomMainView.setVisibilityPriority(.detachEarlier, for: fragToolbarView)\n    }\n\n    fadeableViews.update()\n    showUI()\n\n    if isFloating {\n      fragControlViewMiddleButtons1Constraint.constant = 24\n      fragControlViewMiddleButtons2Constraint.constant = 24\n    } else {\n      fragControlViewMiddleButtons1Constraint.constant = 16\n      fragControlViewMiddleButtons2Constraint.constant = 16\n    }"
+      },
+      "location_info" : {
+        "file_path" : "iina/MainWindowController.swift",
+        "location" : {
+          "end_position" : 35699,
+          "start_position" : 31266
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "setupOnScreenController",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Preference.OSCPosition"
+          },
+          "is_variadic" : false,
+          "label" : "withPosition",
+          "location_info" : {
+            "file_path" : "iina/MainWindowController.swift",
+            "location" : {
+              "end_position" : 31357,
+              "start_position" : 31307
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "newPosition",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "iina/MainWindowController.swift",
+            "location" : {
+              "end_position" : 31377,
+              "start_position" : 31357
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "forced",
+          "order" : 1
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 23,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "iina-iina",
+  "repoName" : "iina/iina",
+  "repoURL" : "https://github.com/iina/iina.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "iina/MainWindowController.swift"
+  ]
+}

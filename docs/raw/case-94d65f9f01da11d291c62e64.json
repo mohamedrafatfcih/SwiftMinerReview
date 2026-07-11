@@ -1,0 +1,640 @@
+{
+  "caseID" : "case-94d65f9f01da11d291c62e64",
+  "commitHash" : "86eae1a6bb5cd45586ac6a17416b026e7258c263",
+  "commitMessage" : "feat: added a new module Remote that allows to monitor remote systems\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/86eae1a6bb5cd45586ac6a17416b026e7258c263",
+  "durationSeconds" : 10.915948987007141,
+  "entityNames" : [
+    "(RemoteUpdate) -> Void",
+    "@escaping (RemoteUpdate) -> Void",
+    "Data",
+    "Error?",
+    "NSObject",
+    "RemoteMachineStream",
+    "String",
+    "URLSession"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "NSObject"
+        },
+        {
+          "name" : "URLSessionDataDelegate"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.stopped = false\n        self.openConnection()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 13173,
+              "start_position" : 13077
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "start",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.stopped = true\n        self.task?.cancel()\n        self.task = nil\n        self.session?.invalidateAndCancel()\n        self.session = nil\n        self.buffer.removeAll()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 13392,
+              "start_position" : 13173
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "stop",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.stopped, SystemStats.shared.isAuthorized, let url = URL(string: \"\\(SystemStats.host)/remote/machine/\\(self.machineID)/sse\") else { return }\n        \n        let config = URLSessionConfiguration.default\n        config.timeoutIntervalForRequest = .infinity\n        config.timeoutIntervalForResource = .infinity\n        let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)\n        self.session = session\n        \n        var request = URLRequest(url: url)\n        request.setValue(\"Bearer \\(SystemStats.shared.auth.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        request.setValue(\"text/event-stream\", forHTTPHeaderField: \"Accept\")\n        request.setValue(\"application/json\", forHTTPHeaderField: \"Content-Type\")\n        let task = session.dataTask(with: request)\n        self.task = task\n        task.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 14309,
+              "start_position" : 13392
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "openConnection",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.buffer.append(data)\n        let separator = Data(\"\\n\\n\".utf8)\n        while let range = self.buffer.range(of: separator) {\n            let frame = self.buffer.subdata(in: 0..<range.lowerBound)\n            self.buffer.removeSubrange(0..<range.upperBound)\n            self.parseFrame(frame)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 14737,
+              "start_position" : 14309
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 14365,
+                  "start_position" : 14342
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDataTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 14395,
+                  "start_position" : 14365
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "didReceive",
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 14416,
+                  "start_position" : 14395
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard !self.stopped else { return }\n        let delay = min(pow(2.0, Double(self.reconnectAttempts)), 60.0)\n        self.reconnectAttempts += 1\n        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in\n            guard let self, !self.stopped else { return }\n            self.openConnection()\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 15193,
+              "start_position" : 14737
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 14793,
+                  "start_position" : 14770
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 14815,
+                  "start_position" : 14793
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Error?"
+              },
+              "is_variadic" : false,
+              "label" : "didCompleteWithError",
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 14849,
+                  "start_position" : 14815
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let text = String(data: frame, encoding: .utf8) else { return }\n        for line in text.components(separatedBy: \"\\n\") {\n            let trimmed = line.trimmingCharacters(in: .whitespaces)\n            guard trimmed.hasPrefix(\"data:\") else { continue }\n            let jsonText = String(trimmed.dropFirst(5)).trimmingCharacters(in: .whitespaces)\n            guard !jsonText.isEmpty,\n                  let jsonData = jsonText.data(using: .utf8),\n                  let update = try? JSONDecoder().decode(RemoteUpdate.self, from: jsonData) else { continue }\n            self.reconnectAttempts = 0\n            let cb = self.onUpdate\n            DispatchQueue.main.async { cb(update) }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 15953,
+              "start_position" : 15193
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "parseFrame",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 15240,
+                  "start_position" : 15227
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "frame",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 13077,
+              "start_position" : 12896
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 12937,
+                  "start_position" : 12918
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "machineID",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (RemoteUpdate) -> Void"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Remote/main.swift",
+                "location" : {
+                  "end_position" : 12979,
+                  "start_position" : 12937
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "onUpdate",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Remote/main.swift",
+        "location" : {
+          "end_position" : 15955,
+          "start_position" : 12551
+        }
+      },
+      "modifiers" : [
+        "public",
+        "final"
+      ],
+      "name" : "RemoteMachineStream",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 12661,
+              "start_position" : 12644
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "machineID"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "(RemoteUpdate) -> Void"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 12710,
+              "start_position" : 12678
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "onUpdate"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSession?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 12752,
+              "start_position" : 12732
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "session"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionDataTask?"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 12794,
+              "start_position" : 12769
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "task"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "Data",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Remote/main.swift",
+                    "location" : {
+                      "end_position" : 12826,
+                      "start_position" : 12820
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 12826,
+              "start_position" : 12811
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "buffer"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 12858,
+              "start_position" : 12843
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "stopped"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "0"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Remote/main.swift",
+            "location" : {
+              "end_position" : 12896,
+              "start_position" : 12875
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reconnectAttempts"
+        }
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 26,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Remote/main.swift"
+  ]
+}

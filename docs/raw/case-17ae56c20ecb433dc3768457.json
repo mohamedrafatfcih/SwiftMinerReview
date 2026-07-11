@@ -1,0 +1,51 @@
+{
+  "caseID" : "case-17ae56c20ecb433dc3768457",
+  "commitHash" : "685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "commitMessage" : "feat: moved ANE utilization from read to calculation from power usage\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "durationSeconds" : 0.67345595359802246,
+  "entityNames" : [
+    "setup"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "depth" : 0,
+      "description" : "#if arch(arm64)\n        self.aneMaxPower = maxANEPower(for: SystemKit.shared.device.platform)\n        self.setupANE()\n        self.setupFrames()\n        #endif",
+      "index" : 3
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "if let list = SystemKit.shared.device.info.gpu {\n            self.displays = list\n        }\n        \n        guard let PCIdevices = fetchIOService(\"IOPCIDevice\") else {\n            return\n        }\n        let devices = PCIdevices.filter{ $0.object(forKey: \"IOName\") as? String == \"display\" }\n        \n        #if arch(arm64)\n        self.aneMaxPower = maxANEPower(for: SystemKit.shared.device.platform)\n        self.setupANE()\n        self.setupFrames()\n        #endif\n\n        devices.forEach { (dict: NSDictionary) in\n            guard let deviceID = dict[\"device-id\"] as? Data, let vendorID = dict[\"vendor-id\"] as? Data else {\n                error(\"device-id or vendor-id not found\", log: self.log)\n                return\n            }\n            let pci = \"0x\" + Data([deviceID[1], deviceID[0], vendorID[1], vendorID[0]]).map { String(format: \"%02hhX\", $0) }.joined().lowercased()\n            \n            guard let modelData = dict[\"model\"] as? Data, let modelName = String(data: modelData, encoding: .ascii) else {\n                error(\"GPU model not found\", log: self.log)\n                return\n            }\n            let model = modelName.replacingOccurrences(of: \"\\0\", with: \"\")\n            \n            var vendor: String? = nil\n            if let v = vendors.first(where: { $0.key == vendorID }) {\n                vendor = v.value\n            }\n            \n            self.devices.append(device(\n                vendor: vendor,\n                model: model,\n                pci: pci,\n                used: false\n            ))\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Modules/GPU/reader.swift",
+        "location" : {
+          "end_position" : 3355,
+          "start_position" : 1743
+        }
+      },
+      "modifiers" : [
+        "public",
+        "override"
+      ],
+      "name" : "setup",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 1,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/GPU/reader.swift"
+  ]
+}

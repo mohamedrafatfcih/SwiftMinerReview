@@ -1,0 +1,101 @@
+{
+  "caseID" : "case-5a4a1bf14135cfa50c6b4d02",
+  "commitHash" : "ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "commitMessage" : "Use FilePath for app, install, and log roots. (#1558)\n\n- Closes #1557.\n- Replaces `executableURL` utility function for getting app executable\npath with `executablePath`.\n- Adds `FilePath.resolvingSymlinks()` extension.\n- Also converts for FilePath for types in `ContainerVersion` target.",
+  "commitURL" : "https://github.com/apple/container/commit/ca3a4d66708bcc517435e9ab46fd8fd529a1d014",
+  "durationSeconds" : 3.797727108001709,
+  "entityNames" : [
+    "installRootURL",
+    "run"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "label" : "fileURLWithPath",
+                  "value" : "installRoot.string"
+                }
+              ],
+              "call" : "URL",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Sources/ContainerCommands/DefaultCommand.swift",
+                "location" : {
+                  "end_position" : 2241,
+                  "start_position" : 2201
+                }
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : true,
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/DefaultCommand.swift",
+        "location" : {
+          "end_position" : 2241,
+          "start_position" : 2184
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "installRootURL"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let pluginLoader = try? await Application.createPluginLoader()\n        guard let command = remaining.first else {\n            await Application.printModifiedHelpText(pluginLoader: pluginLoader)\n            return\n        }\n\n        // Check for edge cases and unknown options to match the behavior in the absence of plugins.\n        if command.isEmpty {\n            throw ValidationError(\"unknown argument '\\(command)'\")\n        } else if command.starts(with: \"-\") {\n            throw ValidationError(\"unknown option '\\(command)'\")\n        }\n\n        // Compute canonical plugin directories to show in helpful errors (avoid hard-coded paths)\n        let installRoot = CommandLine.executablePath\n            .removingLastComponent()\n            .removingLastComponent()\n\n        // TODO: Remove when we convert PluginLoader to FilePath\n        let installRootURL = URL(fileURLWithPath: installRoot.string)\n        let userPluginsURL = PluginLoader.userPluginsDir(installRoot: installRootURL)\n        let installRootPluginsPath =\n            installRoot\n            .appending(FilePath.Component(\"libexec\"))\n            .appending(FilePath.Component(\"container\"))\n            .appending(FilePath.Component(\"plugins\"))\n        let installRootPluginsURL = URL(fileURLWithPath: installRootPluginsPath.string)\n        let hintPaths = [userPluginsURL, installRootPluginsURL]\n            .map { $0.appendingPathComponent(command).path(percentEncoded: false) }\n            .joined(separator: \"\\n  - \")\n\n        // If plugin loader couldn't be created, the system/APIServer likely isn't running.\n        if pluginLoader == nil {\n            throw ValidationError(\n                \"\"\"\n                Plugins are unavailable. Start the container system services and retry:\n\n                    container system start\n\n                Check to see that the plugin exists under:\n                  - \\(hintPaths)\n\n                \"\"\"\n            )\n        }\n\n        guard let plugin = pluginLoader?.findPlugin(name: command), plugin.config.isCLI else {\n            throw ValidationError(\n                \"\"\"\n                Plugin 'container-\\(command)' not found.\n\n                - If system services are not running, start them with: container system start\n                - If the plugin isn't installed, ensure it exists under:\n\n                Check to see that the plugin exists under:\n                  - \\(hintPaths)\n\n                \"\"\"\n            )\n        }\n        // Before execing into the plugin, restore default SIGINT/SIGTERM so the plugin can manage signals.\n        Self.resetSignalsForPluginExec()\n        // Exec performs execvp (with no fork).\n        try plugin.exec(args: remaining)"
+      },
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/DefaultCommand.swift",
+        "location" : {
+          "end_position" : 4038,
+          "start_position" : 1244
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "run",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 36,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/ContainerCommands/DefaultCommand.swift"
+  ]
+}

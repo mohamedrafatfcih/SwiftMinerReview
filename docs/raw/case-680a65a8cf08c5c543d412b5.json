@@ -1,0 +1,49 @@
+{
+  "caseID" : "case-680a65a8cf08c5c543d412b5",
+  "commitHash" : "1da2d91fa6316690ef97f46b450262286231c261",
+  "commitMessage" : "Add Separate Response Hooks (#3762)\n\n### Issue Link :link:\r\n#3401\r\n\r\n### Goals :soccer:\r\nThis PR adds `onHTTPResponse` closure hooks to `DataRequest` /\r\n`UploadRequest` and `DataStreamRequest` to enable the cancellation of\r\nrequests before data is transferred, requests that need to check\r\nresponse info for later parsing, or peculiar requests that may trigger\r\nmultiple response callbacks, like MJPEG streams.\r\n\r\n### Implementation Details :construction:\r\nLike the other value hooks, this API accepts a single closure. The only\r\nunique bit here is that there's second, disfavored, version of the API\r\nthat allows the user to return `ResponseDisposition` value to cancel or\r\nend the request without the body.\r\n\r\n### Testing Details :mag:\r\nStreaming tests are being updated to check these events always fire\r\nbefore the other events. More tests are needed around cancellation or\r\nending behavior to ensure that's really possible.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/1da2d91fa6316690ef97f46b450262286231c261",
+  "durationSeconds" : 13.914338946342468,
+  "entityNames" : [
+    "testThatDataOnHTTPResponseCanCancel"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let session = stored(Session())\n        var receivedCompletion: DataStreamRequest.Completion?\n        let functionCalled = expectation(description: \"doNothing called\")\n        @Sendable @MainActor func fulfill() async {\n            functionCalled.fulfill()\n        }\n\n        // When\n        let request = session.streamRequest(.payloads(2))\n            .onHTTPResponse { _ in\n                await fulfill()\n                return .cancel\n            }\n        let task = request.streamTask()\n\n        for await stream in task.streamingResponses(serializedUsing: .passthrough) {\n            switch stream.event {\n            case .stream:\n                XCTFail(\"cancelled stream should receive no data\")\n            case let .complete(completion):\n                receivedCompletion = completion\n            }\n        }\n\n        await fulfillment(of: [functionCalled], timeout: timeout)\n\n        // Then\n        XCTAssertEqual(receivedCompletion?.response?.statusCode, 200)\n        XCTAssertTrue(request.isCancelled, \"onHTTPResponse cancelled request isCancelled should be true\")\n        XCTAssertTrue(request.error?.isExplicitlyCancelledError == true, \"onHTTPResponse cancelled request error should be explicitly cancelled\")"
+      },
+      "location_info" : {
+        "file_path" : "Tests/ConcurrencyTests.swift",
+        "location" : {
+          "end_position" : 16915,
+          "start_position" : 15599
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataOnHTTPResponseCanCancel",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 60,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/ConcurrencyTests.swift"
+  ]
+}

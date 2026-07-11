@@ -1,0 +1,1243 @@
+{
+  "caseID" : "case-5d30cc556db3e78fbac96020",
+  "commitHash" : "563595b5197188a6770e2482ac3e6d665c5a1578",
+  "commitMessage" : "Refactor Project Structure, Break Request Types Out Into Separate Files (#3819)\n\n### Goals :soccer:\r\nAlamofire's project structure has grown from its original single-file\r\norigin into many files on disk. Unfortunately, as the project has grown,\r\nthe `Request.swift` file has grown rather gigantic, topping 2600 lines\r\nafter the recent addition of `WebSocketRequest`. This PR breaks up\r\n`Request.swift` into separate files for each request type. It also moves\r\nall the previous serialization extensions from\r\n`ResponseSerialization.swift` to their associated type's files.\r\n\r\nThis PR also restructures some of the project's layout on disk to make\r\nsome Xcode groups proper folders.\r\n\r\nThis PR also creates the `AFInfo` namespace and moves the previously\r\ninternal `version` value into it to make it public.\r\n\r\nThis PR also adds primary associated types to the serialization\r\nprotocols.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/563595b5197188a6770e2482ac3e6d665c5a1578",
+  "durationSeconds" : 35.255531072616577,
+  "entityNames" : [
+    "(completed: Bool, metricsGathered: Bool)",
+    "Bool",
+    "Events",
+    "Int",
+    "Request",
+    "Request?",
+    "RequestTaskMap",
+    "URLSessionTask"
+  ],
+  "rawRefactoring" : {
+    "category" : "complex",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let events = taskEvents[task] else {\n            fatalError(\"RequestTaskMap consistency error: no events corresponding to task found.\")\n        }\n\n        switch (events.completed, events.metricsGathered) {\n        case (_, true): fatalError(\"RequestTaskMap consistency error: duplicate metricsGatheredForTask call.\")\n        case (false, false): taskEvents[task] = (completed: false, metricsGathered: true); return false\n        case (true, false): self[task] = nil; return true\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 5084,
+              "start_position" : 4469
+            }
+          },
+          "modifiers" : [
+            "mutating"
+          ],
+          "name" : "disassociateIfNecessaryAfterGatheringMetricsForTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 4563,
+                  "start_position" : 4541
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let events = taskEvents[task] else {\n            fatalError(\"RequestTaskMap consistency error: no events corresponding to task found.\")\n        }\n\n        switch (events.completed, events.metricsGathered) {\n        case (true, _): fatalError(\"RequestTaskMap consistency error: duplicate completionReceivedForTask call.\")\n        // swift-corelibs-foundation doesn't gather metrics, so unconditionally remove the reference and return true.\n        #if canImport(FoundationNetworking)\n        default: self[task] = nil; return true\n        #else\n        case (false, false):\n            if #available(macOS 10.12, iOS 10, watchOS 7, tvOS 10, *) {\n                taskEvents[task] = (completed: true, metricsGathered: false); return false\n            } else {\n                // watchOS < 7 doesn't gather metrics, so unconditionally remove the reference and return true.\n                self[task] = nil; return true\n            }\n        case (false, true):\n            self[task] = nil; return true\n        #endif\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 6224,
+              "start_position" : 5084
+            }
+          },
+          "modifiers" : [
+            "mutating"
+          ],
+          "name" : "disassociateIfNecessaryAfterCompletingTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 5169,
+                  "start_position" : 5147
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 2001,
+              "start_position" : 1656
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[URLSessionTask: Request]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 1716,
+                  "start_position" : 1667
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "tasksToRequests",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[Request: URLSessionTask]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 1775,
+                  "start_position" : 1716
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "requestsToTasks",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[URLSessionTask: (completed: Bool, metricsGathered: Bool)]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Core/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 1861,
+                  "start_position" : 1775
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "taskEvents",
+              "order" : 2
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Core/RequestTaskMap.swift",
+        "location" : {
+          "end_position" : 6226,
+          "start_position" : 1224
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "RequestTaskMap",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 2743,
+              "start_position" : 2001
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "subscript",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 2035,
+                  "start_position" : 2017
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "URLSessionTask?"
+            },
+            "description" : "-> URLSessionTask?"
+          },
+          "return_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTask?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 3469,
+              "start_position" : 2743
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "subscript",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Core/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 2781,
+                  "start_position" : 2759
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "Request?"
+            },
+            "description" : "-> Request?"
+          },
+          "return_type" : {
+            "is_optional" : true,
+            "name" : "Request?"
+          }
+        }
+      ],
+      "type_aliases" : [
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "(completed: Bool, metricsGathered: Bool)"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1409,
+              "start_position" : 1337
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "Events"
+        }
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLSessionTask: Request]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1469,
+              "start_position" : 1427
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "tasksToRequests"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[Request: URLSessionTask]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1528,
+              "start_position" : 1486
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "requestsToTasks"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLSessionTask: Events]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1581,
+              "start_position" : 1545
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "taskEvents"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[Request]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Array(tasksToRequests.values)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1656,
+              "start_position" : 1591
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requests"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(tasksToRequests.count == requestsToTasks.count,\n                     \"RequestTaskMap.count invalid, requests.count: \\(tasksToRequests.count) != tasks.count: \\(requestsToTasks.count)\")\n\n        return tasksToRequests.count"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 3740,
+              "start_position" : 3479
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "count"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(taskEvents.count == count, \"RequestTaskMap.eventCount invalid, count: \\(count) != taskEvents.count: \\(taskEvents.count)\")\n\n        return taskEvents.count"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 3949,
+              "start_position" : 3750
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "eventCount"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(tasksToRequests.isEmpty == requestsToTasks.isEmpty,\n                     \"RequestTaskMap.isEmpty invalid, requests.isEmpty: \\(tasksToRequests.isEmpty) != tasks.isEmpty: \\(requestsToTasks.isEmpty)\")\n\n        return tasksToRequests.isEmpty"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 4239,
+              "start_position" : 3959
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "isEmpty"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(taskEvents.isEmpty == isEmpty, \"RequestTaskMap.isEventsEmpty invalid, isEmpty: \\(isEmpty) != taskEvents.isEmpty: \\(taskEvents.isEmpty)\")\n\n        return taskEvents.isEmpty"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/Core/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 4469,
+              "start_position" : 4249
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "isEventsEmpty"
+        }
+      ]
+    },
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let events = taskEvents[task] else {\n            fatalError(\"RequestTaskMap consistency error: no events corresponding to task found.\")\n        }\n\n        switch (events.completed, events.metricsGathered) {\n        case (_, true): fatalError(\"RequestTaskMap consistency error: duplicate metricsGatheredForTask call.\")\n        case (false, false): taskEvents[task] = (completed: false, metricsGathered: true); return false\n        case (true, false): self[task] = nil; return true\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 5084,
+              "start_position" : 4469
+            }
+          },
+          "modifiers" : [
+            "mutating"
+          ],
+          "name" : "disassociateIfNecessaryAfterGatheringMetricsForTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 4563,
+                  "start_position" : 4541
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let events = taskEvents[task] else {\n            fatalError(\"RequestTaskMap consistency error: no events corresponding to task found.\")\n        }\n\n        switch (events.completed, events.metricsGathered) {\n        case (true, _): fatalError(\"RequestTaskMap consistency error: duplicate completionReceivedForTask call.\")\n        // swift-corelibs-foundation doesn't gather metrics, so unconditionally remove the reference and return true.\n        #if canImport(FoundationNetworking)\n        default: self[task] = nil; return true\n        #else\n        case (false, false):\n            if #available(macOS 10.12, iOS 10, watchOS 7, tvOS 10, *) {\n                taskEvents[task] = (completed: true, metricsGathered: false); return false\n            } else {\n                // watchOS < 7 doesn't gather metrics, so unconditionally remove the reference and return true.\n                self[task] = nil; return true\n            }\n        case (false, true):\n            self[task] = nil; return true\n        #endif\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 6224,
+              "start_position" : 5084
+            }
+          },
+          "modifiers" : [
+            "mutating"
+          ],
+          "name" : "disassociateIfNecessaryAfterCompletingTask",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 5169,
+                  "start_position" : 5147
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "Bool"
+            },
+            "description" : "-> Bool"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 2001,
+              "start_position" : 1656
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[URLSessionTask: Request]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 1716,
+                  "start_position" : 1667
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "tasksToRequests",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[Request: URLSessionTask]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 1775,
+                  "start_position" : 1716
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "requestsToTasks",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[URLSessionTask: (completed: Bool, metricsGathered: Bool)]"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "[:]"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 1861,
+                  "start_position" : 1775
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "taskEvents",
+              "order" : 2
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/RequestTaskMap.swift",
+        "location" : {
+          "end_position" : 6226,
+          "start_position" : 1224
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "RequestTaskMap",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 2743,
+              "start_position" : 2001
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "subscript",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 2035,
+                  "start_position" : 2017
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "URLSessionTask?"
+            },
+            "description" : "-> URLSessionTask?"
+          },
+          "return_type" : {
+            "is_optional" : true,
+            "name" : "URLSessionTask?"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 3469,
+              "start_position" : 2743
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "subscript",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/RequestTaskMap.swift",
+                "location" : {
+                  "end_position" : 2781,
+                  "start_position" : 2759
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "Request?"
+            },
+            "description" : "-> Request?"
+          },
+          "return_type" : {
+            "is_optional" : true,
+            "name" : "Request?"
+          }
+        }
+      ],
+      "type_aliases" : [
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "(completed: Bool, metricsGathered: Bool)"
+          },
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1409,
+              "start_position" : 1337
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "Events"
+        }
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLSessionTask: Request]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1469,
+              "start_position" : 1427
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "tasksToRequests"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[Request: URLSessionTask]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1528,
+              "start_position" : 1486
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "requestsToTasks"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[URLSessionTask: Events]"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1581,
+              "start_position" : 1545
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "taskEvents"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[Request]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Array(tasksToRequests.values)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 1656,
+              "start_position" : 1591
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requests"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(tasksToRequests.count == requestsToTasks.count,\n                     \"RequestTaskMap.count invalid, requests.count: \\(tasksToRequests.count) != tasks.count: \\(requestsToTasks.count)\")\n\n        return tasksToRequests.count"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 3740,
+              "start_position" : 3479
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "count"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(taskEvents.count == count, \"RequestTaskMap.eventCount invalid, count: \\(count) != taskEvents.count: \\(taskEvents.count)\")\n\n        return taskEvents.count"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 3949,
+              "start_position" : 3750
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "eventCount"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(tasksToRequests.isEmpty == requestsToTasks.isEmpty,\n                     \"RequestTaskMap.isEmpty invalid, requests.isEmpty: \\(tasksToRequests.isEmpty) != tasks.isEmpty: \\(requestsToTasks.isEmpty)\")\n\n        return tasksToRequests.isEmpty"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 4239,
+              "start_position" : 3959
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "isEmpty"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "precondition(taskEvents.isEmpty == isEmpty, \"RequestTaskMap.isEventsEmpty invalid, isEmpty: \\(isEmpty) != taskEvents.isEmpty: \\(taskEvents.isEmpty)\")\n\n        return taskEvents.isEmpty"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Source/RequestTaskMap.swift",
+            "location" : {
+              "end_position" : 4469,
+              "start_position" : 4249
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "isEventsEmpty"
+        }
+      ]
+    },
+    "type" : "Move Struct Refactoring"
+  },
+  "refactoringIndex" : 19,
+  "refactoringType" : "Move Struct Refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Core/RequestTaskMap.swift",
+    "Source/RequestTaskMap.swift"
+  ]
+}

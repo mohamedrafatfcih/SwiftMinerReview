@@ -1,0 +1,64 @@
+{
+  "caseID" : "case-342bf86b7c99d5a063cad333",
+  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds" : 73.471343994140625,
+  "entityNames" : [
+    "testThatDataStreamsCanBeRetried"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "annotation" : {
+        "unsupported" : {
+          "_0" : "MainActor"
+        }
+      },
+      "arguments" : [
+
+      ]
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "MainActor"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "final class GoodRetry: RequestInterceptor {\n            var hasRetried = false\n\n            func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, any Error>) -> Void) {\n                if hasRetried {\n                    completion(.success(Endpoint.bytes(1000).urlRequest))\n                } else {\n                    completion(.success(urlRequest))\n                }\n            }\n\n            func retry(_ request: Request, for session: Session, dueTo error: any Error, completion: @escaping (RetryResult) -> Void) {\n                hasRetried = true\n                completion(.retry)\n            }\n        }\n\n        let session = Session(interceptor: GoodRetry())\n        var accumulatedData = Data()\n        var streamOnMain = false\n        var completeOnMain = false\n        var response: HTTPURLResponse?\n        let didReceive = expectation(description: \"stream should receive\")\n        let didComplete = expectation(description: \"stream should complete\")\n\n        // When\n        session.streamRequest(.status(401))\n            .validate()\n            .responseStream { stream in\n                switch stream.event {\n                case let .stream(result):\n                    streamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(data):\n                        accumulatedData.append(data)\n                    }\n                    didReceive.fulfill()\n                case let .complete(completion):\n                    completeOnMain = Thread.isMainThread\n                    response = completion.response\n                    didComplete.fulfill()\n                }\n            }\n\n        wait(for: [didReceive, didComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertTrue(streamOnMain)\n        XCTAssertTrue(completeOnMain)\n        XCTAssertEqual(accumulatedData.count, 1000)\n        XCTAssertEqual(response?.statusCode, 200)"
+      },
+      "location_info" : {
+        "file_path" : "Tests/DataStreamTests.swift",
+        "location" : {
+          "end_position" : 36992,
+          "start_position" : 34921
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testThatDataStreamsCanBeRetried",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add attribute refactoring"
+  },
+  "refactoringIndex" : 628,
+  "refactoringType" : "Add attribute refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/DataStreamTests.swift"
+  ]
+}

@@ -1,0 +1,378 @@
+{
+  "caseID" : "case-3760b3a97ef4729c7032ba22",
+  "commitHash" : "88ab3192f988a780399f9770e25c823eb848aa66",
+  "commitMessage" : "Migrate image, volume and miscellaneous system tests. (#1868)\n\n- Part of #1833.\n- Distributes fixture extensions for images and containers added as part\nof previous builder PR to more sensible locations.",
+  "commitURL" : "https://github.com/apple/container/commit/88ab3192f988a780399f9770e25c823eb848aa66",
+  "durationSeconds" : 5.8030730485916138,
+  "entityNames" : [
+    "ContainerFixture",
+    "String",
+    "TestCLIKernelSetSerial",
+    "binaryPath",
+    "defaultBinaryPath",
+    "expectedKernelRelease",
+    "f",
+    "fromLocalDisk"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialized"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let symlinkBinaryPath = URL(filePath: defaultBinaryPath)\n            .deletingLastPathComponent()\n            .appending(path: \"vmlinux.container\")\n            .relativePath\n\n        try await ContainerFixture.with { f in\n            f.addCleanup { resetKernelToRecommended(f) }\n            let tempDir = URL(filePath: f.testDir.string)\n            let localTarPath = tempDir.appending(path: remoteTar.lastPathComponent)\n            try await ContainerAPIClient.FileDownloader.downloadFile(url: remoteTar, to: localTarPath)\n            try f.run([\"system\", \"kernel\", \"set\", \"--force\", \"--tar\", localTarPath.path, \"--binary\", symlinkBinaryPath]).check()\n            try await validateGuestKernel(f)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 3040,
+              "start_position" : 2250
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "fromLocalTar",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let symlinkBinaryPath = URL(filePath: defaultBinaryPath)\n            .deletingLastPathComponent()\n            .appending(path: \"vmlinux.container\")\n            .relativePath\n\n        try await ContainerFixture.with { f in\n            f.addCleanup { resetKernelToRecommended(f) }\n            try f.run([\"system\", \"kernel\", \"set\", \"--force\", \"--tar\", remoteTar.absoluteString, \"--binary\", symlinkBinaryPath]).check()\n            try await validateGuestKernel(f)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 3578,
+              "start_position" : 3040
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "fromRemoteTarSymlink",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            f.addCleanup { resetKernelToRecommended(f) }\n            let tempDir = URL(filePath: f.testDir.string)\n            let localTarPath = tempDir.appending(path: remoteTar.lastPathComponent)\n            try await ContainerAPIClient.FileDownloader.downloadFile(url: remoteTar, to: localTarPath)\n\n            let targetPath = tempDir.appending(path: URL(string: defaultBinaryPath)!.lastPathComponent)\n            let archiveReader = try ArchiveReader(file: localTarPath)\n            let (_, data) = try archiveReader.extractFile(path: defaultBinaryPath)\n            try data.write(to: targetPath, options: .atomic)\n\n            try f.run([\"system\", \"kernel\", \"set\", \"--force\", \"--binary\", targetPath.path]).check()\n            try await validateGuestKernel(f)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 4454,
+              "start_position" : 3578
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "fromLocalDisk",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "do {\n            let result = try f.run([\"system\", \"kernel\", \"set\", \"--recommended\", \"--force\"])\n            if result.status != 0 {\n                Issue.record(\"kernel reset to --recommended failed (status \\(result.status)): \\(result.error)\")\n            }\n        } catch {\n            Issue.record(\"kernel reset to --recommended could not run: \\(error)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 5331,
+              "start_position" : 4454
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "resetKernelToRecommended",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ContainerFixture"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+                "location" : {
+                  "end_position" : 4945,
+                  "start_position" : 4924
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "f",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n        try await f.withContainer(image: image) { name in\n            let release = try f.doExec(name, cmd: [\"uname\", \"-r\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(\n                release == expectedKernelRelease,\n                \"expected guest kernel \\(expectedKernelRelease), got \\(release)\")\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 6071,
+              "start_position" : 5331
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "validateGuestKernel",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ContainerFixture"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+                "location" : {
+                  "end_position" : 5620,
+                  "start_position" : 5599
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "f",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+        "location" : {
+          "end_position" : 6073,
+          "start_position" : 904
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIKernelSetSerial",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "url"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 1162,
+              "start_position" : 1116
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "remoteTar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "binaryPath"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 1240,
+              "start_position" : 1179
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "defaultBinaryPath"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "let filename = URL(fileURLWithPath: defaultBinaryPath).lastPathComponent\n        let prefix = \"vmlinux-\"\n        let raw = filename.hasPrefix(prefix) ? String(filename.dropFirst(prefix.count)) : filename\n        if let dashIdx = raw.lastIndex(of: \"-\"),\n            raw[raw.index(after: dashIdx)...].allSatisfy({ $0.isNumber })\n        {\n            return String(raw[..<dashIdx])\n        }\n        return raw"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift",
+            "location" : {
+              "end_position" : 2250,
+              "start_position" : 1796
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "expectedKernelRelease"
+        }
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 44,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/System/TestCLIKernelSetSerial.swift"
+  ]
+}

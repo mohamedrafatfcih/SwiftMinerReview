@@ -1,0 +1,792 @@
+{
+  "caseID" : "case-93d134191c46619c17f6b81a",
+  "commitHash" : "b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "commitMessage" : "Add `container machine` for managing persistent Linux VMs (#1662)\n\n## Type of Change\n- [ ] Bug fix\n- [x] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n`container` runs each workload in an ephemeral VM, so there's no\nbuilt-in way to keep a persistent Linux environment you can log into and\nwork in. `container machine` adds one.\n\nA container machine is a lightweight, persistent, and integrated Linux\nenvironments that feel like an extension of your Mac, created from\nstandard OCI images with a familiar UX. The login user matches your host\naccount with passwordless `sudo`, your home directory is mounted inside\nthe VM, and each machine keeps its filesystem and runs the image's own\ninit system (such as`systemd` or `openrc`).\n\n```bash\ncontainer machine create alpine:3.22 --name my-machine\ncontainer machine run -n my-machine # interactive shell\ncontainer machine set -n my-machine cpus=4 memory=8G\n```\n\nSubcommands: `create`, `run`, `list` (`ls`), `inspect`, `set`,\n`set-default`, `logs`, `stop`, `delete` (`rm`); `m` aliases `machine`.\nDocs added to `docs/command-reference.md` (Machine Management) and\n`docs/how-to.md` (\"Use container machines\").\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [x] Added/updated docs\n\nSigned-off-by: Raj Aryan Singh <rajaryan_singh@apple.com>\nCo-authored-by: Jaewon Hur <jaewon_hur@apple.com>\nCo-authored-by: John Logan <john_logan@apple.com>\nCo-authored-by: Michael Crosby <michael_crosby@apple.com>\nCo-authored-by: Eric Ernst <eric_ernst@apple.com>\nCo-authored-by: Danny Canter <danny_canter@apple.com>",
+  "commitURL" : "https://github.com/apple/container/commit/b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "durationSeconds" : 18.474954962730408,
+  "entityNames" : [
+    "MachinesHarness",
+    "MachinesService",
+    "Sendable",
+    "XPCMessage",
+    "boot",
+    "create",
+    "delete",
+    "getDefault"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sendable"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let machineConfig = message.dataNoCopy(key: MachineKeys.machineConfig.rawValue)\n        guard let machineConfig else {\n            throw ContainerizationError(\n                .invalidArgument,\n                message: \"container machine configuration cannot be empty\"\n            )\n        }\n\n        let machineResources = message.dataNoCopy(key: MachineKeys.machineResources.rawValue)\n        var resources: MachineResources? = nil\n        if let machineResources {\n            resources = try JSONDecoder().decode(MachineResources.self, from: machineResources)\n        }\n\n        let bootConfigData = message.dataNoCopy(key: MachineKeys.bootConfig.rawValue)\n        guard let bootConfigData else {\n            throw ContainerizationError(.invalidArgument, message: \"bootConfig cannot be empty\")\n        }\n        let bootConfig = try JSONDecoder().decode(MachineConfig.self, from: bootConfigData)\n\n        let config = try JSONDecoder().decode(MachineConfiguration.self, from: machineConfig)\n\n        try await service.create(configuration: config, resources: resources, bootConfig: bootConfig)\n        return message.reply()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 2322,
+              "start_position" : 1088
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "create",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 1148,
+                  "start_position" : 1127
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = message.string(key: MachineKeys.id.rawValue)\n        guard let id else {\n            throw ContainerizationError(.invalidArgument, message: \"id cannot be empty\")\n        }\n        try await service.delete(id: id)\n        return message.reply()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 2679,
+              "start_position" : 2322
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "delete",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 2382,
+                  "start_position" : 2361
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let machines = try await service.list()\n        let data = try JSONEncoder().encode(machines)\n\n        let reply = message.reply()\n        reply.set(key: MachineKeys.machines.rawValue, value: data)\n        return reply"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 3000,
+              "start_position" : 2679
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "list",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 2737,
+                  "start_position" : 2716
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = try await service.getDefault()\n\n        let reply = message.reply()\n        if let id {\n            reply.set(key: MachineKeys.id.rawValue, value: id)\n        }\n        return reply"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 3299,
+              "start_position" : 3000
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "getDefault",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 3064,
+                  "start_position" : 3043
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = message.string(key: MachineKeys.id.rawValue)\n        guard let id else {\n            throw ContainerizationError(.invalidArgument, message: \"id cannot be empty\")\n        }\n        try await service.setDefault(id: id)\n\n        return message.reply()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 3665,
+              "start_position" : 3299
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setDefault",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 3363,
+                  "start_position" : 3342
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = message.string(key: MachineKeys.id.rawValue)\n\n        var dynamicEnv: [String: String] = [:]\n        if let dynamicEnvData = message.dataNoCopy(key: MachineKeys.dynamicEnv.rawValue) {\n            dynamicEnv = try JSONDecoder().decode([String: String].self, from: dynamicEnvData)\n        }\n\n        let snapshot = try await service.boot(id: id, dynamicEnv: dynamicEnv)\n        let data = try JSONEncoder().encode(snapshot)\n\n        let reply = message.reply()\n        reply.set(key: MachineKeys.snapshot.rawValue, value: data)\n        return reply"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 4323,
+              "start_position" : 3665
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "boot",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 3723,
+                  "start_position" : 3702
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = message.string(key: MachineKeys.id.rawValue)\n        guard let id else {\n            throw ContainerizationError(.invalidArgument, message: \"id cannot be empty\")\n        }\n        try await service.stop(id: id)\n        return message.reply()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 4676,
+              "start_position" : 4323
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "stop",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 4381,
+                  "start_position" : 4360
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = message.string(key: MachineKeys.id.rawValue)\n        guard let id else {\n            throw ContainerizationError(.invalidArgument, message: \"id cannot be empty\")\n        }\n        let snapshot = try await service.inspect(id: id)\n        let data = try JSONEncoder().encode(snapshot)\n\n        let reply = message.reply()\n        reply.set(key: MachineKeys.snapshot.rawValue, value: data)\n        return reply"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 5198,
+              "start_position" : 4676
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "inspect",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 4737,
+                  "start_position" : 4716
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = message.string(key: MachineKeys.id.rawValue)\n        guard let id else {\n            throw ContainerizationError(.invalidArgument, message: \"id cannot be empty\")\n        }\n        let bootConfigData = message.dataNoCopy(key: MachineKeys.bootConfig.rawValue)\n        guard let bootConfigData else {\n            throw ContainerizationError(.invalidArgument, message: \"boot config cannot be empty\")\n        }\n        let bootConfig = try JSONDecoder().decode(MachineConfig.self, from: bootConfigData)\n        try await service.setConfig(id: id, bootConfig: bootConfig)\n        return message.reply()"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 5911,
+              "start_position" : 5198
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "setConfig",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 5261,
+                  "start_position" : 5240
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "sendable" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let id = message.string(key: MachineKeys.id.rawValue)\n        guard let id else {\n            throw ContainerizationError(.invalidArgument, message: \"id cannot be empty\")\n        }\n\n        let fds = try await service.logs(id: id)\n        let reply = message.reply()\n        try reply.set(key: MachineKeys.logs.rawValue, value: fds)\n        return reply"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 6367,
+              "start_position" : 5911
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "logs",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCMessage"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 5969,
+                  "start_position" : 5948
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "XPCMessage"
+            },
+            "description" : "-> XPCMessage"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 1088,
+              "start_position" : 1006
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "MachinesService"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+                "location" : {
+                  "end_position" : 1048,
+                  "start_position" : 1024
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "service",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+        "location" : {
+          "end_position" : 6369,
+          "start_position" : 930
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "MachinesHarness",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "MachinesService"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesHarness.swift",
+            "location" : {
+              "end_position" : 1006,
+              "start_position" : 982
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "service"
+        }
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 175,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/MachineAPIService/Server/MachinesHarness.swift"
+  ]
+}

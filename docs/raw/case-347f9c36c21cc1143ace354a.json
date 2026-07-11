@@ -1,0 +1,1331 @@
+{
+  "caseID" : "case-347f9c36c21cc1143ace354a",
+  "commitHash" : "cda6b99083ad7069fd8d07a4876a7e22e8efb49e",
+  "commitMessage" : "feat: added fixed unit option to the Network and Disk modules (#3231)\n\n* Network monitor fixed unit\n\n* Add fixed units to disk widget\n\n* \"fix\" lint",
+  "commitURL" : "https://github.com/exelban/stats/commit/cda6b99083ad7069fd8d07a4876a7e22e8efb49e",
+  "durationSeconds" : 39.683984994888306,
+  "entityNames" : [
+    "Bool",
+    "CGFloat",
+    "DataSizeBase",
+    "Disks",
+    "Int",
+    "ModuleType",
+    "NSCoder",
+    "NSColor"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "data_type" : {
+        "is_optional" : false,
+        "name" : "DataSizeBase"
+      },
+      "getter_block" : {
+        "body" : {
+          "content" : "DataSizeBase(rawValue: Store.shared.string(key: \"\\(self.title)_base\", defaultValue: DataSizeBase.byte.rawValue)) ?? .byte"
+        },
+        "modifier" : "get"
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Modules/Disk/popup.swift",
+        "location" : {
+          "end_position" : 950,
+          "start_position" : 794
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "base"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "PopupWrapper"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "var h: CGFloat = 0\n        h += self.disks.subviews.map({ $0.frame.height + self.disks.spacing }).reduce(0, +) - self.disks.spacing\n        h += self.processesHeight\n        if h > 0 && self.frame.size.height != h {\n            self.setFrameSize(NSSize(width: self.frame.width, height: h))\n            self.sizeCallback?(self.frame.size)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 3351,
+              "start_position" : 2945
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "recalculateHeight",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if self.numberOfProcesses == 0 {\n            let v = NSView()\n            self.processesView = v\n            return v\n        }\n        \n        let view: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: self.processesHeight))\n        let separator = separatorView(localizedString(\"Top processes\"), origin: NSPoint(x: 0, y: self.processesHeight-Constants.Popup.separatorHeight), width: self.frame.width)\n        let container: ProcessesView = ProcessesView(\n            frame: NSRect(x: 0, y: 0, width: self.frame.width, height: separator.frame.origin.y),\n            values: [(localizedString(\"Read\"), self.readColor), (localizedString(\"Write\"), self.writeColor)],\n            n: self.numberOfProcesses\n        )\n        self.processes = container\n        view.addSubview(separator)\n        view.addSubview(container)\n        self.processesView = view\n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 4314,
+              "start_position" : 3351
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "initProcesses",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "self.disks.subviews.compactMap { $0 as? DiskView }.forEach { $0.appear() }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 4474,
+              "start_position" : 4314
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "appear",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "defer {\n            let h = self.disks.subviews.map({ $0.bounds.height + self.disks.spacing }).reduce(0, +) - self.disks.spacing\n            if h > 0 && self.disks.frame.size.height != h {\n                self.disks.setFrameSize(NSSize(width: self.frame.width, height: h))\n                self.recalculateHeight()\n            } else if h < 0 && self.disks.frame.size.height != 0 {\n                self.disks.setFrameSize(NSSize(width: self.frame.width, height: 0))\n                self.recalculateHeight()\n            }\n            self.lastList = value.array.compactMap{ $0.uuid }\n        }\n        \n        if self.settingsSection.contains(\"empty_view\") {\n            self.settingsSection.delete(\"empty_view\")\n        }\n        \n        self.lastList.filter { !value.map { $0.uuid }.contains($0) }.forEach { self.settingsSection.delete($0) }\n        value.forEach { (drive: drive) in\n            if !self.settingsSection.contains(drive.uuid) {\n                let btn = switchView(\n                    action: #selector(self.toggleDisk),\n                    state: drive.popupState\n                )\n                btn.identifier = NSUserInterfaceItemIdentifier(drive.uuid)\n                self.settingsSection.add(PreferencesRow(drive.mediaName, id: drive.uuid, component: btn))\n            }\n        }\n        \n        self.disks.subviews.filter{ $0 is DiskView }.map{ $0 as! DiskView }.forEach { (v: DiskView) in\n            if !value.array.filter({ $0.popupState }).map({$0.uuid}).contains(v.uuid) {\n                v.removeFromSuperview()\n            }\n        }\n        value.array.filter({ $0.popupState }).forEach { (drive: drive) in\n            if let view = self.disks.subviews.filter({ $0 is DiskView }).map({ $0 as! DiskView }).first(where: { $0.uuid == drive.uuid }) {\n                view.update(free: drive.free, smart: drive.smart)\n            } else {\n                self.disks.addArrangedSubview(DiskView(\n                    width: Constants.Popup.width,\n                    uuid: drive.uuid,\n                    name: drive.mediaName,\n                    size: drive.size,\n                    free: drive.free,\n                    path: drive.path,\n                    smart: drive.smart,\n                    resize: self.recalculateHeight\n                ))\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 6853,
+              "start_position" : 4474
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "capacityCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Disks"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 4529,
+                  "start_position" : 4515
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let views = self.disks.subviews.filter{ $0 is DiskView }.map{ $0 as! DiskView }\n        value.reversed().forEach { (drive: drive) in\n            if let view = views.first(where: { $0.name == drive.mediaName }) {\n                view.updateStats(stats: drive.activity)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 7217,
+              "start_position" : 6853
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "activityCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Disks"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 6908,
+                  "start_position" : 6894
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "DispatchQueue.main.async(execute: {\n            if !(self.window?.isVisible ?? false) && self.processesInitialized {\n                return\n            }\n            let list = list.map{ $0 }\n            if list.count != self.processes?.count { self.processes?.clear(\"-\") }\n            \n            for i in 0..<list.count {\n                let process = list[i]\n                let write = Units(bytes: Int64(process.write)).getReadableSpeed(base: process.base, unit: process.speedUnit)\n                let read = Units(bytes: Int64(process.read)).getReadableSpeed(base: process.base, unit: process.speedUnit)\n                self.processes?.set(i, process, [read, write])\n            }\n            \n            self.processesInitialized = true\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 8053,
+              "start_position" : 7217
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "processCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "[Disk_process]"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 7279,
+                  "start_position" : 7257
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "list",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "if self.processes?.count == self.numberOfProcesses { return }\n        \n        DispatchQueue.main.async(execute: {\n            self.processesView?.removeFromSuperview()\n            self.processesView = nil\n            self.processes = nil\n            self.addArrangedSubview(self.initProcesses())\n            self.processesInitialized = false\n            self.recalculateHeight()\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 8510,
+              "start_position" : 8053
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "numberOfProcessesUpdated",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = SettingsContainerView()\n        \n        view.addArrangedSubview(PreferencesSection([\n            PreferencesRow(localizedString(\"Keyboard shortcut\"), component: KeyboardShartcutView(\n                callback: self.setKeyboardShortcut,\n                value: self.keyboardShortcut\n            ))\n        ]))\n        \n        view.addArrangedSubview(PreferencesSection([\n            PreferencesRow(localizedString(\"Main color\"), component: colorSelectView(\n                action: #selector(self.toggleMainColor),\n                items: SColor.allColors.filter({ $0 != .monochrome }),\n                selected: self.mainColorState.key\n            )),\n            PreferencesRow(localizedString(\"Write color\"), component: colorSelectView(\n                action: #selector(self.toggleWriteColor),\n                items: SColor.allColors,\n                selected: self.writeColorState.key\n            )),\n            PreferencesRow(localizedString(\"Read color\"), component: colorSelectView(\n                action: #selector(self.toggleReadColor),\n                items: SColor.allColors,\n                selected: self.readColorState.key\n            ))\n        ]))\n        \n        view.addArrangedSubview(PreferencesSection([\n            PreferencesRow(localizedString(\"Reverse order\"), component: switchView(\n                action: #selector(self.toggleReverseOrder),\n                state: self.reverseOrderState\n            ))\n        ]))\n        \n        let empty = NSView()\n        empty.identifier = NSUserInterfaceItemIdentifier(\"empty_view\")\n        self.settingsSection.add(empty)\n        view.addArrangedSubview(self.settingsSection)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 10293,
+              "start_position" : 8510
+            }
+          },
+          "modifiers" : [
+            "public",
+            "override"
+          ],
+          "name" : "settings",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : true,
+              "name" : "NSView?"
+            },
+            "description" : "-> NSView?"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "guard let key = sender.representedObject as? String else { return }\n        self.mainColorState = SColor.fromString(key, defaultValue: self.mainColorState)\n        Store.shared.set(key: \"\\(self.title)_mainColor\", value: self.mainColorState.key)"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 10620,
+              "start_position" : 10293
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleMainColor",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 10358,
+                  "start_position" : 10338
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "guard let key = sender.representedObject as? String else { return }\n        self.writeColorState = SColor.fromString(key, defaultValue: self.writeColorState)\n        Store.shared.set(key: \"\\(self.title)_writeColor\", value: self.writeColorState.key)\n        if let color = self.writeColorState.additional as? NSColor {\n            self.processes?.setColor(1, color)\n            for view in self.disks.subviews.filter({ $0 is DiskView }).map({ $0 as! DiskView }) {\n                view.setChartColor(write: color)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 11234,
+              "start_position" : 10620
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleWriteColor",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 10681,
+                  "start_position" : 10661
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "guard let key = sender.representedObject as? String else { return }\n        self.readColorState = SColor.fromString(key, defaultValue: self.readColorState)\n        Store.shared.set(key: \"\\(self.title)_readColor\", value: self.readColorState.key)\n        if let color = self.readColorState.additional as? NSColor {\n            self.processes?.setColor(0, color)\n            for view in self.disks.subviews.filter({ $0 is DiskView }).map({ $0 as! DiskView }) {\n                view.setChartColor(read: color)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 11841,
+              "start_position" : 11234
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleReadColor",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSMenuItem"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 11294,
+                  "start_position" : 11274
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "self.reverseOrderState = controlState(sender)\n        for view in self.disks.subviews.filter({ $0 is DiskView }).map({ $0 as! DiskView }) {\n            view.setChartReverseOrder(self.reverseOrderState)\n        }\n        Store.shared.set(key: \"\\(self.title)_reverseOrder\", value: self.reverseOrderState)\n        self.display()"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 12246,
+              "start_position" : 11841
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleReverseOrder",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSControl"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 11903,
+                  "start_position" : 11884
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "objc" : {
+
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "guard let id = sender.identifier else { return }\n        Store.shared.set(key: \"\\(self.title)_\\(id.rawValue)_popup\", value: controlState(sender))"
+          },
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 12463,
+              "start_position" : 12246
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "toggleDisk",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSControl"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 12300,
+                  "start_position" : 12281
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "sender",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 2837,
+              "start_position" : 1881
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ModuleType"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 1923,
+                  "start_position" : 1903
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "module",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 2945,
+              "start_position" : 2837
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/Disk/popup.swift",
+                "location" : {
+                  "end_position" : 2876,
+                  "start_position" : 2862
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/Disk/popup.swift",
+        "location" : {
+          "end_position" : 12465,
+          "start_position" : 220
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "Popup",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondBlue"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 311,
+              "start_position" : 275
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "mainColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.readColorState.additional as? NSColor ?? NSColor.systemRed"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 414,
+              "start_position" : 328
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "mainColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondBlue"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 467,
+              "start_position" : 431
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.readColorState.additional as? NSColor ?? NSColor.systemRed"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 570,
+              "start_position" : 484
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "readColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondRed"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 623,
+              "start_position" : 587
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "writeColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.writeColorState.additional as? NSColor ?? NSColor.systemBlue"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 729,
+              "start_position" : 640
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "writeColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 777,
+              "start_position" : 746
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "reverseOrderState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DataSizeBase"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "DataSizeBase(rawValue: Store.shared.string(key: \"\\(self.title)_base\", defaultValue: DataSizeBase.byte.rawValue)) ?? .byte"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 950,
+              "start_position" : 794
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "base"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "networkSpeedUnit(from: Store.shared.string(key: \"\\(self.title)_speedUnit\", defaultValue: NetworkSpeedUnitAuto)).key"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1116,
+              "start_position" : 967
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "speedUnit"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSStackView"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+
+                  ],
+                  "call" : "{\n        let view = NSStackView()\n        view.spacing = Constants.Popup.margins\n        view.orientation = .vertical\n        return view\n    }",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+                    {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "NSStackView",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Modules/Disk/popup.swift",
+                        "location" : {
+                          "end_position" : 1193,
+                          "start_position" : 1180
+                        }
+                      }
+                    }
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Disk/popup.swift",
+                    "location" : {
+                      "end_position" : 1305,
+                      "start_position" : 1159
+                    }
+                  },
+                  "trailing_closure" : {
+                    "attributes" : [
+
+                    ],
+                    "body" : {
+                      "content" : "let view = NSStackView()\n        view.spacing = Constants.Popup.margins\n        view.orientation = .vertical\n        return view"
+                    },
+                    "captures" : [
+
+                    ],
+                    "location_info" : {
+                      "file_path" : "Modules/Disk/popup.swift",
+                      "location" : {
+                        "end_position" : 1303,
+                        "start_position" : 1159
+                      }
+                    },
+                    "parameters" : [
+
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1305,
+              "start_position" : 1138
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "disks"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1361,
+              "start_position" : 1327
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "processesInitialized"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Int"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Store.shared.int(key: \"\\(self.title)_processes\", defaultValue: 8)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1487,
+              "start_position" : 1383
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "numberOfProcesses"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "CGFloat"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "(22*CGFloat(self.numberOfProcesses)) + (self.numberOfProcesses == 0 ? 0 : Constants.Popup.separatorHeight + 22)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1656,
+              "start_position" : 1504
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "processesHeight"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "ProcessesView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1704,
+              "start_position" : 1673
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "processes"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1749,
+              "start_position" : 1721
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "processesView"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "label" : "title",
+                      "value" : "localizedString(\"Drives\")"
+                    }
+                  ],
+                  "call" : "PreferencesSection",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Modules/Disk/popup.swift",
+                    "location" : {
+                      "end_position" : 1841,
+                      "start_position" : 1789
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1841,
+              "start_position" : 1771
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "settingsSection"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/Disk/popup.swift",
+            "location" : {
+              "end_position" : 1881,
+              "start_position" : 1858
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "lastList"
+        }
+      ]
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 37,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Disk/popup.swift"
+  ]
+}

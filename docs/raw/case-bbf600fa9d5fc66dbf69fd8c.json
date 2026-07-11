@@ -1,0 +1,89 @@
+{
+  "caseID" : "case-bbf600fa9d5fc66dbf69fd8c",
+  "commitHash" : "72f3357e69a89aba095883b7a462fc5318ff4335",
+  "commitMessage" : "fix: fixed chart draw that could cause crash in some cases (#3297)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/72f3357e69a89aba095883b7a462fc5318ff4335",
+  "durationSeconds" : 5.3416709899902344,
+  "entityNames" : [
+    "DoubleValue",
+    "addValue",
+    "value"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+
+      ],
+      "call" : "display",
+      "has_self_reference" : true,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 22199,
+          "start_position" : 22168
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "self.write {\n            let n = self.points.count\n            guard n > 0 else { return }\n            \n            if let stats = self.intervalStatsLocked() {\n                let gap = value.ts.timeIntervalSince(stats.lastTs)\n                if gap >= 2.0, gap > stats.typical * 1.5 {\n                    let missing = min(Int((gap / stats.typical).rounded()) - 1, n - 1)\n                    for _ in 0..<max(0, missing) {\n                        self.points[self.head] = nil\n                        self.head = (self.head + 1) % n\n                    }\n                }\n            }\n            \n            self.points[self.head] = value\n            self.head = (self.head + 1) % n\n        }\n        self.onMain { [weak self] in\n            guard let self, self.window?.isVisible ?? false else { return }\n            let state = self.read { (n: self.points.count, animate: self.animationEnabled, yLegend: self.yLegend) }\n            if state.animate, !self.stop, state.n > 1 {\n                let now = CACurrentMediaTime()\n                let dt = self.lastSlideAt == 0 ? self.animationDuration : now - self.lastSlideAt\n                self.lastSlideAt = now\n                let chartWidth = self.bounds.width - (state.yLegend ? 30 : 0)\n                CATransaction.begin()\n                CATransaction.setDisableActions(true)\n                self.slideTransition(chartWidth / CGFloat(state.n - 1), duration: min(max(dt, 0.1), 3.0))\n                self.display()\n                CATransaction.commit()\n            } else {\n                self.display()\n            }\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/Charts.swift",
+        "location" : {
+          "end_position" : 22229,
+          "start_position" : 20574
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "addValue",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DoubleValue"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Kit/plugins/Charts.swift",
+            "location" : {
+              "end_position" : 20625,
+              "start_position" : 20605
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "value",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 25,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/Charts.swift"
+  ]
+}

@@ -1,0 +1,322 @@
+{
+  "caseID" : "case-962cd38797700e83c0654caa",
+  "commitHash" : "e20aca820364817e6a16ef0902d8f27d2f6358e8",
+  "commitMessage" : "Normalize JSON output for network and volume resources. (#1624)\n\nNormalize JSON output for network and volume resources. (#1624)\n- Reworks both JSON output presets to use sorted keys, ISO timestamps.\n`compact` is used for `ls` output, and `pretty` is used for `inspect`.\n- Extracts non-DRY option configuration into presets.\n- Closes #1623.",
+  "commitURL" : "https://github.com/apple/container/commit/e20aca820364817e6a16ef0902d8f27d2f6358e8",
+  "durationSeconds" : 9.5567389726638794,
+  "entityNames" : [
+    "Date",
+    "String",
+    "VolumeConfiguration",
+    "VolumeConfigurationTests",
+    "creationDate",
+    "makeConfiguration",
+    "name",
+    "testDecodesLegacyCreatedAtKey"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "VolumeConfiguration(\n            name: name,\n            driver: \"local\",\n            format: \"ext4\",\n            source: \"/volumes/\\(name)/volume.img\",\n            creationDate: creationDate,\n            labels: [\"env\": \"test\"],\n            options: [\"size\": \"1GiB\"],\n            sizeInBytes: 1_073_741_824\n        )"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+            "location" : {
+              "end_position" : 1334,
+              "start_position" : 890
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "makeConfiguration",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "test-volume"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+                "location" : {
+                  "end_position" : 949,
+                  "start_position" : 919
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "name",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Date"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "Date",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+                        "location" : {
+                          "end_position" : 976,
+                          "start_position" : 970
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+                "location" : {
+                  "end_position" : 976,
+                  "start_position" : 949
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "creationDate",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "VolumeConfiguration"
+            },
+            "description" : "-> VolumeConfiguration"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let config = makeConfiguration()\n        let encoder = JSONEncoder()\n        encoder.outputFormatting = .sortedKeys\n        let json = try String(data: encoder.encode(config), encoding: .utf8)!\n\n        #expect(json.contains(\"\\\"creationDate\\\"\"), \"encoded JSON should use creationDate key\")\n        #expect(!json.contains(\"\\\"createdAt\\\"\"), \"encoded JSON must not use deprecated createdAt key\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+            "location" : {
+              "end_position" : 1795,
+              "start_position" : 1334
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testEncodesCreationDateKey",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let date = Date(timeIntervalSince1970: 1_700_000_000)\n        let original = makeConfiguration(creationDate: date)\n\n        let encoder = JSONEncoder()\n        let decoder = JSONDecoder()\n        let decoded = try decoder.decode(VolumeConfiguration.self, from: encoder.encode(original))\n\n        #expect(decoded.name == original.name)\n        #expect(decoded.driver == original.driver)\n        #expect(decoded.format == original.format)\n        #expect(decoded.source == original.source)\n        #expect(decoded.creationDate.timeIntervalSince1970 == original.creationDate.timeIntervalSince1970)\n        #expect(decoded.labels == original.labels)\n        #expect(decoded.options == original.options)\n        #expect(decoded.sizeInBytes == original.sizeInBytes)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+            "location" : {
+              "end_position" : 2610,
+              "start_position" : 1795
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testRoundTrip",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let date = Date(timeIntervalSince1970: 1_700_000_000)\n        let legacyJSON = \"\"\"\n            {\n                \"name\": \"test-volume\",\n                \"driver\": \"local\",\n                \"format\": \"ext4\",\n                \"source\": \"/volumes/test-volume/volume.img\",\n                \"createdAt\": \\(date.timeIntervalSinceReferenceDate),\n                \"labels\": {},\n                \"options\": {}\n            }\n            \"\"\"\n\n        let decoder = JSONDecoder()\n        let config = try decoder.decode(VolumeConfiguration.self, from: Data(legacyJSON.utf8))\n\n        #expect(config.name == \"test-volume\")\n        #expect(config.creationDate.timeIntervalSince1970 == date.timeIntervalSince1970)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+            "location" : {
+              "end_position" : 3374,
+              "start_position" : 2610
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testDecodesLegacyCreatedAtKey",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let json = \"\"\"\n            {\n                \"name\": \"test-volume\",\n                \"driver\": \"local\",\n                \"format\": \"ext4\",\n                \"source\": \"/volumes/test-volume/volume.img\",\n                \"labels\": {},\n                \"options\": {}\n            }\n            \"\"\"\n\n        let config = try JSONDecoder().decode(VolumeConfiguration.self, from: Data(json.utf8))\n        #expect(config.creationDate.timeIntervalSince1970 == 0)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+            "location" : {
+              "end_position" : 3894,
+              "start_position" : 3374
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testMissingDateDefaultsToEpoch",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/ContainerResourceTests/VolumeConfigurationTests.swift",
+        "location" : {
+          "end_position" : 3896,
+          "start_position" : 855
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "VolumeConfigurationTests",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 56,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/ContainerResourceTests/VolumeConfigurationTests.swift"
+  ]
+}

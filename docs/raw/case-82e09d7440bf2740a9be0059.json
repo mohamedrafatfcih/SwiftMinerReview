@@ -1,0 +1,257 @@
+{
+  "caseID" : "case-82e09d7440bf2740a9be0059",
+  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds" : 14.10075306892395,
+  "entityNames" : [
+    "CLITest",
+    "String",
+    "TestCLIExecCommand",
+    "getTestName",
+    "testCreateExecCommand",
+    "testExecDetach",
+    "testExecDetachProcessRunning",
+    "testExecOnExitingContainer"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : ".serialSuites"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "CLITest"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "Test.current!.name.trimmingCharacters(in: [\"(\", \")\"]).lowercased()"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExec.swift",
+            "location" : {
+              "end_position" : 1007,
+              "start_position" : 883
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "getTestName",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n            var unameActual = try doExec(name: name, cmd: [\"uname\"])\n            unameActual = unameActual.trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(unameActual == \"Linux\", \"expected OS to be Linux, instead got \\(unameActual)\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to exec in container \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExec.swift",
+            "location" : {
+              "end_position" : 1660,
+              "start_position" : 1007
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testCreateExecCommand",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n\n            // Run a long-running process in detached mode\n            let output = try doExec(name: name, cmd: [\"sh\", \"-c\", \"touch /tmp/detach_test_marker\"], detach: true)\n            let containerIdOutput = output.trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(containerIdOutput == name, \"exec --detach should print the container ID\")\n\n            // Verify the detached process is running by checking if we can still exec commands\n            var lsActual = try doExec(name: name, cmd: [\"ls\", \"/\"])\n            lsActual = lsActual.trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(lsActual.contains(\"tmp\"), \"container should still be running and accepting exec commands\")\n\n            // Retry loop to check if the marker file was created by the detached process\n            var markerFound = false\n            for _ in 0..<3 {\n                let (_, _, _, status) = try run(arguments: [\n                    \"exec\",\n                    name,\n                    \"test\", \"-f\", \"/tmp/detach_test_marker\",\n                ])\n                if status == 0 {\n                    markerFound = true\n                    break\n                }\n                sleep(1)\n            }\n            try #require(markerFound, \"marker file should be created by detached process within 3 seconds\")\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to exec with detach in container \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExec.swift",
+            "location" : {
+              "end_position" : 3404,
+              "start_position" : 1660
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testExecDetach",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n            try doStart(name: name)\n\n            // Run a long-running process in detached mode\n            let output = try doExec(name: name, cmd: [\"sleep\", \"10\"], detach: true)\n            let containerIdOutput = output.trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(containerIdOutput == name, \"exec --detach should print the container ID\")\n\n            // Immediately check if the process is running using ps\n            var psOutput = try doExec(name: name, cmd: [\"ps\", \"aux\"])\n            psOutput = psOutput.trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(psOutput.contains(\"sleep 10\"), \"detached process 'sleep 10' should be visible in ps output\")\n\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to verify detached process is running \\(error)\")\n            return\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExec.swift",
+            "location" : {
+              "end_position" : 4499,
+              "start_position" : 3404
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testExecDetachProcessRunning",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "do {\n            let name = getTestName()\n            try doLongRun(name: name, containerArgs: [\"sh\"], autoRemove: false)\n            defer {\n                try? doRemove(name: name)\n            }\n            // Give time for container process to exit due to no stdin\n            sleep(1)\n\n            try doStart(name: name)\n            do {\n                _ = try doExec(name: name, cmd: [\"sleep\", \"infinity\"])\n            } catch CLIError.executionFailed(let message) {\n                // There's no nice way to check fail reason here\n                #expect(\n                    message.contains(\"is not running\") || message.contains(\"failed to create process\"),\n                    \"expected container is not running if exec failed\"\n                )\n            }\n\n            // Give time for the exec (or start) error handling settles down\n            sleep(1)\n            #expect(throws: Never.self, \"expected the container remains\") {\n                try getContainerStatus(name)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExec.swift",
+            "location" : {
+              "end_position" : 5583,
+              "start_position" : 4499
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testExecOnExitingContainer",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "description" : "throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIExec.swift",
+        "location" : {
+          "end_position" : 5585,
+          "start_position" : 824
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIExecCommand",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Remove class refactoring"
+  },
+  "refactoringIndex" : 10,
+  "refactoringType" : "Remove class refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Containers/TestCLIExec.swift"
+  ]
+}

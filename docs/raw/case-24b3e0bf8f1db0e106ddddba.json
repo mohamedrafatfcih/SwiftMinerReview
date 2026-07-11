@@ -1,0 +1,164 @@
+{
+  "caseID" : "case-24b3e0bf8f1db0e106ddddba",
+  "commitHash" : "69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "commitMessage" : "Migrates container run integration tests. (#1857)\n\n- Part of #1833.",
+  "commitURL" : "https://github.com/apple/container/commit/69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "durationSeconds" : 7.4378420114517212,
+  "entityNames" : [
+    "(ContainerFixture) async throws -> T",
+    "T",
+    "body",
+    "logger",
+    "with"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "accessors" : [
+
+      ],
+      "attributes" : [
+
+      ],
+      "initializer_clause" : {
+        "has_self_reference" : false,
+        "value" : {
+          "function_call" : {
+            "_0" : {
+              "additional_trailing_closures" : [
+
+              ],
+              "arguments" : [
+                {
+                  "label" : "label",
+                  "value" : "\"com.apple.container.test\""
+                }
+              ],
+              "call" : "Logger",
+              "has_self_reference" : false,
+              "internal_inline_calls" : [
+
+              ],
+              "location_info" : {
+                "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                "location" : {
+                  "end_position" : 5267,
+                  "start_position" : 4674
+                }
+              },
+              "trailing_closure" : {
+                "attributes" : [
+
+                ],
+                "body" : {
+                  "content" : "if let root = ProcessInfo.processInfo.environment[\"CLITEST_LOG_ROOT\"], !root.isEmpty {\n                let path =\n                    FilePath(root)\n                    .appending(\"clitests\")\n                    .appending(suiteName)\n                    .appending(testName + \".log\")\n                if let handler = try? FileLogHandler(label: label, category: \"clitests\", path: path) {\n                    return handler\n                }\n            }\n            return StreamLogHandler.standardOutput(label: label)"
+                },
+                "captures" : [
+
+                ],
+                "location_info" : {
+                  "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+                  "location" : {
+                    "end_position" : 5267,
+                    "start_position" : 4716
+                  }
+                },
+                "parameters" : [
+
+                ]
+              }
+            }
+          }
+        }
+      },
+      "is_constant" : false,
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+        "location" : {
+          "end_position" : 5267,
+          "start_position" : 4665
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "logger"
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "discardable_result" : {
+
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let testID = String(UUID().uuidString.prefix(8)).lowercased()\n\n        let scratchRoot =\n            ProcessInfo.processInfo.environment[\"CLITEST_SCRATCH_ROOT\"]\n            .map { FilePath($0) }\n            ?? FilePath(FileManager.default.temporaryDirectory.path)\n\n        let testName =\n            Test.current.map { $0.name.hasSuffix(\"()\") ? String($0.name.dropLast(2)) : $0.name }\n            ?? testID\n        let suiteName = Test.current.map { \"\\(type(of: $0))\" } ?? \"unknown\"\n\n        // Name the scratch directory so it's immediately identifiable when browsing:\n        // {sanitizedTestName}-{testID}\n        let safeName = testName.replacingOccurrences(\n            of: \"[^a-zA-Z0-9]\", with: \"-\", options: .regularExpression)\n        let testDir = scratchRoot.appending(\"\\(safeName)-\\(testID)\")\n        try FileManager.default.createDirectory(\n            atPath: testDir.string, withIntermediateDirectories: true, attributes: nil)\n\n        var logger = Logger(label: \"com.apple.container.test\") { label in\n            if let root = ProcessInfo.processInfo.environment[\"CLITEST_LOG_ROOT\"], !root.isEmpty {\n                let path =\n                    FilePath(root)\n                    .appending(\"clitests\")\n                    .appending(suiteName)\n                    .appending(testName + \".log\")\n                if let handler = try? FileLogHandler(label: label, category: \"clitests\", path: path) {\n                    return handler\n                }\n            }\n            return StreamLogHandler.standardOutput(label: label)\n        }\n        logger[metadataKey: \"testID\"] = \"\\(testID)\"\n\n        let fixture = ContainerFixture(testID: testID, testDir: testDir, log: logger)\n\n        if ProcessInfo.processInfo.environment[\"CLITEST_PRESERVE_SCRATCH\"] != \"true\" {\n            fixture.addCleanup {\n                try? FileManager.default.removeItem(atPath: testDir.string)\n            }\n        }\n\n        do {\n            let result = try await body(fixture)\n            await fixture.runCleanup()\n            return result\n        } catch {\n            await fixture.runCleanup()\n            throw error\n        }"
+      },
+      "generic_clause" : "<T>",
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+        "location" : {
+          "end_position" : 5852,
+          "start_position" : 3390
+        }
+      },
+      "modifiers" : [
+        "static"
+      ],
+      "name" : "with",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "(ContainerFixture) async throws -> T"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture.swift",
+            "location" : {
+              "end_position" : 3680,
+              "start_position" : 3636
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "body",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "T"
+        },
+        "description" : "-> T"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add variable refactoring"
+  },
+  "refactoringIndex" : 70,
+  "refactoringType" : "Add variable refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Utilities/ContainerFixture.swift"
+  ]
+}

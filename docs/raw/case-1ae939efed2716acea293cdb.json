@@ -1,0 +1,185 @@
+{
+  "caseID" : "case-1ae939efed2716acea293cdb",
+  "commitHash" : "046884df376f6bb53ba9c87ae9791c1b95a76e89",
+  "commitMessage" : "Use ManagedResource for volumes in CLI commands (#1607)\n\n## Type of Change\n- [x] New feature  \n\n## Motivation and Context\nRelated to https://github.com/apple/container/issues/1404.\n\nThis PR adds the initial work to have volume resources conform to\nManagedResource, in alignment with other resources such as networks (see\n[here](https://github.com/apple/container/pull/1421)). Further work is\nnecessary to move the use of `VolumeResource` down to the APIServer (in\nthe VolumesService) and in the volume client. Volumes do not currently\nhave any plugin or runtime state, so that information is not included in\nthe `VolumeResource`, but could be added later if needed.\n\n## Testing\n- [x] Tested locally\n\nSigned-off-by: Kathryn Baldauf <k_baldauf@apple.com>",
+  "commitURL" : "https://github.com/apple/container/commit/046884df376f6bb53ba9c87ae9791c1b95a76e89",
+  "durationSeconds" : 4.1668360233306885,
+  "entityNames" : [
+    "Logger",
+    "ParsedVolume",
+    "Volume",
+    "VolumeConfiguration",
+    "getOrCreateVolume",
+    "log",
+    "parsed"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let labels = parsed.isAnonymous ? [VolumeConfiguration.anonymousLabel: \"\"] : [:]\n\n        let volume: VolumeConfiguration\n        var wasCreated = false\n        do {\n            volume = try await ClientVolume.create(\n                name: parsed.name,\n                driver: \"local\",\n                driverOpts: [:],\n                labels: labels\n            )\n            wasCreated = true\n        } catch let error as VolumeError {\n            guard case .volumeAlreadyExists = error else {\n                throw error\n            }\n            // Volume already exists, just inspect it\n            volume = try await ClientVolume.inspect(parsed.name)\n        } catch let error as ContainerizationError {\n            // Handle XPC-wrapped volumeAlreadyExists error\n            guard error.message.contains(\"already exists\") else {\n                throw error\n            }\n            volume = try await ClientVolume.inspect(parsed.name)\n        }\n\n        if wasCreated && !parsed.isAnonymous {\n            log.warning(\"named volume was automatically created\", metadata: [\"volume\": \"\\(parsed.name)\"])\n        }\n\n        return volume"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+        "location" : {
+          "end_position" : 16496,
+          "start_position" : 15097
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "getOrCreateVolume",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ParsedVolume"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 15292,
+              "start_position" : 15270
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "parsed",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Logger"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 15303,
+              "start_position" : 15292
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "log",
+          "order" : 1
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "VolumeConfiguration"
+        },
+        "description" : "-> VolumeConfiguration"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let labels = parsed.isAnonymous ? [Volume.anonymousLabel: \"\"] : [:]\n\n        let volume: Volume\n        var wasCreated = false\n        do {\n            volume = try await ClientVolume.create(\n                name: parsed.name,\n                driver: \"local\",\n                driverOpts: [:],\n                labels: labels\n            )\n            wasCreated = true\n        } catch let error as VolumeError {\n            guard case .volumeAlreadyExists = error else {\n                throw error\n            }\n            // Volume already exists, just inspect it\n            volume = try await ClientVolume.inspect(parsed.name)\n        } catch let error as ContainerizationError {\n            // Handle XPC-wrapped volumeAlreadyExists error\n            guard error.message.contains(\"already exists\") else {\n                throw error\n            }\n            volume = try await ClientVolume.inspect(parsed.name)\n        }\n\n        if wasCreated && !parsed.isAnonymous {\n            log.warning(\"named volume was automatically created\", metadata: [\"volume\": \"\\(parsed.name)\"])\n        }\n\n        return volume"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+        "location" : {
+          "end_position" : 16457,
+          "start_position" : 15097
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "getOrCreateVolume",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "ParsedVolume"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 15292,
+              "start_position" : 15270
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "parsed",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Logger"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Client/Utility.swift",
+            "location" : {
+              "end_position" : 15303,
+              "start_position" : 15292
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "log",
+          "order" : 1
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Volume"
+        },
+        "description" : "-> Volume"
+      },
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Change Return Type Refactoring"
+  },
+  "refactoringIndex" : 32,
+  "refactoringType" : "Change Return Type Refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerAPIService/Client/Utility.swift"
+  ]
+}

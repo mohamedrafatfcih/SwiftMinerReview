@@ -1,0 +1,1085 @@
+{
+  "caseID" : "case-dafc04ab2c44c032c0297384",
+  "commitHash" : "e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "commitMessage" : "Add WebSocketRequest Under @_spi(WebSocket) (#3455)\n\n### Goals :soccer:\r\nThis PR adds `WebSocketRequest`, an Alamofire wrapper around\r\n`URLSessionWebSocketTask`, as well as assorted functionality for dealing\r\nwith WebSockets. This includes:\r\n\r\n- Automatic listening: no more manual `listen` calls on the task.\r\n- Automatic ping support: ping the server automatically given an\r\ninterval.\r\n- Response serialization support: parse messages into objects, including\r\nusing `Decodable`.\r\n- Concurrency support: full streams of events and messages.\r\n\r\n### Implementation Details :construction:\r\n`WebSocketRequest` follows most of Alamofire's existing patterns. There\r\nare a few differences:\r\n\r\n- Closure vs. cancellation: web sockets can close expectedly, yet this\r\nclosure produces an error from `URLSession`. This had to be customized\r\nin order to ignore the error and allow the user to close a connection\r\nwith no additional issue.\r\n- Like `DataStreamRequest`, `WebSocketRequest` deals with incoming\r\nstreams of data. However, that data is already framed and then partially\r\ndecoded into `Message`s by `URLSession`, so serialization had to be\r\nbuilt at that level.\r\n- Unlike `DataStreamRequest`, `WebSocketRequest` can send `Message` back\r\nup the connection. This requires some queuing on the request side to\r\nensure messages sent before the connection is established are properly\r\nstored for sending.\r\n\r\n### Testing Details :mag:\r\nFull suite of `WebSocketTests` added, as well as the concurrency\r\nversions. Firewalk was updated with several new `websocket` cases to\r\nsupport scenarios like an echo server or expected ping count.\r\n\r\nP.S. This feature was delayed so long due to the many hours of\r\nfrustration I had to deal with when Apple shipped a message dropping bug\r\nin iOS 14.5 - 14.7. In trying to test the socket connections I would\r\nconnect to the test server, have it reply with a message, and then close\r\nthe connection. Shockingly that meant that *sometimes* the messages\r\nwouldn't come through. But sometimes they would. Investigating other web\r\nsocket clients and inspecting network traffic with Wireshark revealed\r\nthat the messages were being sent by the server but the client just\r\nwasn't receiving them. Further investigation showed that delaying the\r\nclose of the connection by 60ms or so let the client receive the message\r\nreliably. After many hours I finally had reliable tests! Only to then\r\ntest on the iOS 15 betas and see that I didn't need the delay at all,\r\nthe tests were reliable without it! Turns out it was just a bug in iOS\r\n14.5 - 14.7. I was so disgusted by this fact that I gave up on the\r\nfeature for years. I'll call out this bug in the documentation.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "durationSeconds" : 15.012655973434448,
+  "entityNames" : [
+    "@escaping (@escaping (WebSocketRequest.Event<Success, Failure>) -> Void) -> Void",
+    "@escaping (WebSocketRequest.Event<Success, Failure>) -> Value?",
+    "Bool",
+    "Data?",
+    "DataDecoder",
+    "EventStreamOf",
+    "EventStreamOf<URLSessionWebSocketTask.Message, Never>",
+    "EventStreamOf<URLSessionWebSocketTask.Message, Never>.BufferingPolicy"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "available" : {
+
+            }
+          },
+          "arguments" : [
+            {
+              "label" : "macOS",
+              "value" : "10.15"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "iOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "tvOS",
+              "value" : "13"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "label" : "watchOS",
+              "value" : "6"
+            },
+            {
+              "value" : ","
+            },
+            {
+              "value" : "*"
+            }
+          ]
+        },
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "_spi"
+            }
+          },
+          "arguments" : [
+            {
+              "value" : "WebSocket"
+            }
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "createStream(automaticallyCancelling: shouldAutomaticallyCancel,\n                     bufferingPolicy: bufferingPolicy,\n                     transform: { $0 }) { onEvent in\n            request.streamMessageEvents(on: .streamCompletionQueue(forRequestID: request.id), handler: onEvent)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 41939,
+              "start_position" : 41344
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "streamingMessageEvents",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "automaticallyCancelling",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 41457,
+                  "start_position" : 41385
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldAutomaticallyCancel",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "EventStreamOf<URLSessionWebSocketTask.Message, Never>.BufferingPolicy"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "unbounded"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 41565,
+                  "start_position" : 41457
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bufferingPolicy",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "EventStreamOf<URLSessionWebSocketTask.Message, Never>"
+            },
+            "description" : "-> EventStreamOf<URLSessionWebSocketTask.Message, Never>"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "createStream(automaticallyCancelling: shouldAutomaticallyCancel,\n                     bufferingPolicy: bufferingPolicy,\n                     transform: { $0.message }) { onEvent in\n            request.streamMessageEvents(on: .streamCompletionQueue(forRequestID: request.id), handler: onEvent)\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 42513,
+              "start_position" : 41939
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "streamingMessages",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "automaticallyCancelling",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 42047,
+                  "start_position" : 41975
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldAutomaticallyCancel",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "StreamOf<URLSessionWebSocketTask.Message>.BufferingPolicy"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "unbounded"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 42143,
+                  "start_position" : 42047
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bufferingPolicy",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "StreamOf<URLSessionWebSocketTask.Message>"
+            },
+            "description" : "-> StreamOf<URLSessionWebSocketTask.Message>"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "createStream(automaticallyCancelling: shouldAutomaticallyCancel,\n                     bufferingPolicy: bufferingPolicy,\n                     transform: { $0 }) { onEvent in\n            request.streamDecodableEvents(Value.self,\n                                          on: .streamCompletionQueue(forRequestID: request.id),\n                                          using: decoder,\n                                          handler: onEvent)\n        }"
+          },
+          "generic_clause" : "<Value: Decodable>",
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 43325,
+              "start_position" : 42513
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "streamingDecodableEvents",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Value.Type"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "self"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 42615,
+                  "start_position" : 42574
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "type",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "automaticallyCancelling",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 42687,
+                  "start_position" : 42615
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldAutomaticallyCancel",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataDecoder"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "JSONDecoder",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Concurrency.swift",
+                        "location" : {
+                          "end_position" : 42738,
+                          "start_position" : 42725
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "using",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 42739,
+                  "start_position" : 42687
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "decoder",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "EventStreamOf<Value, Error>.BufferingPolicy"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "unbounded"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 42821,
+                  "start_position" : 42739
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bufferingPolicy",
+              "order" : 3
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "EventStreamOf<Value, Error>"
+            },
+            "description" : "-> EventStreamOf<Value, Error>"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "createStream(automaticallyCancelling: shouldAutomaticallyCancel,\n                     bufferingPolicy: bufferingPolicy,\n                     transform: { $0.message }) { onEvent in\n            request.streamDecodableEvents(Value.self,\n                                          on: .streamCompletionQueue(forRequestID: request.id),\n                                          using: decoder,\n                                          handler: onEvent)\n        }"
+          },
+          "generic_clause" : "<Value: Decodable>",
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 44115,
+              "start_position" : 43325
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "streamingDecodable",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Value.Type"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "self"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 43421,
+                  "start_position" : 43380
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "type",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "true"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "automaticallyCancelling",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 43493,
+                  "start_position" : 43421
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldAutomaticallyCancel",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataDecoder"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+
+                      ],
+                      "call" : "JSONDecoder",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Source/Concurrency.swift",
+                        "location" : {
+                          "end_position" : 43544,
+                          "start_position" : 43531
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "label" : "using",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 43545,
+                  "start_position" : 43493
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "decoder",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "StreamOf<Value>.BufferingPolicy"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "unbounded"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 43615,
+                  "start_position" : 43545
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bufferingPolicy",
+              "order" : 3
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "StreamOf<Value>"
+            },
+            "description" : "-> StreamOf<Value>"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "StreamOf(bufferingPolicy: bufferingPolicy) {\n            guard shouldAutomaticallyCancel,\n                  request.isInitialized || request.isResumed || request.isSuspended else { return }\n\n            cancel()\n        } builder: { continuation in\n            onResponse { event in\n                if let value = transform(event) {\n                    continuation.yield(value)\n                }\n\n                if case .completed = event.kind {\n                    continuation.finish()\n                }\n            }\n        }"
+          },
+          "generic_clause" : "<Success, Value, Failure: Error>",
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 45071,
+              "start_position" : 44115
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "createStream",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Bool"
+              },
+              "is_variadic" : false,
+              "label" : "automaticallyCancelling",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 44244,
+                  "start_position" : 44179
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "shouldAutomaticallyCancel",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "StreamOf<Value>.BufferingPolicy"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 44302,
+                  "start_position" : 44244
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bufferingPolicy",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (WebSocketRequest.Event<Success, Failure>) -> Value?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 44385,
+                  "start_position" : 44302
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "transform",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                },
+                {
+                  "annotation" : {
+                    "escaping" : {
+
+                    }
+                  },
+                  "arguments" : [
+
+                  ]
+                }
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "@escaping (@escaping (WebSocketRequest.Event<Success, Failure>) -> Void) -> Void"
+              },
+              "is_variadic" : false,
+              "label" : "forResponse",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 44498,
+                  "start_position" : 44385
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "onResponse",
+              "order" : 3
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "StreamOf<Value>"
+            },
+            "description" : "-> StreamOf<Value>"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "try await withCheckedThrowingContinuation { continuation in\n            request.send(message, queue: .streamCompletionQueue(forRequestID: request.id)) { result in\n                continuation.resume(with: result)\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 45513,
+              "start_position" : 45071
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "send",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionWebSocketTask.Message"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 45246,
+                  "start_position" : 45204
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "message",
+              "order" : 0
+            }
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "request.close(sending: closeCode, reason: reason)"
+          },
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 45726,
+              "start_position" : 45513
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "close",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionWebSocketTask.CloseCode"
+              },
+              "is_variadic" : false,
+              "label" : "sending",
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 45640,
+                  "start_position" : 45586
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "closeCode",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Data?"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "nil"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 45659,
+                  "start_position" : 45640
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "reason",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "request.cancel()"
+          },
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 45920,
+              "start_position" : 45726
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "cancel",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "request.resume()"
+          },
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 46029,
+              "start_position" : 45920
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "resume",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "request.suspend()"
+          },
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 46141,
+              "start_position" : 46029
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "suspend",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 41230,
+              "start_position" : 41142
+            }
+          },
+          "modifiers" : [
+            "fileprivate"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "WebSocketRequest"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Source/Concurrency.swift",
+                "location" : {
+                  "end_position" : 41190,
+                  "start_position" : 41165
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Source/Concurrency.swift",
+        "location" : {
+          "end_position" : 46143,
+          "start_position" : 40972
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "WebSocketTask",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+        {
+          "assigned_type" : {
+            "is_optional" : false,
+            "name" : "StreamOf<WebSocketRequest.Event<Success, Failure>>"
+          },
+          "attributes" : [
+
+          ],
+          "generic_clause" : "<Success, Failure: Error>",
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 41344,
+              "start_position" : 41230
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "EventStreamOf"
+        }
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "WebSocketRequest"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Source/Concurrency.swift",
+            "location" : {
+              "end_position" : 41142,
+              "start_position" : 41117
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "request"
+        }
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 20,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Source/Concurrency.swift"
+  ]
+}

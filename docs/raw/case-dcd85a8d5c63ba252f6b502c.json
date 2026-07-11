@@ -1,0 +1,141 @@
+{
+  "caseID" : "case-dcd85a8d5c63ba252f6b502c",
+  "commitHash" : "2fff0dfb5e58fe9ce43636939d6f9cc001ff6a0b",
+  "commitMessage" : "v3.0.5\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/2fff0dfb5e58fe9ce43636939d6f9cc001ff6a0b",
+  "durationSeconds" : 12.869070053100586,
+  "entityNames" : [
+    "Bool",
+    "guard",
+    "omitCooldown",
+    "registerDevice",
+    "url"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "optional_binding" : {
+              "_0" : {
+                "description" : "let url = URL(string: \"\\(SystemStats.host)/v1/machine\")",
+                "initializer_clause" : {
+                  "has_self_reference" : false,
+                  "value" : {
+                    "function_call" : {
+                      "_0" : {
+                        "additional_trailing_closures" : [
+
+                        ],
+                        "arguments" : [
+                          {
+                            "label" : "string",
+                            "value" : "\"\\(SystemStats.host)/v1/machine\""
+                          }
+                        ],
+                        "call" : "URL",
+                        "has_self_reference" : false,
+                        "internal_inline_calls" : [
+
+                        ],
+                        "location_info" : {
+                          "file_path" : "Kit/plugins/SystemStats.swift",
+                          "location" : {
+                            "end_position" : 7603,
+                            "start_position" : 7557
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "is_binding_self" : false,
+                "is_in_out" : false,
+                "is_let" : true,
+                "is_var" : false,
+                "name" : "url"
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 7603,
+              "start_position" : 7547
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemStats.swift",
+        "location" : {
+          "end_position" : 7618,
+          "start_position" : 7523
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let oneHour: TimeInterval = 3600\n        let now = Date()\n        self.cooldownLock.lock()\n        if let lastTime = self.lastRegisterTime, !omitCooldown && now.timeIntervalSince(lastTime) < oneHour {\n            self.cooldownLock.unlock()\n            debug(\"Device registration skipped: cooldown period not met\", log: self.log)\n            return\n        }\n        self.lastRegisterTime = now\n        self.cooldownLock.unlock()\n        \n        guard let url = URL(string: \"\\(SystemStats.host)/v1/machine\") else { return }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/json\", forHTTPHeaderField: \"Content-Type\")\n        request.setValue(\"Bearer \\(SystemStats.shared.auth.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        \n        struct RegisterPayload: Codable {\n            let id: String\n            let details: SystemStats.Details\n        }\n        \n        let payload = RegisterPayload(\n            id: SystemStats.shared.id.uuidString,\n            details: SystemStats.Details(\n                client: Client(\n                    version: Bundle.main.infoDictionary?[\"CFBundleShortVersionString\"] as? String ?? \"Unknown\",\n                    control: SystemStats.shared.control,\n                    update: SystemStats.shared.update,\n                ),\n                system: SystemStats.System(\n                    platform: \"macOS\",\n                    vendor: \"Apple\",\n                    model: SystemKit.shared.device.model.name,\n                    modelID: SystemKit.shared.device.model.id,\n                    os: SystemStats.OS(\n                        name: SystemKit.shared.device.os?.name,\n                        version: SystemKit.shared.device.os?.version.getFullVersion(),\n                        build: SystemKit.shared.device.os?.build\n                    ),\n                    arch: SystemKit.shared.device.arch\n                ),\n                hardware: SystemStats.Hardware(\n                    cpu: SystemKit.shared.device.info.cpu,\n                    gpu: SystemKit.shared.device.info.gpu,\n                    ram: SystemKit.shared.device.info.ram?.dimms,\n                    disk: SystemKit.shared.device.info.disk\n                )\n            )\n        )\n        \n        guard let body = try? JSONEncoder().encode(payload) else { return }\n        request.httpBody = body\n        \n        self.session.dataTask(with: request) { [weak self] data, response, _ in\n            guard let self, let httpResponse = response as? HTTPURLResponse else { return }\n            if httpResponse.statusCode == 200 {\n                debug(\"Registered device: \\(SystemStats.shared.id.uuidString)\", log: self.log)\n                self.fetchAccount()\n            } else {\n                let bodyString = data.flatMap { String(data: $0, encoding: .utf8) } ?? \"\"\n                debug(\"Register remote failed (\\(httpResponse.statusCode)): \\(bodyString)\", log: self.log)\n            }\n        }.resume()"
+      },
+      "location_info" : {
+        "file_path" : "Kit/plugins/SystemStats.swift",
+        "location" : {
+          "end_position" : 10113,
+          "start_position" : 7019
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "registerDevice",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Kit/plugins/SystemStats.swift",
+            "location" : {
+              "end_position" : 7083,
+              "start_position" : 7057
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "omitCooldown",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 3,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/plugins/SystemStats.swift"
+  ]
+}

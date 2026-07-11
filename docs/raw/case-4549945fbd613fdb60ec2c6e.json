@@ -1,0 +1,254 @@
+{
+  "caseID" : "case-4549945fbd613fdb60ec2c6e",
+  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds" : 31.880328059196472,
+  "entityNames" : [
+    "BaseTestCase",
+    "DownloadResumeDataTestCase",
+    "testThatCancelledDownloadCanBeResumedWithResumeData",
+    "testThatCancelledDownloadProducesMatchingResumeData",
+    "testThatCancelledDownloadRequestDoesNotProduceResumeData",
+    "testThatCancelledDownloadResponseDataMatchesResumeData",
+    "testThatCancelledDownloadResumeDataIsAvailableWithDecodableResponseSerializer",
+    "testThatDownloadRequestProducesResumeDataOnError"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "BaseTestCase"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let expectation = expectation(description: \"Download should be cancelled\")\n        var cancelled = false\n\n        var response: DownloadResponse<URL?, AFError>?\n\n        // When\n        let download = AF.download(.download())\n        download.downloadProgress { [unowned download] progress in\n            guard !cancelled else { return }\n\n            if progress.fractionCompleted > 0.1 {\n                download.cancel()\n                cancelled = true\n            }\n        }\n        download.response { resp in\n            response = resp\n            expectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNil(response?.fileURL)\n        XCTAssertNotNil(response?.error)\n\n        XCTAssertNil(response?.resumeData)\n        XCTAssertNil(download.resumeData)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/DownloadTests.swift",
+            "location" : {
+              "end_position" : 21041,
+              "start_position" : 20019
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatCancelledDownloadRequestDoesNotProduceResumeData",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let expectation = expectation(description: \"download complete\")\n\n        var response: DownloadResponse<URL?, AFError>?\n\n        // When\n        let download = AF.download(.download(produceError: true))\n        download.response { resp in\n            response = resp\n            expectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNil(response?.fileURL)\n        XCTAssertNotNil(response?.error)\n\n        XCTAssertNotNil(response?.resumeData)\n        XCTAssertNotNil(download.resumeData)\n        #if !canImport(FoundationNetworking) // If we not using swift-corelibs-foundation.\n        XCTAssertNotNil(download.error?.downloadResumeData)\n        XCTAssertEqual(download.error?.downloadResumeData, response?.resumeData)\n        #endif\n        XCTAssertEqual(response?.resumeData, download.resumeData)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/DownloadTests.swift",
+            "location" : {
+              "end_position" : 22083,
+              "start_position" : 21041
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatDownloadRequestProducesResumeDataOnError",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let expectation = expectation(description: \"Download should be cancelled\")\n        var cancelled = false\n\n        var response: DownloadResponse<URL?, AFError>?\n\n        // When\n        let download = AF.download(.download())\n        download.downloadProgress { [unowned download] progress in\n            guard !cancelled else { return }\n\n            if progress.fractionCompleted > 0.1 {\n                download.cancel(producingResumeData: true)\n                cancelled = true\n            }\n        }\n        download.response { resp in\n            response = resp\n            expectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNil(response?.fileURL)\n        XCTAssertNotNil(response?.error)\n\n        XCTAssertNotNil(response?.resumeData)\n        XCTAssertNotNil(download.resumeData)\n\n        XCTAssertEqual(response?.resumeData, download.resumeData)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/DownloadTests.swift",
+            "location" : {
+              "end_position" : 23202,
+              "start_position" : 22083
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatCancelledDownloadResponseDataMatchesResumeData",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let expectation = expectation(description: \"Download should be cancelled\")\n        var cancelled = false\n\n        var response: DownloadResponse<TestResponse, AFError>?\n\n        // When\n        let download = AF.download(.download())\n        download.downloadProgress { [unowned download] progress in\n            guard !cancelled else { return }\n\n            if progress.fractionCompleted > 0.1 {\n                download.cancel(producingResumeData: true)\n                cancelled = true\n            }\n        }\n        download.responseDecodable(of: TestResponse.self) { resp in\n            response = resp\n            expectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNil(response?.fileURL)\n        XCTAssertEqual(response?.result.isFailure, true)\n        XCTAssertNotNil(response?.result.failure)\n\n        XCTAssertNotNil(response?.resumeData)\n        XCTAssertNotNil(download.resumeData)\n\n        XCTAssertEqual(response?.resumeData, download.resumeData)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/DownloadTests.swift",
+            "location" : {
+              "end_position" : 24450,
+              "start_position" : 23202
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatCancelledDownloadResumeDataIsAvailableWithDecodableResponseSerializer",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let expectation1 = expectation(description: \"Download should be cancelled\")\n        var cancelled = false\n\n        var response1: DownloadResponse<Data, AFError>?\n\n        // When\n        let download = AF.download(.download())\n        download.downloadProgress { [unowned download] progress in\n            guard !cancelled else { return }\n\n            if progress.fractionCompleted > 0.1 {\n                download.cancel(producingResumeData: true)\n                cancelled = true\n            }\n        }\n        download.responseData { resp in\n            response1 = resp\n            expectation1.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        guard let resumeData = download.resumeData else {\n            XCTFail(\"resumeData should not be nil\")\n            return\n        }\n\n        let expectation2 = expectation(description: \"Download should complete\")\n\n        var progressValues: [Double] = []\n        var response2: DownloadResponse<Data, AFError>?\n\n        AF.download(resumingWith: resumeData)\n            .downloadProgress { progress in\n                progressValues.append(progress.fractionCompleted)\n            }\n            .responseData { resp in\n                response2 = resp\n                expectation2.fulfill()\n            }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response1?.request)\n        XCTAssertNotNil(response1?.response)\n        XCTAssertNil(response1?.fileURL)\n        XCTAssertEqual(response1?.result.isFailure, true)\n        XCTAssertNotNil(response1?.result.failure)\n\n        XCTAssertNotNil(response2?.response)\n        XCTAssertNotNil(response2?.fileURL)\n        XCTAssertEqual(response2?.result.isSuccess, true)\n        XCTAssertNil(response2?.result.failure)\n\n        progressValues.forEach { XCTAssertGreaterThanOrEqual($0, 0.1) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/DownloadTests.swift",
+            "location" : {
+              "end_position" : 26415,
+              "start_position" : 24450
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatCancelledDownloadCanBeResumedWithResumeData",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "MainActor"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "let expectation = expectation(description: \"Download should be cancelled\")\n        var cancelled = false\n        var receivedResumeData: Data?\n        var response: DownloadResponse<URL?, AFError>?\n\n        // When\n        let download = AF.download(.download())\n        download.downloadProgress { [unowned download] progress in\n            guard !cancelled else { return }\n\n            if progress.fractionCompleted > 0.1 {\n                download.cancel { receivedResumeData = $0 }\n                cancelled = true\n            }\n        }\n        download.response { resp in\n            response = resp\n            expectation.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response?.request)\n        XCTAssertNotNil(response?.response)\n        XCTAssertNil(response?.fileURL)\n        XCTAssertNotNil(response?.error)\n\n        XCTAssertNotNil(response?.resumeData)\n        XCTAssertNotNil(download.resumeData)\n\n        XCTAssertEqual(response?.resumeData, download.resumeData)\n        XCTAssertEqual(response?.resumeData, receivedResumeData)\n        XCTAssertEqual(download.resumeData, receivedResumeData)"
+          },
+          "location_info" : {
+            "file_path" : "Tests/DownloadTests.swift",
+            "location" : {
+              "end_position" : 27698,
+              "start_position" : 26415
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testThatCancelledDownloadProducesMatchingResumeData",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/DownloadTests.swift",
+        "location" : {
+          "end_position" : 27700,
+          "start_position" : 19951
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "DownloadResumeDataTestCase",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 172,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/DownloadTests.swift"
+  ]
+}

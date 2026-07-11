@@ -1,0 +1,1336 @@
+{
+  "caseID" : "case-1790b549aad8c8f86d4bd35d",
+  "commitHash" : "b259d067260ad8334aadd6679626cf53a915d67e",
+  "commitMessage" : "feat: added GPU preview (disabled for now)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/b259d067260ad8334aadd6679626cf53a915d67e",
+  "durationSeconds" : 10.610538005828857,
+  "entityNames" : [
+    "BarChartView?",
+    "Bool",
+    "CPU_AverageLoad?",
+    "CPU_Frequency?",
+    "CPU_Load",
+    "LineChartView?",
+    "ModuleType",
+    "NSCoder"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "name" : "PreviewWrapper"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "PreviewWrapper"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.distribution = .fill\n        view.orientation = .horizontal\n        view.translatesAutoresizingMaskIntoConstraints = false\n        view.heightAnchor.constraint(equalToConstant: 90).isActive = true\n        view.edgeInsets = NSEdgeInsets(\n            top: Constants.Settings.margin,\n            left: Constants.Settings.margin,\n            bottom: Constants.Settings.margin,\n            right: Constants.Settings.margin\n        )\n        view.spacing = Constants.Settings.margin\n        \n        let circle = PieChartView(drawValue: true)\n        circle.widthAnchor.constraint(equalToConstant: 90).isActive = true\n        circle.toolTip = localizedString(\"CPU usage\")\n        self.circle = circle\n        \n        let details: NSView = {\n            let view = NSStackView()\n            view.orientation = .vertical\n            view.distribution = .fillEqually\n            view.spacing = 2\n            \n            var titleValue = localizedString(\"Unknown\")\n            if let cpu = SystemKit.shared.device.info.cpu {\n                if let name = cpu.name {\n                    titleValue = name\n                }\n                if let eCores = cpu.eCores, let pCores = cpu.pCores {\n                    titleValue.append(\" (\\(eCores)E/\\(pCores)P)\")\n                } else if let eCores = cpu.eCores {\n                    titleValue.append(\" (\\(eCores)E)\")\n                } else if let pCores = cpu.pCores {\n                    titleValue.append(\" (\\(pCores)P)\")\n                } else if let sCores = cpu.sCores {\n                    titleValue.append(\" (\\(sCores)S)\")\n                }\n            }\n            \n            let title = NSStackView()\n            title.addArrangedSubview(LabelField(titleValue))\n            title.addArrangedSubview(NSView())\n            \n            let bar = BarChartView(size: 11, horizontal: true)\n            self.bar = bar\n            \n            let levels = NSStackView()\n            levels.orientation = .horizontal\n            levels.distribution = .fill\n            \n            self.systemField = previewRow(levels, space: false, color: self.systemColor, title: \"\\(localizedString(\"System\")):\", value: \"\")\n            self.userField = previewRow(levels, space: false, color: self.userColor, title: \"\\(localizedString(\"User\")):\", value: \"\")\n            self.idleField = previewRow(levels, space: false, color: self.idleColor, title: \"\\(localizedString(\"Idle\")):\", value: \"\")\n            levels.addArrangedSubview(NSView())\n            \n            view.addArrangedSubview(title)\n            view.addArrangedSubview(bar)\n            view.addArrangedSubview(levels)\n            \n            return view\n        }()\n        \n        view.addArrangedSubview(circle)\n        view.addArrangedSubview(details)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 6575,
+              "start_position" : 3697
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "totalView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSStackView = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = Constants.Settings.margin*2\n        view.heightAnchor.constraint(equalToConstant: 140).isActive = true\n        \n        let chart = LineChartView(num: 600)\n        chart.setColor(self.chartColor)\n        chart.setLegend(x: true, y: true)\n        self.loadLineChart = chart\n        view.addArrangedSubview(chart)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 7117,
+              "start_position" : 6575
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "historyView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view: NSStackView = NSStackView()\n        view.orientation = .horizontal\n        view.distribution = .fillEqually\n        view.spacing = Constants.Settings.margin\n        \n        let leftColumn: NSStackView = NSStackView()\n        leftColumn.orientation = .vertical\n        leftColumn.distribution = .fillEqually\n        leftColumn.spacing = Constants.Settings.margin\n        \n        let rightColumn: NSStackView = NSStackView()\n        rightColumn.orientation = .vertical\n        rightColumn.distribution = .fillEqually\n        rightColumn.spacing = Constants.Settings.margin\n        \n        if let cpu = SystemKit.shared.device.info.cpu, let cores = cpu.cores {\n            var e = 0\n            var p = 0\n            var s = 0\n            \n            for (i, core) in cores.enumerated() {\n                var num = i\n                \n                if core.type == .efficiency {\n                    e += 1\n                    num = e\n                } else if core.type == .performance {\n                    p += 1\n                    num = p\n                } else if core.type == .super {\n                    s += 1\n                    num = s\n                }\n                \n                let c = CoreView(core, num: num)\n                if i % 2 == 0 {\n                    leftColumn.addArrangedSubview(c)\n                } else {\n                    rightColumn.addArrangedSubview(c)\n                }\n                self.cores.append(c)\n            }\n        }\n        \n        view.addArrangedSubview(leftColumn)\n        view.addArrangedSubview(rightColumn)\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 8789,
+              "start_position" : 7117
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "coresView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = 2\n        \n        self.average1Field = previewRow(view, title: \"\\(localizedString(\"1 minute\")):\", value: \"\")\n        self.average5Field = previewRow(view, title: \"\\(localizedString(\"5 minutes\")):\", value: \"\")\n        self.average15Field = previewRow(view, title: \"\\(localizedString(\"15 minutes\")):\", value: \"\")\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 9318,
+              "start_position" : 8789
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "averageView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let view = NSStackView()\n        view.orientation = .vertical\n        view.distribution = .fillEqually\n        view.spacing = 2\n        \n        self.coresFreqField = previewRow(view, title: \"\\(localizedString(\"All cores\")):\", value: \"\")\n        \n        if isARM {\n            if SystemKit.shared.device.info.cpu?.eCores != nil {\n                self.eCoresFreqField = previewRow(view, color: self.eCoresColor, title: \"\\(localizedString(\"Efficiency cores\")):\", value: \"\")\n            }\n            if SystemKit.shared.device.info.cpu?.pCores != nil {\n                self.pCoresFreqField = previewRow(view, color: self.pCoresColor, title: \"\\(localizedString(\"Performance cores\")):\", value: \"\")\n            }\n            if SystemKit.shared.device.info.cpu?.sCores != nil {\n                self.sCoresFreqField = previewRow(view, color: self.sCoresColor, title: \"\\(localizedString(\"Super cores\")):\", value: \"\")\n            }\n        }\n        \n        return view"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 10346,
+              "start_position" : 9318
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "frequencyView",
+          "parameters" : [
+
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "NSView"
+            },
+            "description" : "-> NSView"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "DispatchQueue.main.async(execute: {\n            if (self.window?.isVisible ?? false) || !self.initialized {\n                self.circle?.toolTip = \"\\(localizedString(\"CPU usage\")): \\(Int(value.totalUsage.rounded(toPlaces: 2) * 100))%\"\n                self.circle?.setValue(value.totalUsage)\n                self.circle?.setSegments([\n                    ColorValue(value.systemLoad, color: self.systemColor),\n                    ColorValue(value.userLoad, color: self.userColor)\n                ])\n                self.circle?.setNonActiveSegmentColor(self.idleColor)\n                \n                self.systemField?.stringValue = \"\\(Int(value.systemLoad.rounded(toPlaces: 2) * 100))%\"\n                self.userField?.stringValue = \"\\(Int(value.userLoad.rounded(toPlaces: 2) * 100))%\"\n                self.idleField?.stringValue = \"\\(Int(value.idleLoad.rounded(toPlaces: 2) * 100))%\"\n                \n                self.bar?.setValues([\n                    ColorValue(value.systemLoad, color: self.systemColor),\n                    ColorValue(value.userLoad, color: self.userColor)\n                ])\n                \n                for (i, v) in value.usagePerCore.enumerated() {\n                    if let core = self.cores.first(where: {$0.identifier?.rawValue == \"\\(i)\" }) {\n                        core.setValue(v)\n                    }\n                }\n                \n                self.initialized = true\n            }\n            self.loadLineChart?.addValue(value.totalUsage)\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 11923,
+              "start_position" : 10346
+            }
+          },
+          "modifiers" : [
+            "internal"
+          ],
+          "name" : "loadCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CPU_Load"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/CPU/preview.swift",
+                "location" : {
+                  "end_position" : 10400,
+                  "start_position" : 10383
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let value else { return }\n        \n        DispatchQueue.main.async(execute: {\n            if (self.window?.isVisible ?? false) || !self.initializedFrequency {\n                self.average1Field?.stringValue = \"\\(value.load1)\"\n                self.average5Field?.stringValue = \"\\(value.load5)\"\n                self.average15Field?.stringValue = \"\\(value.load15)\"\n                \n                self.initializedAverage = true\n            }\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 12461,
+              "start_position" : 11923
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "averageCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "CPU_AverageLoad?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/CPU/preview.swift",
+                "location" : {
+                  "end_position" : 11986,
+                  "start_position" : 11961
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "guard let value else { return }\n        \n        DispatchQueue.main.async(execute: {\n            if (self.window?.isVisible ?? false) || !self.initializedFrequency {\n                if let v = value.value {\n                    self.coresFreqField?.stringValue = \"\\(Int(v)) MHz\"\n                }\n                if let v = value.eCore {\n                    self.eCoresFreqField?.stringValue = \"\\(Int(v)) MHz\"\n                }\n                if let v = value.pCore {\n                    self.pCoresFreqField?.stringValue = \"\\(Int(v)) MHz\"\n                }\n                if let v = value.sCore {\n                    self.sCoresFreqField?.stringValue = \"\\(Int(v)) MHz\"\n                }\n                \n                self.initializedFrequency = true\n            }\n        })"
+          },
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 13321,
+              "start_position" : 12461
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "frequencyCallback",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "CPU_Frequency?"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/CPU/preview.swift",
+                "location" : {
+                  "end_position" : 12524,
+                  "start_position" : 12501
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "value",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 3589,
+              "start_position" : 2728
+            }
+          },
+          "modifiers" : [
+            "public"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "ModuleType"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Modules/CPU/preview.swift",
+                "location" : {
+                  "end_position" : 2770,
+                  "start_position" : 2750
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "module",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 3697,
+              "start_position" : 3589
+            }
+          },
+          "modifiers" : [
+            "required"
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "NSCoder"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Modules/CPU/preview.swift",
+                "location" : {
+                  "end_position" : 3628,
+                  "start_position" : 3614
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "coder",
+              "order" : 0
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Modules/CPU/preview.swift",
+        "location" : {
+          "end_position" : 13323,
+          "start_position" : 219
+        }
+      },
+      "modifiers" : [
+        "internal"
+      ],
+      "name" : "Preview",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 303,
+              "start_position" : 278
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "initialized"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 352,
+              "start_position" : 320
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "initializedAverage"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "Bool"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "false"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 403,
+              "start_position" : 369
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "initializedFrequency"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondRed"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 462,
+              "start_position" : 425
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "systemColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.systemColorState.additional as? NSColor ?? NSColor.systemRed"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 569,
+              "start_position" : 479
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "systemColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "secondBlue"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 622,
+              "start_position" : 586
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "userColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.userColorState.additional as? NSColor ?? NSColor.systemBlue"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 726,
+              "start_position" : 639
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "userColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "lightGray"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 778,
+              "start_position" : 743
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "idleColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.idleColorState.additional as? NSColor ?? NSColor.lightGray"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 881,
+              "start_position" : 795
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "idleColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "SColor"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "reference" : {
+                "arguments" : [
+
+                ],
+                "name" : "systemAccent"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 937,
+              "start_position" : 898
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "chartColorState"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "self.chartColorState.additional as? NSColor ?? NSColor.systemBlue"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 1043,
+              "start_position" : 954
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "chartColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "let color = SColor.teal\n        let key = Store.shared.string(key: \"\\(self.module.stringValue)_eCoresColor\", defaultValue: color.key)\n        if let c = SColor.fromString(key).additional as? NSColor {\n            return c\n        }\n        return color.additional as! NSColor"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 1377,
+              "start_position" : 1065
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "eCoresColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "let color = SColor.indigo\n        let key = Store.shared.string(key: \"\\(self.module.stringValue)_pCoresColor\", defaultValue: color.key)\n        if let c = SColor.fromString(key).additional as? NSColor {\n            return c\n        }\n        return color.additional as! NSColor"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 1708,
+              "start_position" : 1394
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pCoresColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSColor"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "let color = SColor.orange\n        let key = Store.shared.string(key: \"\\(self.module.stringValue)_sCoresColor\", defaultValue: color.key)\n        if let c = SColor.fromString(key).additional as? NSColor {\n            return c\n        }\n        return color.additional as! NSColor"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2039,
+              "start_position" : 1725
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sCoresColor"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "PieChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2088,
+              "start_position" : 2061
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "circle"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "BarChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2129,
+              "start_position" : 2105
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "bar"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "LineChartView?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2181,
+              "start_position" : 2146
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "loadLineChart"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2234,
+              "start_position" : 2203
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "systemField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2280,
+              "start_position" : 2251
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "userField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2326,
+              "start_position" : 2297
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "idleField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2376,
+              "start_position" : 2343
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "average1Field"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2426,
+              "start_position" : 2393
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "average5Field"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2477,
+              "start_position" : 2443
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "average15Field"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2528,
+              "start_position" : 2494
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "coresFreqField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2580,
+              "start_position" : 2545
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "eCoresFreqField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2632,
+              "start_position" : 2597
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "sCoresFreqField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "NSTextField?"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "nil"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2684,
+              "start_position" : 2649
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "pCoresFreqField"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[CoreView]"
+          },
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "[]"
+              }
+            }
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Modules/CPU/preview.swift",
+            "location" : {
+              "end_position" : 2728,
+              "start_position" : 2706
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "cores"
+        }
+      ]
+    },
+    "type" : "Add Confromed Type Refactoring"
+  },
+  "refactoringIndex" : 9,
+  "refactoringType" : "Add Confromed Type Refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/CPU/preview.swift"
+  ]
+}

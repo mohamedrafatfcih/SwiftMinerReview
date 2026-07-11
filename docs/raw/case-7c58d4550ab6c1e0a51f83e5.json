@@ -1,0 +1,119 @@
+{
+  "caseID" : "case-7c58d4550ab6c1e0a51f83e5",
+  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds" : 16.732138991355896,
+  "entityNames" : [
+    "NetworkConfiguration",
+    "configuration",
+    "guard",
+    "pluginInfo",
+    "registerService"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "conditions" : [
+        {
+          "condition_value" : {
+            "optional_binding" : {
+              "_0" : {
+                "description" : "let pluginInfo = configuration.pluginInfo",
+                "initializer_clause" : {
+                  "has_self_reference" : false,
+                  "value" : {
+                    "reference" : {
+                      "arguments" : [
+
+                      ],
+                      "name" : "pluginInfo"
+                    }
+                  }
+                },
+                "is_binding_self" : false,
+                "is_in_out" : false,
+                "is_let" : true,
+                "is_var" : false,
+                "name" : "pluginInfo"
+              }
+            }
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+            "location" : {
+              "end_position" : 16806,
+              "start_position" : 16764
+            }
+          }
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+        "location" : {
+          "end_position" : 16945,
+          "start_position" : 16748
+        }
+      },
+      "name" : "guard"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard configuration.mode == .nat || configuration.mode == .hostOnly else {\n            throw ContainerizationError(.invalidArgument, message: \"unsupported network mode \\(configuration.mode.rawValue)\")\n        }\n\n        guard let pluginInfo = configuration.pluginInfo else {\n            throw ContainerizationError(.internalError, message: \"network \\(configuration.id) missing plugin information\")\n        }\n\n        guard let networkPlugin = self.networkPlugins.first(where: { $0.name == pluginInfo.plugin }) else {\n            throw ContainerizationError(\n                .notFound,\n                message: \"unable to locate network plugin \\(pluginInfo.plugin)\"\n            )\n        }\n\n        guard let serviceIdentifier = networkPlugin.getMachService(instanceId: configuration.id, type: .network) else {\n            throw ContainerizationError(.invalidArgument, message: \"unsupported network mode \\(configuration.mode.rawValue)\")\n        }\n        var args = [\n            \"start\",\n            \"--id\",\n            configuration.id,\n            \"--service-identifier\",\n            serviceIdentifier,\n            \"--mode\",\n            configuration.mode.rawValue,\n        ]\n        if debugHelpers {\n            args.append(\"--debug\")\n        }\n\n        if let ipv4Subnet = configuration.ipv4Subnet {\n            var existingCidrs: [CIDRv4] = []\n            for serviceState in serviceStates.values {\n                if case .running(_, let status) = serviceState.networkState {\n                    existingCidrs.append(status.ipv4Subnet)\n                }\n            }\n            let overlap = existingCidrs.first {\n                $0.contains(ipv4Subnet.lower)\n                    || $0.contains(ipv4Subnet.upper)\n                    || ipv4Subnet.contains($0.lower)\n                    || ipv4Subnet.contains($0.upper)\n            }\n            if let overlap {\n                throw ContainerizationError(.exists, message: \"IPv4 subnet \\(ipv4Subnet) overlaps an existing network with subnet \\(overlap)\")\n            }\n\n            args += [\"--subnet\", ipv4Subnet.description]\n        }\n\n        if let ipv6Subnet = configuration.ipv6Subnet {\n            var existingCidrs: [CIDRv6] = []\n            for serviceState in serviceStates.values {\n                if case .running(_, let status) = serviceState.networkState, let otherIPv6Subnet = status.ipv6Subnet {\n                    existingCidrs.append(otherIPv6Subnet)\n                }\n            }\n            let overlap = existingCidrs.first {\n                $0.contains(ipv6Subnet.lower)\n                    || $0.contains(ipv6Subnet.upper)\n                    || ipv6Subnet.contains($0.lower)\n                    || ipv6Subnet.contains($0.upper)\n            }\n            if let overlap {\n                throw ContainerizationError(.exists, message: \"IPv6 subnet \\(ipv6Subnet) overlaps an existing network with subnet \\(overlap)\")\n            }\n\n            args += [\"--subnet-v6\", ipv6Subnet.description]\n        }\n\n        if let variant = configuration.pluginInfo?.variant {\n            args += [\"--variant\", variant]\n        }\n\n        let entityPath = try store.entityPath(configuration.id)\n        try pluginLoader.registerWithLaunchd(\n            plugin: networkPlugin,\n            pluginStateRoot: URL(filePath: entityPath.string),\n            args: args,\n            instanceId: configuration.id\n        )"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+        "location" : {
+          "end_position" : 19927,
+          "start_position" : 16443
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "registerService",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NetworkConfiguration"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift",
+            "location" : {
+              "end_position" : 16513,
+              "start_position" : 16478
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "configuration",
+          "order" : 0
+        }
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 119,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerAPIService/Server/Networks/NetworksService.swift"
+  ]
+}

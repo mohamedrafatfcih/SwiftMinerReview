@@ -1,0 +1,67 @@
+{
+  "caseID" : "case-0a6430adce738b4a5bccfc40",
+  "commitHash" : "d85c0154cb052667f634514fd8e32764095d9d2b",
+  "commitMessage" : "feat: enabled Network preview\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/d85c0154cb052667f634514fd8e32764095d9d2b",
+  "durationSeconds" : 3.2712239027023315,
+  "entityNames" : [
+    "Bandwidth",
+    "defer",
+    "readProcessBandwidth"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "body" : {
+        "content" : "inputPipe.fileHandleForWriting.closeFile()\n            outputPipe.fileHandleForReading.closeFile()\n            errorPipe.fileHandleForReading.closeFile()"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Net/readers.swift",
+        "location" : {
+          "end_position" : 11751,
+          "start_position" : 11550
+        }
+      },
+      "name" : "defer"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let task = Process()\n        task.launchPath = \"/usr/bin/nettop\"\n        task.arguments = [\"-P\", \"-L\", \"1\", \"-n\", \"-k\", \"time,interface,state,rx_dupe,rx_ooo,re-tx,rtt_avg,rcvsize,tx_win,tc_class,tc_mgt,cc_algo,P,C,R,W,arch\"]\n        task.environment = [\n            \"NSUnbufferedIO\": \"YES\",\n            \"LC_ALL\": \"en_US.UTF-8\"\n        ]\n        \n        let inputPipe = Pipe()\n        let outputPipe = Pipe()\n        let errorPipe = Pipe()\n        \n        defer {\n            inputPipe.fileHandleForWriting.closeFile()\n            outputPipe.fileHandleForReading.closeFile()\n            errorPipe.fileHandleForReading.closeFile()\n        }\n        \n        task.standardInput = inputPipe\n        task.standardOutput = outputPipe\n        task.standardError = errorPipe\n        \n        do {\n            try task.run()\n        } catch let err {\n            error(\"read bandwidth from processes: \\(err)\", log: self.log)\n            return Bandwidth()\n        }\n        \n        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()\n        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()\n        let output = String(data: outputData, encoding: .utf8)\n        _ = String(data: errorData, encoding: .utf8)\n        guard let output, !output.isEmpty else { return Bandwidth() }\n\n        var totalUpload: Int64 = 0\n        var totalDownload: Int64 = 0\n        var firstLine = false\n        output.enumerateLines { (line, _) in\n            if !firstLine {\n                firstLine = true\n                return\n            }\n            \n            let parsedLine = line.split(separator: \",\")\n            guard parsedLine.count >= 3 else {\n                return\n            }\n            \n            if let download = Int64(parsedLine[1]) {\n                totalDownload += download\n            }\n            if let upload = Int64(parsedLine[2]) {\n                totalUpload += upload\n            }\n        }\n        \n        return Bandwidth(upload: totalUpload, download: totalDownload)"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Net/readers.swift",
+        "location" : {
+          "end_position" : 13140,
+          "start_position" : 11042
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "readProcessBandwidth",
+      "parameters" : [
+
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : false,
+          "name" : "Bandwidth"
+        },
+        "description" : "-> Bandwidth"
+      }
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 0,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Net/readers.swift"
+  ]
+}

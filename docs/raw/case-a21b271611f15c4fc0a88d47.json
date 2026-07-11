@@ -1,0 +1,73 @@
+{
+  "caseID" : "case-a21b271611f15c4fc0a88d47",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "AsyncLock.Context",
+    "lock",
+    "startInitProcess"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let info = try self.getContainer()\n        let container = info.container\n        let id = container.id\n\n        guard self.state == .booted else {\n            throw ContainerizationError(\n                .invalidState,\n                message: \"container expected to be in booted state, got: \\(self.state)\"\n            )\n        }\n\n        do {\n            let io = info.io\n\n            try await container.start()\n            let waitFunc: ExitMonitor.WaitHandler = {\n                let code = try await container.wait()\n                if let out = io.out {\n                    try out.close()\n                }\n                if let err = io.err {\n                    try err.close()\n                }\n                return code\n            }\n            try await self.monitor.track(id: id, waitingOn: waitFunc)\n        } catch {\n            try? await self.cleanUpContainer(containerInfo: info)\n            self.setState(.stopped)\n            throw error\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location" : {
+          "end_position" : 32145,
+          "start_position" : 31082
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "startInitProcess",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "AsyncLock.Context"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location" : {
+              "end_position" : 31141,
+              "start_position" : 31118
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "lock",
+          "order" : 0
+        }
+      ],
+      "specifiers_decl" : {
+        "async_specifier" : "async",
+        "description" : "async throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 192,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "caseID" : "case-b44fd0087be3130131cbc13e",
+  "commitHash" : "184bf068b77ae1790c645a2569a2554020dbca8b",
+  "commitMessage" : "update outdated pods\n",
+  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/184bf068b77ae1790c645a2569a2554020dbca8b",
+  "durationSeconds" : 1072.5666660070419,
+  "entityNames" : [
+    "Error?",
+    "URLSession",
+    "URLSessionTask",
+    "error",
+    "session",
+    "task",
+    "urlSession"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let completeTask: (URLSession, URLSessionTask, Error?) -> Void = { [weak self] session, task, error in\n            guard let strongSelf = self else { return }\n\n            strongSelf.taskDidComplete?(session, task, error)\n\n            strongSelf[task]?.delegate.urlSession(session, task: task, didCompleteWithError: error)\n\n            var userInfo: [String: Any] = [Notification.Key.Task: task]\n\n            if let data = (strongSelf[task]?.delegate as? DataTaskDelegate)?.data {\n                userInfo[Notification.Key.ResponseData] = data\n            }\n\n            NotificationCenter.default.post(\n                name: Notification.Name.Task.DidComplete,\n                object: strongSelf,\n                userInfo: userInfo\n            )\n\n            strongSelf[task] = nil\n        }\n\n        guard let request = self[task], let sessionManager = sessionManager else {\n            completeTask(session, task, error)\n            return\n        }\n\n        // Run all validations on the request before checking if an error occurred\n        request.validations.forEach { $0() }\n\n        // Determine whether an error has occurred\n        var error: Error? = error\n\n        if request.delegate.error != nil {\n            error = request.delegate.error\n        }\n\n        /// If an error occurred and the retrier is set, asynchronously ask the retrier if the request\n        /// should be retried. Otherwise, complete the task by notifying the task delegate.\n        if let retrier = retrier, let error = error {\n            retrier.should(sessionManager, retry: request, with: error) { [weak self] shouldRetry, timeDelay in\n                guard shouldRetry else { completeTask(session, task, error) ; return }\n\n                DispatchQueue.utility.after(timeDelay) { [weak self] in\n                    guard let strongSelf = self else { return }\n\n                    let retrySucceeded = strongSelf.sessionManager?.retry(request) ?? false\n\n                    if retrySucceeded, let task = request.task {\n                        strongSelf[task] = request\n                        return\n                    } else {\n                        completeTask(session, task, error)\n                    }\n                }\n            }\n        } else {\n            completeTask(session, task, error)\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Pods/Alamofire/Source/SessionDelegate.swift",
+        "location" : {
+          "end_position" : 24278,
+          "start_position" : 21381
+        }
+      },
+      "modifiers" : [
+        "open"
+      ],
+      "name" : "urlSession",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLSession"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Pods/Alamofire/Source/SessionDelegate.swift",
+            "location" : {
+              "end_position" : 21809,
+              "start_position" : 21786
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "session",
+          "order" : 0
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "URLSessionTask"
+          },
+          "is_variadic" : false,
+          "location_info" : {
+            "file_path" : "Pods/Alamofire/Source/SessionDelegate.swift",
+            "location" : {
+              "end_position" : 21831,
+              "start_position" : 21809
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "task",
+          "order" : 1
+        },
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : true,
+            "name" : "Error?"
+          },
+          "is_variadic" : false,
+          "label" : "didCompleteWithError",
+          "location_info" : {
+            "file_path" : "Pods/Alamofire/Source/SessionDelegate.swift",
+            "location" : {
+              "end_position" : 21865,
+              "start_position" : 21831
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "error",
+          "order" : 2
+        }
+      ]
+    },
+    "type" : "Remove function refactoring"
+  },
+  "refactoringIndex" : 1026,
+  "refactoringType" : "Remove function refactoring",
+  "repoID" : "shadowsocks-shadowsocksx-ng",
+  "repoName" : "shadowsocks/ShadowsocksX-NG",
+  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Pods/Alamofire/Source/SessionDelegate.swift"
+  ]
+}

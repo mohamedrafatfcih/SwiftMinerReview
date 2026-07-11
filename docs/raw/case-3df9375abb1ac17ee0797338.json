@@ -1,0 +1,4026 @@
+{
+  "caseID" : "case-3df9375abb1ac17ee0797338",
+  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds" : 31.880328059196472,
+  "entityNames" : [
+    "(any Error)?",
+    "CachedURLResponse",
+    "Data",
+    "Data?",
+    "DataRequest",
+    "DataResponse<Data?, AFError>",
+    "DataResponse<Value, AFError>",
+    "DataStreamRequest"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "EventMonitor"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "await queue.pendingWork()"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1947,
+              "start_position" : 1873
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "pendingEvents",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "_timeline.write { $0.append(TimelineEvent(date: .now, event: event, label: label)) }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 2090,
+              "start_position" : 1947
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "append",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 1988,
+                  "start_position" : 1973
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 2220,
+              "start_position" : 2090
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2135,
+                  "start_position" : 2112
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any Error)?"
+              },
+              "is_variadic" : false,
+              "label" : "didBecomeInvalidWithError",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2180,
+                  "start_position" : 2135
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 2375,
+              "start_position" : 2220
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2265,
+                  "start_position" : 2242
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2287,
+                  "start_position" : 2265
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLAuthenticationChallenge"
+              },
+              "is_variadic" : false,
+              "label" : "didReceive",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2335,
+                  "start_position" : 2287
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "challenge",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 2650,
+              "start_position" : 2375
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2419,
+                  "start_position" : 2397
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2461,
+                  "start_position" : 2419
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "label" : "didSendBodyData",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2515,
+                  "start_position" : 2461
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bytesSent",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2558,
+                  "start_position" : 2515
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesSent",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2610,
+                  "start_position" : 2558
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesExpectedToSend",
+              "order" : 4
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 2778,
+              "start_position" : 2650
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2695,
+                  "start_position" : 2672
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "taskNeedsNewBodyStream",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2738,
+                  "start_position" : 2695
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 3029,
+              "start_position" : 2778
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2822,
+                  "start_position" : 2800
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2864,
+                  "start_position" : 2822
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "label" : "willPerformHTTPRedirection",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2938,
+                  "start_position" : 2864
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "newRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 2989,
+                  "start_position" : 2938
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 3
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 3186,
+              "start_position" : 3029
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3074,
+                  "start_position" : 3051
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3096,
+                  "start_position" : 3074
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTaskMetrics"
+              },
+              "is_variadic" : false,
+              "label" : "didFinishCollecting",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3146,
+                  "start_position" : 3096
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "metrics",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 3333,
+              "start_position" : 3186
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3231,
+                  "start_position" : 3208
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3253,
+                  "start_position" : 3231
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any Error)?"
+              },
+              "is_variadic" : false,
+              "label" : "didCompleteWithError",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3293,
+                  "start_position" : 3253
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 3467,
+              "start_position" : 3333
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3378,
+                  "start_position" : 3355
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "taskIsWaitingForConnectivity",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3427,
+                  "start_position" : 3378
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 3603,
+              "start_position" : 3467
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3512,
+                  "start_position" : 3489
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDataTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3542,
+                  "start_position" : 3512
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Data"
+              },
+              "is_variadic" : false,
+              "label" : "didReceive",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3563,
+                  "start_position" : 3542
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 3811,
+              "start_position" : 3603
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3647,
+                  "start_position" : 3625
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDataTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3697,
+                  "start_position" : 3647
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "dataTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "CachedURLResponse"
+              },
+              "is_variadic" : false,
+              "label" : "willCacheResponse",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3771,
+                  "start_position" : 3697
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "proposedResponse",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 4056,
+              "start_position" : 3811
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3855,
+                  "start_position" : 3833
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDownloadTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3913,
+                  "start_position" : 3855
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "downloadTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "label" : "didResumeAtOffset",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 3970,
+                  "start_position" : 3913
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "fileOffset",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4016,
+                  "start_position" : 3970
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "expectedTotalBytes",
+              "order" : 3
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 4351,
+              "start_position" : 4056
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4100,
+                  "start_position" : 4078
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDownloadTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4158,
+                  "start_position" : 4100
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "downloadTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "label" : "didWriteData",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4212,
+                  "start_position" : 4158
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "bytesWritten",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4258,
+                  "start_position" : 4212
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesWritten",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int64"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4311,
+                  "start_position" : 4258
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "totalBytesExpectedToWrite",
+              "order" : 4
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 4550,
+              "start_position" : 4351
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "urlSession",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSession"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4395,
+                  "start_position" : 4373
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "session",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionDownloadTask"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4453,
+                  "start_position" : 4395
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "downloadTask",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URL"
+              },
+              "is_variadic" : false,
+              "label" : "didFinishDownloadingTo",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4510,
+                  "start_position" : 4453
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "location",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 4678,
+              "start_position" : 4550
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4589,
+                  "start_position" : 4569
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateInitialURLRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4638,
+                  "start_position" : 4589
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 4808,
+              "start_position" : 4678
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4717,
+                  "start_position" : 4697
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any Error"
+              },
+              "is_variadic" : false,
+              "label" : "didFailToCreateURLRequestWithError",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4768,
+                  "start_position" : 4717
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 4967,
+              "start_position" : 4808
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4847,
+                  "start_position" : 4827
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didAdaptInitialRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4898,
+                  "start_position" : 4847
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "initialRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "to",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 4927,
+                  "start_position" : 4898
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "adaptedRequest",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5125,
+              "start_position" : 4967
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5006,
+                  "start_position" : 4986
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didFailToAdaptURLRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5059,
+                  "start_position" : 5006
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "initialRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any Error"
+              },
+              "is_variadic" : false,
+              "label" : "withError",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5085,
+                  "start_position" : 5059
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5246,
+              "start_position" : 5125
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5164,
+                  "start_position" : 5144
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLRequest"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateURLRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5206,
+                  "start_position" : 5164
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5359,
+              "start_position" : 5246
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5285,
+                  "start_position" : 5265
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateTask",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5319,
+                  "start_position" : 5285
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5485,
+              "start_position" : 5359
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5398,
+                  "start_position" : 5378
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTaskMetrics"
+              },
+              "is_variadic" : false,
+              "label" : "didGatherMetrics",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5445,
+                  "start_position" : 5398
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "metrics",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5629,
+              "start_position" : 5485
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5524,
+                  "start_position" : 5504
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didFailTask",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5558,
+                  "start_position" : 5524
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any Error"
+              },
+              "is_variadic" : false,
+              "label" : "earlyWithError",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5589,
+                  "start_position" : 5558
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5770,
+              "start_position" : 5629
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5668,
+                  "start_position" : 5648
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didCompleteTask",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5706,
+                  "start_position" : 5668
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "(any Error)?"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5730,
+                  "start_position" : 5706
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5856,
+              "start_position" : 5770
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestDidFinish",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5816,
+                  "start_position" : 5798
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 5942,
+              "start_position" : 5856
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestDidResume",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5902,
+                  "start_position" : 5884
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6055,
+              "start_position" : 5942
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 5981,
+                  "start_position" : 5961
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didResumeTask",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6015,
+                  "start_position" : 5981
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6142,
+              "start_position" : 6055
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestDidSuspend",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6102,
+                  "start_position" : 6084
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6256,
+              "start_position" : 6142
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6181,
+                  "start_position" : 6161
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didSuspendTask",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6216,
+                  "start_position" : 6181
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6342,
+              "start_position" : 6256
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestDidCancel",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6302,
+                  "start_position" : 6284
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6455,
+              "start_position" : 6342
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6381,
+                  "start_position" : 6361
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didCancelTask",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6415,
+                  "start_position" : 6381
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6593,
+              "start_position" : 6455
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6498,
+                  "start_position" : 6474
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataResponse<Data?, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6553,
+                  "start_position" : 6498
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "generic_clause" : "<Value>",
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6738,
+              "start_position" : 6593
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6643,
+                  "start_position" : 6619
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataResponse<Value, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6698,
+                  "start_position" : 6643
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 6883,
+              "start_position" : 6738
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6785,
+                  "start_position" : 6757
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadResponse<URL?, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6843,
+                  "start_position" : 6785
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 7029,
+              "start_position" : 6883
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6930,
+                  "start_position" : 6902
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadResponse<Data?, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 6989,
+                  "start_position" : 6930
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "generic_clause" : "<Value>",
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 7182,
+              "start_position" : 7029
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7083,
+                  "start_position" : 7055
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadResponse<Value, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseResponse",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7142,
+                  "start_position" : 7083
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 7269,
+              "start_position" : 7182
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "requestIsRetrying",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7229,
+                  "start_position" : 7211
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 7479,
+              "start_position" : 7269
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7312,
+                  "start_position" : 7288
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URLRequest?"
+              },
+              "is_variadic" : false,
+              "label" : "didValidateRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7356,
+                  "start_position" : 7312
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7383,
+                  "start_position" : 7356
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "Data?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7396,
+                  "start_position" : 7383
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "data",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request.ValidationResult"
+              },
+              "is_variadic" : false,
+              "label" : "withResult",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7439,
+                  "start_position" : 7396
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 4
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 7682,
+              "start_position" : 7479
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataStreamRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7528,
+                  "start_position" : 7498
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URLRequest?"
+              },
+              "is_variadic" : false,
+              "label" : "didValidateRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7572,
+                  "start_position" : 7528
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7599,
+                  "start_position" : 7572
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request.ValidationResult"
+              },
+              "is_variadic" : false,
+              "label" : "withResult",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7642,
+                  "start_position" : 7599
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 3
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "generic_clause" : "<Value>",
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 7823,
+              "start_position" : 7682
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DataStreamRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7738,
+                  "start_position" : 7708
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Result<Value, AFError>"
+              },
+              "is_variadic" : false,
+              "label" : "didParseStream",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7783,
+                  "start_position" : 7738
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 7964,
+              "start_position" : 7823
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7868,
+                  "start_position" : 7842
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest.Uploadable"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateUploadable",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 7924,
+                  "start_position" : 7868
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "uploadable",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 8100,
+              "start_position" : 7964
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8009,
+                  "start_position" : 7983
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "any Error"
+              },
+              "is_variadic" : false,
+              "label" : "didFailToCreateUploadableWithError",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8060,
+                  "start_position" : 8009
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "error",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 8226,
+              "start_position" : 8100
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "UploadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8145,
+                  "start_position" : 8119
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "InputStream"
+              },
+              "is_variadic" : false,
+              "label" : "didProvideInputStream",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8186,
+                  "start_position" : 8145
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "stream",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 8396,
+              "start_position" : 8226
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8273,
+                  "start_position" : 8245
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URLSessionTask"
+              },
+              "is_variadic" : false,
+              "label" : "didFinishDownloadingUsing",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8321,
+                  "start_position" : 8273
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "task",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Result<URL, any Error>"
+              },
+              "is_variadic" : false,
+              "label" : "with",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8356,
+                  "start_position" : 8321
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 8515,
+              "start_position" : 8396
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8443,
+                  "start_position" : 8415
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "URL"
+              },
+              "is_variadic" : false,
+              "label" : "didCreateDestinationURL",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8475,
+                  "start_position" : 8443
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "url",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "append(\"\\(#function)\")"
+          },
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 8758,
+              "start_position" : 8515
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "request",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DownloadRequest"
+              },
+              "is_variadic" : false,
+              "label" : "_",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8562,
+                  "start_position" : 8534
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "request",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URLRequest?"
+              },
+              "is_variadic" : false,
+              "label" : "didValidateRequest",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8606,
+                  "start_position" : 8562
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "urlRequest",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPURLResponse"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8633,
+                  "start_position" : 8606
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "response",
+              "order" : 2
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URL?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8653,
+                  "start_position" : 8633
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "temporaryURL",
+              "order" : 3
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : true,
+                "name" : "URL?"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8675,
+                  "start_position" : 8653
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "destinationURL",
+              "order" : 4
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Request.ValidationResult"
+              },
+              "is_variadic" : false,
+              "label" : "withResult",
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 8718,
+                  "start_position" : 8675
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "result",
+              "order" : 5
+            }
+          ]
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1873,
+              "start_position" : 1676
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "InspectorEventMonitor"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 1728,
+                  "start_position" : 1687
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "label",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "DispatchQueue"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "function_call" : {
+                    "_0" : {
+                      "additional_trailing_closures" : [
+
+                      ],
+                      "arguments" : [
+                        {
+                          "label" : "label",
+                          "value" : "\"org.alamofire.inspectorEventMonitor\""
+                        }
+                      ],
+                      "call" : "DispatchQueue",
+                      "has_self_reference" : false,
+                      "internal_inline_calls" : [
+
+                      ],
+                      "location_info" : {
+                        "file_path" : "Tests/InspectorEventMonitor.swift",
+                        "location" : {
+                          "end_position" : 1810,
+                          "start_position" : 1751
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 1810,
+                  "start_position" : 1728
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "queue",
+              "order" : 1
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Tests/InspectorEventMonitor.swift",
+        "location" : {
+          "end_position" : 8760,
+          "start_position" : 1254
+        }
+      },
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "InspectorEventMonitor",
+      "protocols" : [
+
+      ],
+      "structs" : [
+        {
+          "attributes" : [
+
+          ],
+          "classes" : [
+
+          ],
+          "conformed_types" : [
+
+          ],
+          "enums" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "initializers" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1465,
+              "start_position" : 1356
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "TimelineEvent",
+          "protocols" : [
+
+          ],
+          "structs" : [
+
+          ],
+          "subscripts" : [
+
+          ],
+          "type_aliases" : [
+
+          ],
+          "variables" : [
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Date"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 1407,
+                  "start_position" : 1397
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "date"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 1433,
+                  "start_position" : 1420
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "event"
+            },
+            {
+              "accessors" : [
+
+              ],
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_constant" : false,
+              "location_info" : {
+                "file_path" : "Tests/InspectorEventMonitor.swift",
+                "location" : {
+                  "end_position" : 1459,
+                  "start_position" : 1446
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "label"
+            }
+          ]
+        }
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1327,
+              "start_position" : 1314
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "label"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "DispatchQueue"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1356,
+              "start_position" : 1336
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "queue"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[String]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "_timeline.read { $0.map(\\.event) }"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1542,
+              "start_position" : 1475
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "events"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[TimelineEvent]"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "_timeline.read(\\.self)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1616,
+              "start_position" : 1552
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "timeline"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "function_call" : {
+                "_0" : {
+                  "additional_trailing_closures" : [
+
+                  ],
+                  "arguments" : [
+                    {
+                      "value" : "[]"
+                    }
+                  ],
+                  "call" : "Protected<[TimelineEvent]>",
+                  "has_self_reference" : false,
+                  "internal_inline_calls" : [
+
+                  ],
+                  "location_info" : {
+                    "file_path" : "Tests/InspectorEventMonitor.swift",
+                    "location" : {
+                      "end_position" : 1676,
+                      "start_position" : 1646
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Tests/InspectorEventMonitor.swift",
+            "location" : {
+              "end_position" : 1676,
+              "start_position" : 1634
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "_timeline"
+        }
+      ]
+    },
+    "type" : "Add class refactoring"
+  },
+  "refactoringIndex" : 175,
+  "refactoringType" : "Add class refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/InspectorEventMonitor.swift"
+  ]
+}

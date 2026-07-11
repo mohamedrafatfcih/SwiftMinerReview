@@ -1,0 +1,91 @@
+{
+  "caseID" : "case-ad060e4643af5c5b82747c5d",
+  "commitHash" : "efa9c4f33e0f79073087446863a014ca2a8172b5",
+  "commitMessage" : "fix: moved back to draw line chart in the widget instead of using a subview (#3294)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/efa9c4f33e0f79073087446863a014ca2a8172b5",
+  "durationSeconds" : 0.94488203525543213,
+  "entityNames" : [
+    "NSRect",
+    "chartFrame",
+    "dirtyRect",
+    "draw"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "description" : "self.chart.frame = chartFrame",
+      "left_operand" : "self.chart.frame",
+      "location_info" : {
+        "file_path" : "Kit/Widgets/LineChart.swift",
+        "location" : {
+          "end_position" : 9337,
+          "start_position" : 9295
+        }
+      },
+      "operator_value" : "=",
+      "right_operand" : {
+        "reference" : {
+          "arguments" : [
+
+          ],
+          "name" : "chartFrame"
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "super.draw(dirtyRect)\n        \n        guard NSGraphicsContext.current != nil else { return }\n        \n        var value: Double = 0\n        var pressureLevel: RAMPressure = .normal\n        self.queue.sync {\n            value = self._value\n            pressureLevel = self._pressureLevel\n        }\n        \n        var width = self.width + (Constants.Widget.margin.x*2)\n        var x: CGFloat = 0\n        let lineWidth = 1 / (NSScreen.main?.backingScaleFactor ?? 1)\n        let offset = lineWidth / 2\n        var boxSize: CGSize = CGSize(width: self.width - (Constants.Widget.margin.x*2), height: self.frame.size.height)\n        \n        var color: NSColor = .controlAccentColor\n        switch self.colorState {\n        case .systemAccent: color = .controlAccentColor\n        case .utilization: color = value.usageColor()\n        case .pressure: color = pressureLevel.pressureColor()\n        case .monochrome:\n            if self.boxState {\n                color = (isDarkMode ? NSColor.black : NSColor.white)\n            } else {\n                color = (isDarkMode ? NSColor.white : NSColor.black)\n            }\n        default: color = self.colorState.additional as? NSColor ?? .controlAccentColor\n        }\n        \n        if self.labelState {\n            let letterHeight = self.frame.height / 3\n            let letterWidth: CGFloat = 6.0\n            \n            var yMargin: CGFloat = 0\n            for char in self.NSLabelCharts {\n                let rect = CGRect(x: x, y: yMargin, width: letterWidth, height: letterHeight)\n                char.draw(with: rect)\n                yMargin += letterHeight\n            }\n            \n            width += letterWidth + Constants.Widget.spacing\n            x = letterWidth + Constants.Widget.spacing\n        }\n        \n        if self.valueState {\n            let style = NSMutableParagraphStyle()\n            style.alignment = .right\n            \n            var valueColor = isDarkMode ? NSColor.white : NSColor.black\n            if self.valueColorState {\n                valueColor = color\n            }\n            \n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 8, weight: .regular),\n                NSAttributedString.Key.foregroundColor: valueColor,\n                NSAttributedString.Key.paragraphStyle: style\n            ]\n            \n            let rect = CGRect(x: x+2, y: boxSize.height-7, width: boxSize.width - 2, height: 7)\n            let str = NSAttributedString.init(string: \"\\(Int((value.rounded(toPlaces: 2)) * 100))%\", attributes: stringAttributes)\n            str.draw(with: rect)\n            \n            boxSize.height = offset == 0.5 ? 10 : 9\n        }\n        \n        let box = NSBezierPath(roundedRect: NSRect(\n            x: x+offset,\n            y: offset,\n            width: self.width - offset*2,\n            height: boxSize.height - (offset*2)\n        ), xRadius: 2, yRadius: 2)\n        \n        if self.boxState {\n            (isDarkMode ? NSColor.white : NSColor.black).set()\n            box.stroke()\n            box.fill()\n            self.chart.setTransparent(false)\n        } else if self.frameState {\n            self.chart.setTransparent(true)\n        } else {\n            self.chart.setTransparent(true)\n        }\n        \n        let chartSize = NSSize(\n            width: box.bounds.width - (offset*2+lineWidth),\n            height: box.bounds.height - offset\n        )\n        self.chart.setColor(color)\n        let chartFrame = NSRect(x: x+offset+lineWidth, y: offset, width: chartSize.width, height: chartSize.height)\n        if self.chart.frame != chartFrame {\n            self.chart.frame = chartFrame\n        }\n        \n        if self.boxState || self.frameState {\n            (isDarkMode ? NSColor.white : NSColor.black).set()\n            box.lineWidth = lineWidth\n            box.stroke()\n        }\n        \n        self.setWidth(width)"
+      },
+      "location_info" : {
+        "file_path" : "Kit/Widgets/LineChart.swift",
+        "location" : {
+          "end_position" : 9582,
+          "start_position" : 5604
+        }
+      },
+      "modifiers" : [
+        "public",
+        "override"
+      ],
+      "name" : "draw",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "NSRect"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Kit/Widgets/LineChart.swift",
+            "location" : {
+              "end_position" : 5659,
+              "start_position" : 5640
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "dirtyRect",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 1,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Kit/Widgets/LineChart.swift"
+  ]
+}

@@ -1,0 +1,476 @@
+{
+  "caseID" : "case-d720e5db13cc5b0d4cee95a4",
+  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds" : 7.7093260288238525,
+  "entityNames" : [
+    "Duration",
+    "SandboxClient",
+    "Sendable",
+    "String",
+    "XPCClient",
+    "client",
+    "create",
+    "id"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "attributes" : [
+
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+        {
+          "name" : "Sendable"
+        }
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "\"\\(Self.label).\\(runtime).\\(id)\""
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 1253,
+              "start_position" : 1124
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "machServiceLabel",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1183,
+                  "start_position" : 1166
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "runtime",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1193,
+                  "start_position" : 1183
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 1
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "String"
+            },
+            "description" : "-> String"
+          }
+        },
+        {
+          "attributes" : [
+
+          ],
+          "body" : {
+            "content" : "let label = Self.machServiceLabel(runtime: runtime, id: id)\n        let client = XPCClient(service: label)\n        let request = XPCMessage(route: SandboxRoutes.createEndpoint.rawValue)\n\n        let response: XPCMessage\n        do {\n            response = try await client.send(request, responseTimeout: timeout)\n        } catch {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to create container \\(id)\",\n                cause: error\n            )\n        }\n        guard let endpoint = response.endpoint(key: SandboxKeys.sandboxServiceEndpoint.rawValue) else {\n            throw ContainerizationError(\n                .internalError,\n                message: \"failed to get endpoint for sandbox service\"\n            )\n        }\n\n        let endpointConnection = xpc_connection_create_from_endpoint(endpoint)\n        let xpcClient = XPCClient(connection: endpointConnection, label: label)\n        return SandboxClient(id: id, runtime: runtime, client: xpcClient)"
+          },
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 2890,
+              "start_position" : 1576
+            }
+          },
+          "modifiers" : [
+            "public",
+            "static"
+          ],
+          "name" : "create",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1751,
+                  "start_position" : 1739
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1768,
+                  "start_position" : 1751
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "runtime",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Duration"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "reference" : {
+                    "arguments" : [
+
+                    ],
+                    "name" : "xpcRegistrationTimeout"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1820,
+                  "start_position" : 1768
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "timeout",
+              "order" : 2
+            }
+          ],
+          "return_clause" : {
+            "data_type" : {
+              "is_optional" : false,
+              "name" : "SandboxClient"
+            },
+            "description" : "-> SandboxClient"
+          },
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+        {
+          "attributes" : [
+
+          ],
+          "functions" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 1576,
+              "start_position" : 1429
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "init",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1452,
+                  "start_position" : 1440
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "id",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1469,
+                  "start_position" : 1452
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "runtime",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "XPCClient"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+                "location" : {
+                  "end_position" : 1486,
+                  "start_position" : 1469
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "client",
+              "order" : 2
+            }
+          ]
+        }
+      ],
+      "location_info" : {
+        "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+        "location" : {
+          "end_position" : 2892,
+          "start_position" : 978
+        }
+      },
+      "modifiers" : [
+        "public"
+      ],
+      "name" : "SandboxClient",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "initializer_clause" : {
+            "has_self_reference" : false,
+            "value" : {
+              "other" : {
+                "_0" : "com.apple.container.runtime"
+              }
+            }
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 1124,
+              "start_position" : 1087
+            }
+          },
+          "modifiers" : [
+            "static"
+          ],
+          "name" : "label"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "Self.machServiceLabel(runtime: runtime, id: id)"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 1359,
+              "start_position" : 1271
+            }
+          },
+          "modifiers" : [
+            "private"
+          ],
+          "name" : "machServiceLabel"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 1379,
+              "start_position" : 1369
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "id"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 1403,
+              "start_position" : 1388
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "runtime"
+        },
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "XPCClient"
+          },
+          "is_constant" : true,
+          "location_info" : {
+            "file_path" : "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift",
+            "location" : {
+              "end_position" : 1429,
+              "start_position" : 1412
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "client"
+        }
+      ]
+    },
+    "type" : "Remove struct refactoring"
+  },
+  "refactoringIndex" : 48,
+  "refactoringType" : "Remove struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/Services/ContainerSandboxService/Client/SandboxClient.swift"
+  ]
+}

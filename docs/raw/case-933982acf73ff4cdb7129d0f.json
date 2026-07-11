@@ -1,0 +1,114 @@
+{
+  "caseID" : "case-933982acf73ff4cdb7129d0f",
+  "commitHash" : "be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
+  "commitMessage" : "Migrate some container tests, remove concurrent demo tests. (#1840)\n\n- Part of #1833.\n- Tweaks `ContainerFixture.withContainer()` to support the legacy\n`longRun()` pattern without boilerplate.",
+  "commitURL" : "https://github.com/apple/container/commit/be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
+  "durationSeconds" : 1.9615820646286011,
+  "entityNames" : [
+    "TestCLIRmRaceCondition",
+    "testStopRmRace"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Suite"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+        {
+          "attributes" : [
+            {
+              "annotation" : {
+                "unsupported" : {
+                  "_0" : "Test"
+                }
+              },
+              "arguments" : [
+
+              ]
+            }
+          ],
+          "body" : {
+            "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-c\"\n            f.addCleanup { try f.doRemoveIfExists(name, force: true, ignoreFailure: true) }\n\n            try f.doCreate(name: name)\n            try f.doStart(name)\n            try f.waitForContainerRunning(name)\n            try f.doStop(name)\n\n            // Immediately attempt removal — both outcomes are valid:\n            // 1. Success: race condition prevention working perfectly\n            // 2. \"not yet stopped\" error: race detected and controlled\n            var raceConditionPrevented = false\n            var raceConditionDetected = false\n\n            do {\n                try f.doRemove(name)\n                raceConditionPrevented = true\n            } catch CommandError.nonZeroExit(_, let message) {\n                if message.contains(\"is not yet stopped and can not be deleted\") {\n                    raceConditionDetected = true\n                } else if message.contains(\"not found\")\n                    || message.contains(\"failed to delete one or more containers\")\n                {\n                    raceConditionPrevented = true\n                } else {\n                    Issue.record(\"Unexpected error message: \\(message)\")\n                    return\n                }\n            } catch {\n                Issue.record(\"Unexpected error type: \\(error)\")\n                return\n            }\n\n            #expect(\n                raceConditionPrevented || raceConditionDetected,\n                \"Expected either immediate success (race prevented) or controlled failure (race detected)\"\n            )\n\n            if raceConditionPrevented { return }\n\n            // Race detected — wait for background cleanup then retry with backoff.\n            try await Task.sleep(for: .seconds(2))\n\n            var attempts = 0\n            let maxAttempts = 5\n            while attempts < maxAttempts {\n                guard (try? f.getContainerStatus(name)) != nil else { break }\n                do {\n                    try f.doRemove(name)\n                    break\n                } catch CommandError.nonZeroExit(_, let message) {\n                    if message.contains(\"not found\") { break }\n                    guard attempts < maxAttempts - 1 else {\n                        throw CommandError.executionFailed(\n                            \"Failed to remove container after \\(maxAttempts) attempts: \\(message)\")\n                    }\n                    let delay = 1 << attempts\n                    try await Task.sleep(for: .seconds(delay))\n                    attempts += 1\n                } catch {\n                    guard attempts < maxAttempts - 1 else { throw error }\n                    let delay = 1 << attempts\n                    try await Task.sleep(for: .seconds(delay))\n                    attempts += 1\n                }\n            }\n        }"
+          },
+          "location_info" : {
+            "file_path" : "Tests/IntegrationTests/Containers/TestCLIRmRaceCondition.swift",
+            "location" : {
+              "end_position" : 3768,
+              "start_position" : 841
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "testStopRmRace",
+          "parameters" : [
+
+          ],
+          "specifiers_decl" : {
+            "async_specifier" : "async",
+            "description" : "async throws",
+            "throws_specifier" : "throws"
+          }
+        }
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/IntegrationTests/Containers/TestCLIRmRaceCondition.swift",
+        "location" : {
+          "end_position" : 3770,
+          "start_position" : 801
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "TestCLIRmRaceCondition",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+
+      ]
+    },
+    "type" : "Add struct refactoring"
+  },
+  "refactoringIndex" : 16,
+  "refactoringType" : "Add struct refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/IntegrationTests/Containers/TestCLIRmRaceCondition.swift"
+  ]
+}

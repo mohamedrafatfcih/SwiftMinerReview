@@ -1,0 +1,45 @@
+{
+  "caseID" : "case-5fbe3259439944b9f8b173c9",
+  "commitHash" : "82098ab53e098b9e950556a074fce46630d222a2",
+  "commitMessage" : "Limit stream upload length according to bodyContentLength specified (#3730)\n\n### Issue Link :link:\r\n<!-- What issue does this fix? If an issue doesn't exist, remove this\r\nsection. -->\r\n[Can't upload a specific length of\r\nMultipartFormData.BodyPart.bodyContentLength from an InputStream\r\n#3714](https://github.com/Alamofire/Alamofire/issues/3714)\r\n\r\n### Goals :soccer:\r\n<!-- List the high-level objectives of this pull request. -->\r\n<!-- Include any relevant context. -->\r\nLimit the writing of a MultipartFormData input stream to only the\r\nspecified content length,\r\n\r\n### Implementation Details :construction:\r\n<!-- Explain the reasoning behind any architectural changes. -->\r\n<!-- Highlight any new functionality. -->\r\nAdd `MultipartFormData.BodyPart.bodyContentLength` to constraint the\r\n`while` loop doing the writing.\r\n\r\n### Testing Details :mag:\r\n<!-- Describe what tests you've added for your changes. -->\r\nCreated test\r\n`MultipartFormDataWriteEncodedDataToDiskTestCase.testWritingEncodedStreamBodyPartToDiskRespectingBodyLength`.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/82098ab53e098b9e950556a074fce46630d222a2",
+  "durationSeconds" : 2.7957839965820312,
+  "entityNames" : [
+    "testWritingEncodedStreamBodyPartToDiskRespectingBodyLength"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let destinationFileURL = temporaryFileURL\n        let multipartFormData = MultipartFormData()\n\n        let unicornImageURL = url(forResource: \"unicorn\", withExtension: \"png\")\n        let unicornImageData = try! Data(contentsOf: unicornImageURL)\n        let unicornDataLength = unicornImageData.count\n\n        // Write only PART of the file\n        let expectedFileStreamUploadLength = UInt64(unicornDataLength / 2)\n        multipartFormData.append(InputStream(url: unicornImageURL)!,\n                                 withLength: expectedFileStreamUploadLength,\n                                 name: \"unicorn\",\n                                 fileName: \"unicorn.png\",\n                                 mimeType: \"image/png\")\n\n        var encodingError: Error?\n\n        // When\n        do {\n            try multipartFormData.writeEncodedData(to: destinationFileURL)\n        } catch {\n            encodingError = error\n        }\n\n        // Then\n        XCTAssertNil(encodingError, \"encoding error should be nil\")\n\n        if let destinationFileData = try? Data(contentsOf: destinationFileURL) {\n            let boundary = multipartFormData.boundary\n\n            var expectedFileData = Data()\n            expectedFileData.append(BoundaryGenerator.boundaryData(boundaryType: .initial, boundaryKey: boundary))\n            expectedFileData.append(Data((\n                \"Content-Disposition: form-data; name=\\\"unicorn\\\"; filename=\\\"unicorn.png\\\"\\(crlf)\" +\n                \"Content-Type: image/png\\(crlf)\\(crlf)\").utf8\n            ))\n            expectedFileData.append(unicornImageData.prefix(Int(expectedFileStreamUploadLength)))\n            expectedFileData.append(BoundaryGenerator.boundaryData(boundaryType: .final, boundaryKey: boundary))\n\n            XCTAssertEqual(destinationFileData, expectedFileData, \"file data should match expected file data\")\n        } else {\n            XCTFail(\"file data should not be nil\")\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Tests/MultipartFormDataTests.swift",
+        "location" : {
+          "end_position" : 25461,
+          "start_position" : 23428
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testWritingEncodedStreamBodyPartToDiskRespectingBodyLength",
+      "parameters" : [
+
+      ]
+    },
+    "type" : "Add function refactoring"
+  },
+  "refactoringIndex" : 5,
+  "refactoringType" : "Add function refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/MultipartFormDataTests.swift"
+  ]
+}

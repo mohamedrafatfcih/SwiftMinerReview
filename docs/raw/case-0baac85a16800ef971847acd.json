@@ -1,0 +1,92 @@
+{
+  "caseID" : "case-0baac85a16800ef971847acd",
+  "commitHash" : "822b47b8776e01659f931e4f4206a76349043d98",
+  "commitMessage" : "Fix --format yaml and toml output (#1653)\n\n- Closes #1528.\n- Several commands (`builder status`, `image list`,\n  `stats`, `system df`, `system status`) advertised\n  `--format yaml` and `--format toml` but only handled\n  `json`, and every other format fell through to the\n  table. With this PR, we now route them through one\n  shared renderer with an exhaustive switch over the\n  format enum, so a missing format would now be a\n  compile error, and not just fail silently.\n- Since TOML has no top level array, TOML output\n  now wraps list payloads under an `items` key,\n  because otherwise it was returning nothing for lists.\n- `stats` now prints one static result for machine\n  readable formats instead of opening its live table\n  view.\n- `builder status` now returns an empty list for\n  json/yaml/toml when no builder is running, instead \n  of the unparseable \"builder is not running\" text.\n  The table view keeps the message.\n- with `--quiet` and no builder it now exits 0 with\n  no output, earlier it exited non-zero.",
+  "commitURL" : "https://github.com/apple/container/commit/822b47b8776e01659f931e4f4206a76349043d98",
+  "durationSeconds" : 13.978502988815308,
+  "entityNames" : [
+    "[StatsSnapshot]",
+    "printStatsTable",
+    "statsData"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "additional_trailing_closures" : [
+
+      ],
+      "arguments" : [
+        {
+          "value" : "formatter.format()"
+        }
+      ],
+      "call" : "print",
+      "has_self_reference" : false,
+      "internal_inline_calls" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+        "location" : {
+          "end_position" : 11460,
+          "start_position" : 11422
+        }
+      }
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "let headerRow = [\"Container ID\", \"Cpu %\", \"Memory Usage\", \"Net Rx/Tx\", \"Block I/O\", \"Pids\"]\n            let notAvailable = \"--\"\n            var rows = [headerRow]\n\n            for snapshot in statsData {\n                var row = [snapshot.container.id]\n                let stats1 = snapshot.stats1\n                let stats2 = snapshot.stats2\n\n                if let cpuUsageUsec1 = stats1.cpuUsageUsec, let cpuUsageUsec2 = stats2.cpuUsageUsec {\n                    let cpuPercent = Self.calculateCPUPercent(\n                        cpuUsage1: .microseconds(cpuUsageUsec1),\n                        cpuUsage2: .microseconds(cpuUsageUsec2),\n                        timeInterval: .seconds(2)\n                    )\n                    let cpuStr = String(format: \"%.2f%%\", cpuPercent)\n                    row.append(cpuStr)\n                } else {\n                    row.append(notAvailable)\n                }\n\n                let memUsageStr = stats2.memoryUsageBytes.map { Self.formatBytes($0) } ?? notAvailable\n                let memLimitStr = stats2.memoryLimitBytes.map { Self.formatBytes($0) } ?? notAvailable\n                row.append(\"\\(memUsageStr) / \\(memLimitStr)\")\n\n                let netRxStr = stats2.networkRxBytes.map { Self.formatBytes($0) } ?? notAvailable\n                let netTxStr = stats2.networkTxBytes.map { Self.formatBytes($0) } ?? notAvailable\n                row.append(\"\\(netRxStr) / \\(netTxStr)\")\n\n                let blkReadStr = stats2.blockReadBytes.map { Self.formatBytes($0) } ?? notAvailable\n                let blkWriteStr = stats2.blockWriteBytes.map { Self.formatBytes($0) } ?? notAvailable\n                row.append(\"\\(blkReadStr) / \\(blkWriteStr)\")\n\n                let pidsStr = stats2.numProcesses.map { \"\\($0)\" } ?? notAvailable\n                row.append(pidsStr)\n\n                rows.append(row)\n            }\n\n            // Always print header, even if no containers\n            let formatter = TableOutput(rows: rows)\n            print(formatter.format())"
+      },
+      "location_info" : {
+        "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+        "location" : {
+          "end_position" : 11470,
+          "start_position" : 9360
+        }
+      },
+      "modifiers" : [
+        "private",
+        "static"
+      ],
+      "name" : "printStatsTable",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "[StatsSnapshot]"
+          },
+          "is_variadic" : false,
+          "label" : "_",
+          "location_info" : {
+            "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
+            "location" : {
+              "end_position" : 9434,
+              "start_position" : 9406
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "statsData",
+          "order" : 0
+        }
+      ]
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 21,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Sources/ContainerCommands/Container/ContainerStats.swift"
+  ]
+}

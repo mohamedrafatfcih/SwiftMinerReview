@@ -1,0 +1,63 @@
+{
+  "caseID" : "case-4eb86f397d5524a7cbf2af74",
+  "commitHash" : "e20aca820364817e6a16ef0902d8f27d2f6358e8",
+  "commitMessage" : "Normalize JSON output for network and volume resources. (#1624)\n\nNormalize JSON output for network and volume resources. (#1624)\n- Reworks both JSON output presets to use sorted keys, ISO timestamps.\n`compact` is used for `ls` output, and `pretty` is used for `inspect`.\n- Extracts non-DRY option configuration into presets.\n- Closes #1623.",
+  "commitURL" : "https://github.com/apple/container/commit/e20aca820364817e6a16ef0902d8f27d2f6358e8",
+  "durationSeconds" : 9.5567389726638794,
+  "entityNames" : [
+    "testAnonymousVolumeMetadata"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "current_content" : {
+      "depth" : 0,
+      "description" : "#expect(output.contains(\"\\\"creationDate\\\"\"), \"JSON output should use creationDate key\")",
+      "index" : 10
+    },
+    "parent" : {
+      "attributes" : [
+        {
+          "annotation" : {
+            "unsupported" : {
+              "_0" : "Test"
+            }
+          },
+          "arguments" : [
+
+          ]
+        }
+      ],
+      "body" : {
+        "content" : "let testName = getTestName()\n        let containerName = \"\\(testName)_c1\"\n\n        defer {\n            try? doStop(name: containerName)\n            doRemoveIfExists(name: containerName, force: true)\n            if let volumes = try? getAnonymousVolumeNames() {\n                volumes.forEach { doVolumeDeleteIfExists(name: $0) }\n            }\n        }\n\n        // Create container with anonymous volume\n        try doLongRun(name: containerName, args: [\"-v\", \"/data\"])\n        try waitForContainerRunning(containerName)\n\n        // Get the anonymous volume\n        let volumeNames = try getAnonymousVolumeNames()\n        #expect(volumeNames.count == 1, \"should have exactly one anonymous volume\")\n        let volumeName = volumeNames[0]\n\n        // Inspect volume in JSON format\n        let (_, output, error, status) = try run(arguments: [\"volume\", \"list\", \"--format\", \"json\"])\n        #expect(status == 0, \"volume list should succeed: \\(error)\")\n\n        #expect(output.contains(\"\\\"creationDate\\\"\"), \"JSON output should use creationDate key\")\n        #expect(!output.contains(\"\\\"createdAt\\\"\"), \"JSON output must not use deprecated createdAt key\")\n\n        // Parse JSON to verify metadata\n        let data = output.data(using: .utf8)!\n        let decoder = JSONDecoder()\n        decoder.dateDecodingStrategy = .iso8601\n        let volumes = try decoder.decode([VolumeResource].self, from: data)\n\n        let anonVolume = volumes.first { $0.name == volumeName }\n        #expect(anonVolume != nil, \"should find anonymous volume in list\")\n\n        if let vol = anonVolume {\n            #expect(vol.isAnonymous == true, \"isAnonymous should be true\")\n        }"
+      },
+      "location_info" : {
+        "file_path" : "Tests/CLITests/Subcommands/Volumes/TestCLIAnonymousVolumes.swift",
+        "location" : {
+          "end_position" : 12733,
+          "start_position" : 11004
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "testAnonymousVolumeMetadata",
+      "parameters" : [
+
+      ],
+      "specifiers_decl" : {
+        "description" : "throws",
+        "throws_specifier" : "throws"
+      }
+    },
+    "type" : "Add statement refactoring"
+  },
+  "refactoringIndex" : 41,
+  "refactoringType" : "Add statement refactoring",
+  "repoID" : "apple-container",
+  "repoName" : "apple/container",
+  "repoURL" : "https://github.com/apple/container.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/CLITests/Subcommands/Volumes/TestCLIAnonymousVolumes.swift"
+  ]
+}

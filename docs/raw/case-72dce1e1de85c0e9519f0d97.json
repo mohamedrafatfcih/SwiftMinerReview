@@ -1,0 +1,91 @@
+{
+  "caseID" : "case-72dce1e1de85c0e9519f0d97",
+  "commitHash" : "061caec33de0fa9544a2e05918716b812f49bad7",
+  "commitMessage" : "feat: added ATA SMART reader to the Disk module (#3357)\n",
+  "commitURL" : "https://github.com/exelban/stats/commit/061caec33de0fa9544a2e05918716b812f49bad7",
+  "durationSeconds" : 4.2244679927825928,
+  "entityNames" : [
+    "BSDName",
+    "String",
+    "defer",
+    "getSMARTDetails",
+    "smart_t?"
+  ],
+  "rawRefactoring" : {
+    "category" : "basic",
+    "old_content" : {
+      "body" : {
+        "content" : "if smartInterface != nil {\n                _ = pluginInterface?.pointee?.pointee.Release(smartInterface)\n            }"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Disk/readers.swift",
+        "location" : {
+          "end_position" : 8999,
+          "start_position" : 8842
+        }
+      },
+      "name" : "defer"
+    },
+    "parent" : {
+      "attributes" : [
+
+      ],
+      "body" : {
+        "content" : "guard self.SMART else { return nil }\n        \n        var disk = IOServiceGetMatchingService(kIOMainPortDefault, IOBSDNameMatching(kIOMainPortDefault, 0, BSDName.cString(using: .utf8)))\n        guard disk != kIOReturnSuccess else { return nil }\n        defer { IOObjectRelease(disk) }\n        \n        var parent = disk\n        while IOObjectConformsTo(disk, kIOBlockStorageDeviceClass) == 0 {\n            let error = IORegistryEntryGetParentEntry(disk, kIOServicePlane, &parent)\n            if error != kIOReturnSuccess || parent == kIOReturnSuccess { return nil }\n            disk = parent\n        }\n        \n        guard IOObjectConformsTo(disk, kIOBlockStorageDeviceClass) > 0,\n              let raw = IORegistryEntryCreateCFProperty(disk, \"NVMe SMART Capable\" as CFString, kCFAllocatorDefault, 0),\n              let val = raw.takeRetainedValue() as? Bool, val else {\n            return nil\n        }\n        \n        var pluginInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?\n        var smartInterface: UnsafeMutablePointer<UnsafeMutablePointer<IONVMeSMARTInterface>?>?\n        var score: Int32  = 0\n        \n        var result = IOCreatePlugInInterfaceForService(disk, kIONVMeSMARTUserClientTypeID, kIOCFPlugInInterfaceID, &pluginInterface, &score)\n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if pluginInterface != nil {\n                IODestroyPlugInInterface(pluginInterface)\n            }\n        }\n        \n        result = withUnsafeMutablePointer(to: &smartInterface) {\n            $0.withMemoryRebound(to: Optional<LPVOID>.self, capacity: 1) {\n                pluginInterface?.pointee?.pointee.QueryInterface(pluginInterface, CFUUIDGetUUIDBytes(kIONVMeSMARTInterfaceID), $0) ?? KERN_NOT_FOUND\n            }\n        }\n        \n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if smartInterface != nil {\n                _ = pluginInterface?.pointee?.pointee.Release(smartInterface)\n            }\n        }\n        \n        guard let smart = smartInterface?.pointee else { return nil }\n        var smartData: nvme_smart_log = nvme_smart_log()\n        guard smart.pointee.SMARTReadData(smartInterface, &smartData) == kIOReturnSuccess else { return nil }\n        \n        let temperatures: [UInt8] = [UInt8(smartData.temperature.1), UInt8(smartData.temperature.0)]\n        var temperature: UInt16 = 0\n        let data = NSData(bytes: temperatures, length: 2)\n        data.getBytes(&temperature, length: 2)\n        \n        let dataUnitsRead = self.extractUInt128(smartData.data_units_read)\n        let dataUnitsWritten = self.extractUInt128(smartData.data_units_written)\n        let bytesPerDataUnit: Int64 = 512 * 1000\n        \n        let powerCycles = withUnsafeBytes(of: smartData.power_cycles) { $0.load(as: UInt32.self) }\n        let powerOnHours = withUnsafeBytes(of: smartData.power_on_hours) { $0.load(as: UInt32.self) }\n        \n        return smart_t(\n            temperature: Int(UInt16(bigEndian: temperature) - 273),\n            life: 100 - Int(smartData.percent_used),\n            totalRead: dataUnitsRead * bytesPerDataUnit,\n            totalWritten: dataUnitsWritten * bytesPerDataUnit,\n            powerCycles: Int(powerCycles),\n            powerOnHours: Int(powerOnHours)\n        )"
+      },
+      "location_info" : {
+        "file_path" : "Modules/Disk/readers.swift",
+        "location" : {
+          "end_position" : 10297,
+          "start_position" : 6885
+        }
+      },
+      "modifiers" : [
+        "private"
+      ],
+      "name" : "getSMARTDetails",
+      "parameters" : [
+        {
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "is_variadic" : false,
+          "label" : "for",
+          "location_info" : {
+            "file_path" : "Modules/Disk/readers.swift",
+            "location" : {
+              "end_position" : 6943,
+              "start_position" : 6924
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "BSDName",
+          "order" : 0
+        }
+      ],
+      "return_clause" : {
+        "data_type" : {
+          "is_optional" : true,
+          "name" : "smart_t?"
+        },
+        "description" : "-> smart_t?"
+      }
+    },
+    "type" : "Remove statement refactoring"
+  },
+  "refactoringIndex" : 10,
+  "refactoringType" : "Remove statement refactoring",
+  "repoID" : "exelban-stats",
+  "repoName" : "exelban/stats",
+  "repoURL" : "https://github.com/exelban/stats.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Modules/Disk/readers.swift"
+  ]
+}

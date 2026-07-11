@@ -1,0 +1,1093 @@
+{
+  "caseID" : "case-ee521e07d8a2bc7746b079c1",
+  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds" : 52.782080054283142,
+  "entityNames" : [
+    "Compression",
+    "HTTPMethod",
+    "Image",
+    "Int",
+    "Path",
+    "String",
+    "basicAuth",
+    "bytes"
+  ],
+  "rawRefactoring" : {
+    "added_case" : {
+      "attributes" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/TestHelpers.swift",
+        "location" : {
+          "end_position" : 2423,
+          "start_position" : 2401
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "infinite",
+      "parameters" : [
+
+      ]
+    },
+    "category" : "basic",
+    "enum" : {
+      "attributes" : [
+
+      ],
+      "cases" : [
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2022,
+              "start_position" : 1963
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "basicAuth",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2005,
+                  "start_position" : 1987
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "username",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2021,
+                  "start_position" : 2005
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "password",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2053,
+              "start_position" : 2022
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "bytes",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2052,
+                  "start_position" : 2042
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "count",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2072,
+              "start_position" : 2053
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "cache",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2122,
+              "start_position" : 2072
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "chunked",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2106,
+                  "start_position" : 2094
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "count",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "40"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2121,
+                  "start_position" : 2106
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "delay",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2160,
+              "start_position" : 2122
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "compression",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Compression"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2159,
+                  "start_position" : 2148
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2194,
+              "start_position" : 2160
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "delay",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2193,
+                  "start_position" : 2180
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "interval",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2276,
+              "start_position" : 2194
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "digestAuth",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "auth"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2241,
+                  "start_position" : 2219
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "qop",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2259,
+                  "start_position" : 2241
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "username",
+              "order" : 1
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2275,
+                  "start_position" : 2259
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "password",
+              "order" : 2
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2310,
+              "start_position" : 2276
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "download",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2309,
+                  "start_position" : 2299
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "count",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2375,
+              "start_position" : 2310
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "hiddenBasicAuth",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2358,
+                  "start_position" : 2340
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "username",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "String"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2374,
+                  "start_position" : 2358
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "password",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2401,
+              "start_position" : 2375
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "image",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Image"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2400,
+                  "start_position" : 2395
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2423,
+              "start_position" : 2401
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "infinite",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2439,
+              "start_position" : 2423
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "ip",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2471,
+              "start_position" : 2439
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "method",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "HTTPMethod"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2470,
+                  "start_position" : 2460
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2522,
+              "start_position" : 2471
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "payloads",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2506,
+                  "start_position" : 2494
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "count",
+              "order" : 0
+            },
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "initializer_clause" : {
+                "has_self_reference" : false,
+                "value" : {
+                  "other" : {
+                    "_0" : "40"
+                  }
+                }
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2521,
+                  "start_position" : 2506
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "delay",
+              "order" : 1
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2556,
+              "start_position" : 2522
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "redirect",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2555,
+                  "start_position" : 2545
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "count",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2580,
+              "start_position" : 2556
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "redirectTo",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2609,
+              "start_position" : 2580
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "responseHeaders",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2634,
+              "start_position" : 2609
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "status",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2633,
+                  "start_position" : 2630
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2666,
+              "start_position" : 2634
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "stream",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2665,
+                  "start_position" : 2655
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "count",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2686,
+              "start_position" : 2666
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "upload",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2709,
+              "start_position" : 2686
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "websocket",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2742,
+              "start_position" : 2709
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "websocketCount",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2741,
+                  "start_position" : 2738
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2769,
+              "start_position" : 2742
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "websocketEcho",
+          "parameters" : [
+
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2806,
+              "start_position" : 2769
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "websocketPingCount",
+          "parameters" : [
+            {
+              "attributes" : [
+
+              ],
+              "data_type" : {
+                "is_optional" : false,
+                "name" : "Int"
+              },
+              "is_variadic" : false,
+              "location_info" : {
+                "file_path" : "Tests/TestHelpers.swift",
+                "location" : {
+                  "end_position" : 2805,
+                  "start_position" : 2802
+                }
+              },
+              "modifiers" : [
+
+              ],
+              "name" : "",
+              "order" : 0
+            }
+          ]
+        },
+        {
+          "attributes" : [
+
+          ],
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 2823,
+              "start_position" : 2806
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "xml",
+          "parameters" : [
+
+          ]
+        }
+      ],
+      "classes" : [
+
+      ],
+      "conformed_types" : [
+
+      ],
+      "enums" : [
+
+      ],
+      "functions" : [
+
+      ],
+      "initializers" : [
+
+      ],
+      "location_info" : {
+        "file_path" : "Tests/TestHelpers.swift",
+        "location" : {
+          "end_position" : 4845,
+          "start_position" : 1946
+        }
+      },
+      "modifiers" : [
+
+      ],
+      "name" : "Path",
+      "protocols" : [
+
+      ],
+      "structs" : [
+
+      ],
+      "subscripts" : [
+
+      ],
+      "type_aliases" : [
+
+      ],
+      "variables" : [
+        {
+          "accessors" : [
+
+          ],
+          "attributes" : [
+
+          ],
+          "data_type" : {
+            "is_optional" : false,
+            "name" : "String"
+          },
+          "getter_block" : {
+            "body" : {
+              "content" : "switch self {\n            case let .basicAuth(username: username, password: password):\n                \"/basic-auth/\\(username)/\\(password)\"\n            case let .bytes(count):\n                \"/bytes/\\(count)\"\n            case .cache:\n                \"/cache\"\n            case let .chunked(count, delay):\n                \"/chunked/\\(count)/\\(delay)\"\n            case let .compression(compression):\n                \"/\\(compression.rawValue)\"\n            case let .delay(interval):\n                \"/delay/\\(interval)\"\n            case let .digestAuth(qop, username, password):\n                \"/digest-auth/\\(qop)/\\(username)/\\(password)\"\n            case let .download(count):\n                \"/download/\\(count)\"\n            case let .hiddenBasicAuth(username, password):\n                \"/hidden-basic-auth/\\(username)/\\(password)\"\n            case let .image(type):\n                \"/image/\\(type.rawValue)\"\n            case .infinite:\n                \"/infinite\"\n            case .ip:\n                \"/ip\"\n            case let .method(method):\n                \"/\\(method.rawValue.lowercased())\"\n            case let .payloads(count, delay):\n                \"/payloads/\\(count)/\\(delay)\"\n            case let .redirect(count):\n                \"/redirect/\\(count)\"\n            case .redirectTo:\n                \"/redirect-to\"\n            case .responseHeaders:\n                \"/response-headers\"\n            case let .status(code):\n                \"/status/\\(code)\"\n            case let .stream(count):\n                \"/stream/\\(count)\"\n            case .upload:\n                \"/upload\"\n            case .websocket:\n                \"/websocket\"\n            case let .websocketCount(count):\n                \"/websocket/payloads/\\(count)\"\n            case .websocketEcho:\n                \"/websocket/echo\"\n            case let .websocketPingCount(count):\n                \"/websocket/ping/\\(count)\"\n            case .xml:\n                \"/xml\"\n            }"
+            },
+            "modifier" : "get"
+          },
+          "is_constant" : false,
+          "location_info" : {
+            "file_path" : "Tests/TestHelpers.swift",
+            "location" : {
+              "end_position" : 4839,
+              "start_position" : 2837
+            }
+          },
+          "modifiers" : [
+
+          ],
+          "name" : "string"
+        }
+      ]
+    },
+    "type" : "Add Enum Case refactoring"
+  },
+  "refactoringIndex" : 630,
+  "refactoringType" : "Add Enum Case refactoring",
+  "repoID" : "alamofire-alamofire",
+  "repoName" : "Alamofire/Alamofire",
+  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
+  "runID" : "app-batch",
+  "swiftPaths" : [
+    "Tests/TestHelpers.swift"
+  ]
+}
