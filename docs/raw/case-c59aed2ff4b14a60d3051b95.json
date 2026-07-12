@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-c59aed2ff4b14a60d3051b95",
-  "commitHash" : "cfc77d53d6aea9863cec0f9db409c4154b5d976b",
-  "commitMessage" : "Various fixes and improvements for v4.0.1 (#769)\n\n- Fixed: display properties reset turns off hardware DDC\r\n- Fixed: brief black screen upon changing space when using shade dimming\r\n- Asynchronous thread-safe debouncing DDC write for smoother sliders\r\n- Improved support for [BetterDummy](https://github.com/waydabber/BetterDummy)\r\n- Better support for common physical dummies identifying as 28E850\r\n- Inert dummy menu sliders are now hidden\r\n- Improved support for nongamma->nongamma mirroring scenarios\r\n- Compiled to run 10.14 (needed some minor changes) - compatibility is unofficial!\r\n- Updated README\r\n- Bumped version number to 4.0.1 (service release)",
-  "commitURL" : "https://github.com/MonitorControl/MonitorControl/commit/cfc77d53d6aea9863cec0f9db409c4154b5d976b",
-  "durationSeconds" : 7.2387109994888306,
-  "entityNames" : [
+  "caseID": "case-c59aed2ff4b14a60d3051b95",
+  "commitHash": "cfc77d53d6aea9863cec0f9db409c4154b5d976b",
+  "commitMessage": "Various fixes and improvements for v4.0.1 (#769)\n\n- Fixed: display properties reset turns off hardware DDC\r\n- Fixed: brief black screen upon changing space when using shade dimming\r\n- Asynchronous thread-safe debouncing DDC write for smoother sliders\r\n- Improved support for [BetterDummy](https://github.com/waydabber/BetterDummy)\r\n- Better support for common physical dummies identifying as 28E850\r\n- Inert dummy menu sliders are now hidden\r\n- Improved support for nongamma->nongamma mirroring scenarios\r\n- Compiled to run 10.14 (needed some minor changes) - compatibility is unofficial!\r\n- Updated README\r\n- Bumped version number to 4.0.1 (service release)",
+  "commitURL": "https://github.com/MonitorControl/MonitorControl/commit/cfc77d53d6aea9863cec0f9db409c4154b5d976b",
+  "durationSeconds": 7.238710999488831,
+  "entityNames": [
     "Bool",
     "Float",
     "noPrefSave",
@@ -12,133 +12,125 @@
     "smooth",
     "value"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "for transientValue in stride(from: currentValue, to: newValue, by: 0.005 * (currentValue > newValue ? -1 : 1)) {\n          guard app.reconfigureID == 0 else {\n            self.swBrightnessSemaphore.signal()\n            return\n          }\n          if self.isVirtual || self.readPrefAsBool(key: .avoidGamma) {\n            _ = DisplayManager.shared.setShadeAlpha(value: 1 - transientValue, displayID: self.identifier)\n          } else {\n            let gammaTableRed = self.defaultGammaTableRed.map { $0 * transientValue }\n            let gammaTableGreen = self.defaultGammaTableGreen.map { $0 * transientValue }\n            let gammaTableBlue = self.defaultGammaTableBlue.map { $0 * transientValue }\n            CGSetDisplayTransferByTable(self.identifier, self.defaultGammaTableSampleCount, gammaTableRed, gammaTableGreen, gammaTableBlue)\n          }\n          Thread.sleep(forTimeInterval: 0.001) // Let's make things quick if not performed in the background\n        }",
-      "index" : 0
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "for transientValue in stride(from: currentValue, to: newValue, by: 0.005 * (currentValue > newValue ? -1 : 1)) {\n          guard app.reconfigureID == 0 else {\n            self.swBrightnessSemaphore.signal()\n            return\n          }\n          if self.isVirtual || self.readPrefAsBool(key: .avoidGamma) {\n            _ = DisplayManager.shared.setShadeAlpha(value: 1 - transientValue, displayID: self.identifier)\n          } else {\n            let gammaTableRed = self.defaultGammaTableRed.map { $0 * transientValue }\n            let gammaTableGreen = self.defaultGammaTableGreen.map { $0 * transientValue }\n            let gammaTableBlue = self.defaultGammaTableBlue.map { $0 * transientValue }\n            CGSetDisplayTransferByTable(self.identifier, self.defaultGammaTableSampleCount, gammaTableRed, gammaTableGreen, gammaTableBlue)\n          }\n          Thread.sleep(forTimeInterval: 0.001) // Let's make things quick if not performed in the background\n        }",
+      "index": 0
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "self.swBrightnessSemaphore.wait()\n    let brightnessValue = min(1, value)\n    var currentValue = self.readPrefAsFloat(key: .SwBrightness)\n    if !noPrefSave {\n      self.savePref(brightnessValue, key: .SwBrightness)\n    }\n    guard !self.isDummy else {\n      self.swBrightnessSemaphore.signal()\n      return true\n    }\n    var newValue = brightnessValue\n    currentValue = self.swBrightnessTransform(value: currentValue)\n    newValue = self.swBrightnessTransform(value: newValue)\n    if smooth {\n      DispatchQueue.global(qos: .userInteractive).async {\n        for transientValue in stride(from: currentValue, to: newValue, by: 0.005 * (currentValue > newValue ? -1 : 1)) {\n          guard app.reconfigureID == 0 else {\n            self.swBrightnessSemaphore.signal()\n            return\n          }\n          if self.isVirtual || self.readPrefAsBool(key: .avoidGamma) {\n            _ = DisplayManager.shared.setShadeAlpha(value: 1 - transientValue, displayID: self.identifier)\n          } else {\n            let gammaTableRed = self.defaultGammaTableRed.map { $0 * transientValue }\n            let gammaTableGreen = self.defaultGammaTableGreen.map { $0 * transientValue }\n            let gammaTableBlue = self.defaultGammaTableBlue.map { $0 * transientValue }\n            CGSetDisplayTransferByTable(self.identifier, self.defaultGammaTableSampleCount, gammaTableRed, gammaTableGreen, gammaTableBlue)\n          }\n          Thread.sleep(forTimeInterval: 0.001) // Let's make things quick if not performed in the background\n        }\n      }\n    } else {\n      if self.isVirtual || self.readPrefAsBool(key: .avoidGamma) {\n        self.swBrightnessSemaphore.signal()\n        return DisplayManager.shared.setShadeAlpha(value: 1 - newValue, displayID: self.identifier)\n      } else {\n        let gammaTableRed = self.defaultGammaTableRed.map { $0 * newValue }\n        let gammaTableGreen = self.defaultGammaTableGreen.map { $0 * newValue }\n        let gammaTableBlue = self.defaultGammaTableBlue.map { $0 * newValue }\n        DisplayManager.shared.moveGammaActivityEnforcer(displayID: self.identifier)\n        CGSetDisplayTransferByTable(self.identifier, self.defaultGammaTableSampleCount, gammaTableRed, gammaTableGreen, gammaTableBlue)\n        DisplayManager.shared.enforceGammaActivity()\n      }\n    }\n    self.swBrightnessSemaphore.signal()\n    return true"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "self.swBrightnessSemaphore.wait()\n    let brightnessValue = min(1, value)\n    var currentValue = self.readPrefAsFloat(key: .SwBrightness)\n    if !noPrefSave {\n      self.savePref(brightnessValue, key: .SwBrightness)\n    }\n    guard !self.isDummy else {\n      self.swBrightnessSemaphore.signal()\n      return true\n    }\n    var newValue = brightnessValue\n    currentValue = self.swBrightnessTransform(value: currentValue)\n    newValue = self.swBrightnessTransform(value: newValue)\n    if smooth {\n      DispatchQueue.global(qos: .userInteractive).async {\n        for transientValue in stride(from: currentValue, to: newValue, by: 0.005 * (currentValue > newValue ? -1 : 1)) {\n          guard app.reconfigureID == 0 else {\n            self.swBrightnessSemaphore.signal()\n            return\n          }\n          if self.isVirtual || self.readPrefAsBool(key: .avoidGamma) {\n            _ = DisplayManager.shared.setShadeAlpha(value: 1 - transientValue, displayID: self.identifier)\n          } else {\n            let gammaTableRed = self.defaultGammaTableRed.map { $0 * transientValue }\n            let gammaTableGreen = self.defaultGammaTableGreen.map { $0 * transientValue }\n            let gammaTableBlue = self.defaultGammaTableBlue.map { $0 * transientValue }\n            CGSetDisplayTransferByTable(self.identifier, self.defaultGammaTableSampleCount, gammaTableRed, gammaTableGreen, gammaTableBlue)\n          }\n          Thread.sleep(forTimeInterval: 0.001) // Let's make things quick if not performed in the background\n        }\n      }\n    } else {\n      if self.isVirtual || self.readPrefAsBool(key: .avoidGamma) {\n        self.swBrightnessSemaphore.signal()\n        return DisplayManager.shared.setShadeAlpha(value: 1 - newValue, displayID: self.identifier)\n      } else {\n        let gammaTableRed = self.defaultGammaTableRed.map { $0 * newValue }\n        let gammaTableGreen = self.defaultGammaTableGreen.map { $0 * newValue }\n        let gammaTableBlue = self.defaultGammaTableBlue.map { $0 * newValue }\n        DisplayManager.shared.moveGammaActivityEnforcer(displayID: self.identifier)\n        CGSetDisplayTransferByTable(self.identifier, self.defaultGammaTableSampleCount, gammaTableRed, gammaTableGreen, gammaTableBlue)\n        DisplayManager.shared.enforceGammaActivity()\n      }\n    }\n    self.swBrightnessSemaphore.signal()\n    return true"
       },
-      "location_info" : {
-        "file_path" : "MonitorControl/Model/Display.swift",
-        "location" : {
-          "end_position" : 10916,
-          "start_position" : 8454
+      "location_info": {
+        "file_path": "MonitorControl/Model/Display.swift",
+        "location": {
+          "end_position": 10916,
+          "start_position": 8454,
+          "start_line": 209,
+          "end_line": 258
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "setSwBrightness",
-      "parameters" : [
+      "modifiers": [],
+      "name": "setSwBrightness",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Float"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Float"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/Display.swift",
-            "location" : {
-              "end_position" : 8495,
-              "start_position" : 8479
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "MonitorControl/Model/Display.swift",
+            "location": {
+              "end_position": 8495,
+              "start_position": 8479,
+              "start_line": 211,
+              "end_line": 211
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "value",
-          "order" : 0
+          "modifiers": [],
+          "name": "value",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/Display.swift",
-            "location" : {
-              "end_position" : 8517,
-              "start_position" : 8495
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/Display.swift",
+            "location": {
+              "end_position": 8517,
+              "start_position": 8495,
+              "start_line": 211,
+              "end_line": 211
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "smooth",
-          "order" : 1
+          "modifiers": [],
+          "name": "smooth",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/Display.swift",
-            "location" : {
-              "end_position" : 8541,
-              "start_position" : 8517
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/Display.swift",
+            "location": {
+              "end_position": 8541,
+              "start_position": 8517,
+              "start_line": 211,
+              "end_line": 211
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "noPrefSave",
-          "order" : 2
+          "modifiers": [],
+          "name": "noPrefSave",
+          "order": 2
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "Bool"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "Bool"
         },
-        "description" : "-> Bool"
+        "description": "-> Bool"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 1,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "monitorcontrol-monitorcontrol",
-  "repoName" : "MonitorControl/MonitorControl",
-  "repoURL" : "https://github.com/MonitorControl/MonitorControl.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 1,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "monitorcontrol-monitorcontrol",
+  "repoName": "MonitorControl/MonitorControl",
+  "repoURL": "https://github.com/MonitorControl/MonitorControl.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "MonitorControl/Model/Display.swift"
   ]
 }

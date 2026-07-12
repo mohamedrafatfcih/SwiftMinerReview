@@ -1,64 +1,58 @@
 {
-  "caseID" : "case-885ab00ed9b0ebd8f76c54e7",
-  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "durationSeconds" : 73.471343994140625,
-  "entityNames" : [
+  "caseID": "case-885ab00ed9b0ebd8f76c54e7",
+  "commitHash": "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage": "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds": 73.47134399414062,
+  "entityNames": [
     "testThatDataStreamWorksCorrectlyWithMultipleSerialQueues"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "annotation" : {
-        "unsupported" : {
-          "_0" : "MainActor"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "annotation": {
+        "unsupported": {
+          "_0": "MainActor"
         }
       },
-      "arguments" : [
-
-      ]
+      "arguments": []
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "MainActor"
+          "annotation": {
+            "unsupported": {
+              "_0": "MainActor"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "let requestQueue = DispatchQueue(label: \"org.alamofire.testRequestQueue\")\n        let serializationQueue = DispatchQueue(label: \"org.alamofire.testSerializationQueue\")\n        let session = Session(requestQueue: requestQueue, serializationQueue: serializationQueue)\n        var firstResponse: HTTPURLResponse?\n        var firstDecodedResponse: TestResponse?\n        var firstDecodingError: AFError?\n        var firstStreamOnMain = false\n        var firstCompleteOnMain = false\n        let firstStream = expectation(description: \"first stream\")\n        let firstDidReceive = expectation(description: \"first stream did receive\")\n        let firstDidComplete = expectation(description: \"first stream complete\")\n        var secondResponse: HTTPURLResponse?\n        var secondDecodedResponse: TestResponse?\n        var secondDecodingError: AFError?\n        var secondStreamOnMain = false\n        var secondCompleteOnMain = false\n        let secondStream = expectation(description: \"second stream\")\n        let secondDidReceive = expectation(description: \"second stream did receive\")\n        let secondDidComplete = expectation(description: \"second stream complete\")\n\n        // When\n        session.streamRequest(.stream(1))\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case let .stream(result):\n                    firstStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(value):\n                        firstDecodedResponse = value\n                    case let .failure(error):\n                        firstDecodingError = error\n                    }\n                    firstStream.fulfill()\n                    firstDidReceive.fulfill()\n                case let .complete(completion):\n                    firstCompleteOnMain = Thread.isMainThread\n                    firstResponse = completion.response\n                    firstDidComplete.fulfill()\n                }\n            }\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case let .stream(result):\n                    secondStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(value):\n                        secondDecodedResponse = value\n                    case let .failure(error):\n                        secondDecodingError = error\n                    }\n                    secondStream.fulfill()\n                    secondDidReceive.fulfill()\n                case let .complete(completion):\n                    secondCompleteOnMain = Thread.isMainThread\n                    secondResponse = completion.response\n                    secondDidComplete.fulfill()\n                }\n            }\n\n        wait(for: [firstStream, secondStream], timeout: timeout, enforceOrder: true)\n        // Cannot test order of completion events, as one may have been enqueued while the other executed directly.\n        wait(for: [firstDidReceive, firstDidComplete], timeout: timeout, enforceOrder: true)\n        wait(for: [secondDidReceive, secondDidComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertTrue(firstStreamOnMain)\n        XCTAssertTrue(firstCompleteOnMain)\n        XCTAssertNotNil(firstDecodedResponse)\n        XCTAssertEqual(firstResponse?.statusCode, 200)\n        XCTAssertNil(firstDecodingError)\n        XCTAssertTrue(secondStreamOnMain)\n        XCTAssertTrue(secondCompleteOnMain)\n        XCTAssertNotNil(secondDecodedResponse)\n        XCTAssertEqual(secondResponse?.statusCode, 200)\n        XCTAssertNil(secondDecodingError)"
+      "body": {
+        "content": "let requestQueue = DispatchQueue(label: \"org.alamofire.testRequestQueue\")\n        let serializationQueue = DispatchQueue(label: \"org.alamofire.testSerializationQueue\")\n        let session = Session(requestQueue: requestQueue, serializationQueue: serializationQueue)\n        var firstResponse: HTTPURLResponse?\n        var firstDecodedResponse: TestResponse?\n        var firstDecodingError: AFError?\n        var firstStreamOnMain = false\n        var firstCompleteOnMain = false\n        let firstStream = expectation(description: \"first stream\")\n        let firstDidReceive = expectation(description: \"first stream did receive\")\n        let firstDidComplete = expectation(description: \"first stream complete\")\n        var secondResponse: HTTPURLResponse?\n        var secondDecodedResponse: TestResponse?\n        var secondDecodingError: AFError?\n        var secondStreamOnMain = false\n        var secondCompleteOnMain = false\n        let secondStream = expectation(description: \"second stream\")\n        let secondDidReceive = expectation(description: \"second stream did receive\")\n        let secondDidComplete = expectation(description: \"second stream complete\")\n\n        // When\n        session.streamRequest(.stream(1))\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case let .stream(result):\n                    firstStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(value):\n                        firstDecodedResponse = value\n                    case let .failure(error):\n                        firstDecodingError = error\n                    }\n                    firstStream.fulfill()\n                    firstDidReceive.fulfill()\n                case let .complete(completion):\n                    firstCompleteOnMain = Thread.isMainThread\n                    firstResponse = completion.response\n                    firstDidComplete.fulfill()\n                }\n            }\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case let .stream(result):\n                    secondStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(value):\n                        secondDecodedResponse = value\n                    case let .failure(error):\n                        secondDecodingError = error\n                    }\n                    secondStream.fulfill()\n                    secondDidReceive.fulfill()\n                case let .complete(completion):\n                    secondCompleteOnMain = Thread.isMainThread\n                    secondResponse = completion.response\n                    secondDidComplete.fulfill()\n                }\n            }\n\n        wait(for: [firstStream, secondStream], timeout: timeout, enforceOrder: true)\n        // Cannot test order of completion events, as one may have been enqueued while the other executed directly.\n        wait(for: [firstDidReceive, firstDidComplete], timeout: timeout, enforceOrder: true)\n        wait(for: [secondDidReceive, secondDidComplete], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertTrue(firstStreamOnMain)\n        XCTAssertTrue(firstCompleteOnMain)\n        XCTAssertNotNil(firstDecodedResponse)\n        XCTAssertEqual(firstResponse?.statusCode, 200)\n        XCTAssertNil(firstDecodingError)\n        XCTAssertTrue(secondStreamOnMain)\n        XCTAssertTrue(secondCompleteOnMain)\n        XCTAssertNotNil(secondDecodedResponse)\n        XCTAssertEqual(secondResponse?.statusCode, 200)\n        XCTAssertNil(secondDecodingError)"
       },
-      "location_info" : {
-        "file_path" : "Tests/DataStreamTests.swift",
-        "location" : {
-          "end_position" : 44518,
-          "start_position" : 40711
+      "location_info": {
+        "file_path": "Tests/DataStreamTests.swift",
+        "location": {
+          "end_position": 44518,
+          "start_position": 40711,
+          "start_line": 1055,
+          "end_line": 1135
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatDataStreamWorksCorrectlyWithMultipleSerialQueues",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "testThatDataStreamWorksCorrectlyWithMultipleSerialQueues",
+      "parameters": []
     },
-    "type" : "Add attribute refactoring"
+    "type": "Add attribute refactoring"
   },
-  "refactoringIndex" : 631,
-  "refactoringType" : "Add attribute refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 631,
+  "refactoringType": "Add attribute refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/DataStreamTests.swift"
   ]
 }

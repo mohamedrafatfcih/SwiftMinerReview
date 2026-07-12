@@ -1,89 +1,83 @@
 {
-  "caseID" : "case-3c7223c0d58faa4292864e86",
-  "commitHash" : "2df1353a14fbe67121c58172697fc3fe792e6274",
-  "commitMessage" : "ui: add docked osc and titlebar option\n",
-  "commitURL" : "https://github.com/iina/iina/commit/2df1353a14fbe67121c58172697fc3fe792e6274",
-  "durationSeconds" : 15.105790019035339,
-  "entityNames" : [
+  "caseID": "case-3c7223c0d58faa4292864e86",
+  "commitHash": "2df1353a14fbe67121c58172697fc3fe792e6274",
+  "commitMessage": "ui: add docked osc and titlebar option\n",
+  "commitURL": "https://github.com/iina/iina/commit/2df1353a14fbe67121c58172697fc3fe792e6274",
+  "durationSeconds": 15.10579001903534,
+  "entityNames": [
     "Preference.OSCPosition",
     "newPosition",
     "setupOnScreenController"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
-
-      ],
-      "call" : "removeTitlebarViewFromFadeableViews",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "iina/MainWindowController.swift",
-        "location" : {
-          "end_position" : 29800,
-          "start_position" : 29756
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "additional_trailing_closures": [],
+      "arguments": [],
+      "call": "removeTitlebarViewFromFadeableViews",
+      "has_self_reference": false,
+      "internal_inline_calls": [],
+      "location_info": {
+        "file_path": "iina/MainWindowController.swift",
+        "location": {
+          "end_position": 29800,
+          "start_position": 29756,
+          "start_line": 813,
+          "end_line": 814
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard !oscIsInitialized || oscPosition != newPosition else { return }\n    oscIsInitialized = true\n\n    let isSwitchingToTop = newPosition == .top\n    let isSwitchingFromTop = oscPosition == .top\n    let isFloating = newPosition == .floating\n\n    if let cb = currentControlBar {\n      // remove current osc view from fadeable views\n      fadeableViews = fadeableViews.filter { $0 != cb }\n    }\n\n    // reset\n    [oscFloatingView, oscBottomView].forEach { $0.isHidden = true }\n\n    oscFloatingView.isDragging = false\n\n    // detach all fragment views\n    [oscFloatingView.oscTopView, titleBarView.oscView, oscBottomView.oscView].forEach { stackView in\n      stackView!.views.forEach {\n        stackView!.removeView($0)\n      }\n    }\n    [fragSliderView, fragControlView, fragToolbarView, fragVolumeView].forEach {\n        $0!.removeFromSuperview()\n    }\n\n    let isInFullScreen = fsState.isFullscreen\n    titleBarView.update(hasOSC: isSwitchingToTop, inFullScreen: isInFullScreen)\n\n    if isSwitchingToTop && isInFullScreen {\n      addBackTitlebarViewToFadeableViews()\n    }\n    if isSwitchingFromTop && isInFullScreen {\n      titleBarView.isHidden = true\n      removeTitlebarViewFromFadeableViews()\n    }\n\n    oscPosition = newPosition\n\n    // add fragment views\n    switch oscPosition {\n    case .floating:\n      currentControlBar = oscFloatingView\n      fragControlView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragControlViewRightView)\n      oscFloatingView.oscTopView.addView(fragVolumeView, in: .leading)\n      oscFloatingView.oscTopView.addView(fragToolbarView, in: .trailing)\n      oscFloatingView.oscTopView.addView(fragControlView, in: .center)\n\n      // Setting the visibility priority to detach only will cause freeze when resizing the window\n      // (and triggering the detach) in macOS 11.\n      if !isMacOS11 {\n        oscFloatingView.oscTopView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragVolumeView)\n        oscFloatingView.oscTopView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragToolbarView)\n        oscFloatingView.oscTopView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      }\n      oscFloatingView.oscBottomView.addSubview(fragSliderView)\n      Utility.quickConstraints([\"H:|[v]|\", \"V:|[v]|\"], [\"v\": fragSliderView])\n      Utility.quickConstraints([\"H:|-(>=0)-[v]-(>=0)-|\"], [\"v\": fragControlView])\n      // center control bar\n      let cph = Preference.float(for: .controlBarPositionHorizontal)\n      let cpv = Preference.float(for: .controlBarPositionVertical)\n      oscFloatingView.xConstraint.constant = window!.frame.width * CGFloat(cph)\n      oscFloatingView.yConstraint.constant = window!.frame.height * CGFloat(cpv)\n    case .top:\n      let oscTopMainView = titleBarView.oscView!\n      currentControlBar = nil\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewRightView)\n      oscTopMainView.addView(fragVolumeView, in: .trailing)\n      oscTopMainView.addView(fragToolbarView, in: .trailing)\n      oscTopMainView.addView(fragControlView, in: .leading)\n      oscTopMainView.addView(fragSliderView, in: .leading)\n      oscTopMainView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      oscTopMainView.setVisibilityPriority(.mustHold, for: fragSliderView)\n      oscTopMainView.setVisibilityPriority(.detachEarly, for: fragVolumeView)\n      oscTopMainView.setVisibilityPriority(.detachEarlier, for: fragToolbarView)\n    case .bottom:\n      let oscBottomMainView = oscBottomView.oscView!\n      currentControlBar = oscBottomView\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewRightView)\n      oscBottomMainView.addView(fragVolumeView, in: .trailing)\n      oscBottomMainView.addView(fragToolbarView, in: .trailing)\n      oscBottomMainView.addView(fragControlView, in: .leading)\n      oscBottomMainView.addView(fragSliderView, in: .leading)\n      oscBottomMainView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      oscBottomMainView.setVisibilityPriority(.mustHold, for: fragSliderView)\n      oscBottomMainView.setVisibilityPriority(.detachEarly, for: fragVolumeView)\n      oscBottomMainView.setVisibilityPriority(.detachEarlier, for: fragToolbarView)\n    }\n\n    if currentControlBar != nil {\n      fadeableViews.append(currentControlBar!)\n    }\n    showUI()\n\n    if isFloating {\n      fragControlViewMiddleButtons1Constraint.constant = 24\n      fragControlViewMiddleButtons2Constraint.constant = 24\n    } else {\n      fragControlViewMiddleButtons1Constraint.constant = 16\n      fragControlViewMiddleButtons2Constraint.constant = 16\n    }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard !oscIsInitialized || oscPosition != newPosition else { return }\n    oscIsInitialized = true\n\n    let isSwitchingToTop = newPosition == .top\n    let isSwitchingFromTop = oscPosition == .top\n    let isFloating = newPosition == .floating\n\n    if let cb = currentControlBar {\n      // remove current osc view from fadeable views\n      fadeableViews = fadeableViews.filter { $0 != cb }\n    }\n\n    // reset\n    [oscFloatingView, oscBottomView].forEach { $0.isHidden = true }\n\n    oscFloatingView.isDragging = false\n\n    // detach all fragment views\n    [oscFloatingView.oscTopView, titleBarView.oscView, oscBottomView.oscView].forEach { stackView in\n      stackView!.views.forEach {\n        stackView!.removeView($0)\n      }\n    }\n    [fragSliderView, fragControlView, fragToolbarView, fragVolumeView].forEach {\n        $0!.removeFromSuperview()\n    }\n\n    let isInFullScreen = fsState.isFullscreen\n    titleBarView.update(hasOSC: isSwitchingToTop, inFullScreen: isInFullScreen)\n\n    if isSwitchingToTop && isInFullScreen {\n      addBackTitlebarViewToFadeableViews()\n    }\n    if isSwitchingFromTop && isInFullScreen {\n      titleBarView.isHidden = true\n      removeTitlebarViewFromFadeableViews()\n    }\n\n    oscPosition = newPosition\n\n    // add fragment views\n    switch oscPosition {\n    case .floating:\n      currentControlBar = oscFloatingView\n      fragControlView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragControlViewRightView)\n      oscFloatingView.oscTopView.addView(fragVolumeView, in: .leading)\n      oscFloatingView.oscTopView.addView(fragToolbarView, in: .trailing)\n      oscFloatingView.oscTopView.addView(fragControlView, in: .center)\n\n      // Setting the visibility priority to detach only will cause freeze when resizing the window\n      // (and triggering the detach) in macOS 11.\n      if !isMacOS11 {\n        oscFloatingView.oscTopView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragVolumeView)\n        oscFloatingView.oscTopView.setVisibilityPriority(.detachOnlyIfNecessary, for: fragToolbarView)\n        oscFloatingView.oscTopView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      }\n      oscFloatingView.oscBottomView.addSubview(fragSliderView)\n      Utility.quickConstraints([\"H:|[v]|\", \"V:|[v]|\"], [\"v\": fragSliderView])\n      Utility.quickConstraints([\"H:|-(>=0)-[v]-(>=0)-|\"], [\"v\": fragControlView])\n      // center control bar\n      let cph = Preference.float(for: .controlBarPositionHorizontal)\n      let cpv = Preference.float(for: .controlBarPositionVertical)\n      oscFloatingView.xConstraint.constant = window!.frame.width * CGFloat(cph)\n      oscFloatingView.yConstraint.constant = window!.frame.height * CGFloat(cpv)\n    case .top:\n      let oscTopMainView = titleBarView.oscView!\n      currentControlBar = nil\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewRightView)\n      oscTopMainView.addView(fragVolumeView, in: .trailing)\n      oscTopMainView.addView(fragToolbarView, in: .trailing)\n      oscTopMainView.addView(fragControlView, in: .leading)\n      oscTopMainView.addView(fragSliderView, in: .leading)\n      oscTopMainView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      oscTopMainView.setVisibilityPriority(.mustHold, for: fragSliderView)\n      oscTopMainView.setVisibilityPriority(.detachEarly, for: fragVolumeView)\n      oscTopMainView.setVisibilityPriority(.detachEarlier, for: fragToolbarView)\n    case .bottom:\n      let oscBottomMainView = oscBottomView.oscView!\n      currentControlBar = oscBottomView\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewLeftView)\n      fragControlView.setVisibilityPriority(.notVisible, for: fragControlViewRightView)\n      oscBottomMainView.addView(fragVolumeView, in: .trailing)\n      oscBottomMainView.addView(fragToolbarView, in: .trailing)\n      oscBottomMainView.addView(fragControlView, in: .leading)\n      oscBottomMainView.addView(fragSliderView, in: .leading)\n      oscBottomMainView.setClippingResistancePriority(.defaultLow, for: .horizontal)\n      oscBottomMainView.setVisibilityPriority(.mustHold, for: fragSliderView)\n      oscBottomMainView.setVisibilityPriority(.detachEarly, for: fragVolumeView)\n      oscBottomMainView.setVisibilityPriority(.detachEarlier, for: fragToolbarView)\n    }\n\n    if currentControlBar != nil {\n      fadeableViews.append(currentControlBar!)\n    }\n    showUI()\n\n    if isFloating {\n      fragControlViewMiddleButtons1Constraint.constant = 24\n      fragControlViewMiddleButtons2Constraint.constant = 24\n    } else {\n      fragControlViewMiddleButtons1Constraint.constant = 16\n      fragControlViewMiddleButtons2Constraint.constant = 16\n    }"
       },
-      "location_info" : {
-        "file_path" : "iina/MainWindowController.swift",
-        "location" : {
-          "end_position" : 33474,
-          "start_position" : 28505
+      "location_info": {
+        "file_path": "iina/MainWindowController.swift",
+        "location": {
+          "end_position": 33474,
+          "start_position": 28505,
+          "start_line": 775,
+          "end_line": 884
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "setupOnScreenController",
-      "parameters" : [
+      "name": "setupOnScreenController",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Preference.OSCPosition"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Preference.OSCPosition"
           },
-          "is_variadic" : false,
-          "label" : "withPosition",
-          "location_info" : {
-            "file_path" : "iina/MainWindowController.swift",
-            "location" : {
-              "end_position" : 28594,
-              "start_position" : 28546
+          "is_variadic": false,
+          "label": "withPosition",
+          "location_info": {
+            "file_path": "iina/MainWindowController.swift",
+            "location": {
+              "end_position": 28594,
+              "start_position": 28546,
+              "start_line": 777,
+              "end_line": 777
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "newPosition",
-          "order" : 0
+          "modifiers": [],
+          "name": "newPosition",
+          "order": 0
         }
       ]
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 56,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "iina-iina",
-  "repoName" : "iina/iina",
-  "repoURL" : "https://github.com/iina/iina.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 56,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "iina-iina",
+  "repoName": "iina/iina",
+  "repoURL": "https://github.com/iina/iina.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "iina/MainWindowController.swift"
   ]
 }

@@ -1,116 +1,110 @@
 {
-  "caseID" : "case-d16d3337c43b0477dacf0c94",
-  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
-  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
-  "durationSeconds" : 52.782080054283142,
-  "entityNames" : [
+  "caseID": "case-d16d3337c43b0477dacf0c94",
+  "commitHash": "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage": "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds": 52.78208005428314,
+  "entityNames": [
     "Credential",
     "credential",
     "handleRefreshSuccess",
     "inout MutableState",
     "mutableState"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "additional_trailing_closures": [],
+      "arguments": [
         {
-          "value" : "credential"
+          "value": "credential"
         }
       ],
-      "call" : "updateCredential",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-        "location" : {
-          "end_position" : 22119,
-          "start_position" : 22069
+      "call": "updateCredential",
+      "has_self_reference": false,
+      "internal_inline_calls": [],
+      "location_info": {
+        "file_path": "Source/Features/AuthenticationInterceptor.swift",
+        "location": {
+          "end_position": 22119,
+          "start_position": 22069,
+          "start_line": 422,
+          "end_line": 423
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "mutableState.updateCredential(credential)\n\n        let adaptOperations = mutableState.adaptOperations\n        let requestsToRetry = mutableState.requestsToRetry\n\n        mutableState.adaptOperations.removeAll()\n        mutableState.requestsToRetry.removeAll()\n\n        // Dispatch to queue to hop out of the mutable state lock\n        queue.async {\n            adaptOperations.forEach { self.adapt($0.urlRequest, for: $0.session, completion: $0.completion) }\n            requestsToRetry.forEach { $0(.retry) }\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "mutableState.updateCredential(credential)\n\n        let adaptOperations = mutableState.adaptOperations\n        let requestsToRetry = mutableState.requestsToRetry\n\n        mutableState.adaptOperations.removeAll()\n        mutableState.requestsToRetry.removeAll()\n\n        // Dispatch to queue to hop out of the mutable state lock\n        queue.async {\n            adaptOperations.forEach { self.adapt($0.urlRequest, for: $0.session, completion: $0.completion) }\n            requestsToRetry.forEach { $0(.retry) }\n        }"
       },
-      "location_info" : {
-        "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-        "location" : {
-          "end_position" : 22603,
-          "start_position" : 21957
+      "location_info": {
+        "file_path": "Source/Features/AuthenticationInterceptor.swift",
+        "location": {
+          "end_position": 22603,
+          "start_position": 21957,
+          "start_line": 420,
+          "end_line": 436
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "handleRefreshSuccess",
-      "parameters" : [
+      "name": "handleRefreshSuccess",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Credential"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Credential"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 22023,
-              "start_position" : 21997
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 22023,
+              "start_position": 21997,
+              "start_line": 422,
+              "end_line": 422
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "credential",
-          "order" : 0
+          "modifiers": [],
+          "name": "credential",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "inout MutableState"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "inout MutableState"
           },
-          "is_variadic" : false,
-          "label" : "insideLock",
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 22066,
-              "start_position" : 22023
+          "is_variadic": false,
+          "label": "insideLock",
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 22066,
+              "start_position": 22023,
+              "start_line": 422,
+              "end_line": 422
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "mutableState",
-          "order" : 1
+          "modifiers": [],
+          "name": "mutableState",
+          "order": 1
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 102,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 102,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Features/AuthenticationInterceptor.swift"
   ]
 }

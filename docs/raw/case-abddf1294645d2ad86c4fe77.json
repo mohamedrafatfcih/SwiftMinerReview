@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-abddf1294645d2ad86c4fe77",
-  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "durationSeconds" : 73.471343994140625,
-  "entityNames" : [
+  "caseID": "case-abddf1294645d2ad86c4fe77",
+  "commitHash": "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage": "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds": 73.47134399414062,
+  "entityNames": [
     "@escaping Listener",
     "Bool",
     "DispatchQueue",
@@ -13,140 +13,122 @@
     "queue",
     "startListening"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "annotation" : {
-        "preconcurrency" : {
-
-        }
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "annotation": {
+        "preconcurrency": {}
       },
-      "arguments" : [
-
-      ]
+      "arguments": []
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "preconcurrency" : {
-
-            }
+          "annotation": {
+            "preconcurrency": {}
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         },
         {
-          "annotation" : {
-            "discardable_result" : {
-
-            }
+          "annotation": {
+            "discardable_result": {}
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "stopListening()\n\n        mutableState.write { state in\n            state.listenerQueue = queue\n            state.listener = listener\n        }\n\n        let weakManager = WeakManager(manager: self)\n\n        var context = SCNetworkReachabilityContext(\n            version: 0,\n            info: Unmanaged.passUnretained(weakManager).toOpaque(),\n            retain: { info in\n                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)\n                _ = unmanaged.retain()\n\n                return UnsafeRawPointer(unmanaged.toOpaque())\n            },\n            release: { info in\n                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)\n                unmanaged.release()\n            },\n            copyDescription: { info in\n                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)\n                let weakManager = unmanaged.takeUnretainedValue()\n                let description = weakManager.manager?.flags?.readableDescription ?? \"nil\"\n\n                return Unmanaged.passRetained(description as CFString)\n            }\n        )\n        let callback: SCNetworkReachabilityCallBack = { _, flags, info in\n            guard let info else { return }\n\n            let weakManager = Unmanaged<WeakManager>.fromOpaque(info).takeUnretainedValue()\n            weakManager.manager?.notifyListener(flags)\n        }\n\n        let queueAdded = SCNetworkReachabilitySetDispatchQueue(reachability, reachabilityQueue)\n        let callbackAdded = SCNetworkReachabilitySetCallback(reachability, callback, &context)\n\n        // Manually call listener to give initial state, since the framework may not.\n        if let currentFlags = flags {\n            reachabilityQueue.async {\n                self.notifyListener(currentFlags)\n            }\n        }\n\n        return callbackAdded && queueAdded"
+      "body": {
+        "content": "stopListening()\n\n        mutableState.write { state in\n            state.listenerQueue = queue\n            state.listener = listener\n        }\n\n        let weakManager = WeakManager(manager: self)\n\n        var context = SCNetworkReachabilityContext(\n            version: 0,\n            info: Unmanaged.passUnretained(weakManager).toOpaque(),\n            retain: { info in\n                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)\n                _ = unmanaged.retain()\n\n                return UnsafeRawPointer(unmanaged.toOpaque())\n            },\n            release: { info in\n                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)\n                unmanaged.release()\n            },\n            copyDescription: { info in\n                let unmanaged = Unmanaged<WeakManager>.fromOpaque(info)\n                let weakManager = unmanaged.takeUnretainedValue()\n                let description = weakManager.manager?.flags?.readableDescription ?? \"nil\"\n\n                return Unmanaged.passRetained(description as CFString)\n            }\n        )\n        let callback: SCNetworkReachabilityCallBack = { _, flags, info in\n            guard let info else { return }\n\n            let weakManager = Unmanaged<WeakManager>.fromOpaque(info).takeUnretainedValue()\n            weakManager.manager?.notifyListener(flags)\n        }\n\n        let queueAdded = SCNetworkReachabilitySetDispatchQueue(reachability, reachabilityQueue)\n        let callbackAdded = SCNetworkReachabilitySetCallback(reachability, callback, &context)\n\n        // Manually call listener to give initial state, since the framework may not.\n        if let currentFlags = flags {\n            reachabilityQueue.async {\n                self.notifyListener(currentFlags)\n            }\n        }\n\n        return callbackAdded && queueAdded"
       },
-      "location_info" : {
-        "file_path" : "Source/Features/NetworkReachabilityManager.swift",
-        "location" : {
-          "end_position" : 8895,
-          "start_position" : 6399
+      "location_info": {
+        "file_path": "Source/Features/NetworkReachabilityManager.swift",
+        "location": {
+          "end_position": 8895,
+          "start_position": 6399,
+          "start_line": 152,
+          "end_line": 217
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "open"
       ],
-      "name" : "startListening",
-      "parameters" : [
+      "name": "startListening",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "DispatchQueue"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "DispatchQueue"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "reference" : {
-                "arguments" : [
-
-                ],
-                "name" : "main"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "reference": {
+                "arguments": [],
+                "name": "main"
               }
             }
           },
-          "is_variadic" : false,
-          "label" : "onQueue",
-          "location_info" : {
-            "file_path" : "Source/Features/NetworkReachabilityManager.swift",
-            "location" : {
-              "end_position" : 6966,
-              "start_position" : 6929
+          "is_variadic": false,
+          "label": "onQueue",
+          "location_info": {
+            "file_path": "Source/Features/NetworkReachabilityManager.swift",
+            "location": {
+              "end_position": 6966,
+              "start_position": 6929,
+              "start_line": 167,
+              "end_line": 167
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "queue",
-          "order" : 0
+          "modifiers": [],
+          "name": "queue",
+          "order": 0
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "escaping" : {
-
-                }
+              "annotation": {
+                "escaping": {}
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "@escaping Listener"
+          "data_type": {
+            "is_optional": false,
+            "name": "@escaping Listener"
           },
-          "is_variadic" : false,
-          "label" : "onUpdatePerforming",
-          "location_info" : {
-            "file_path" : "Source/Features/NetworkReachabilityManager.swift",
-            "location" : {
-              "end_position" : 7043,
-              "start_position" : 6966
+          "is_variadic": false,
+          "label": "onUpdatePerforming",
+          "location_info": {
+            "file_path": "Source/Features/NetworkReachabilityManager.swift",
+            "location": {
+              "end_position": 7043,
+              "start_position": 6966,
+              "start_line": 167,
+              "end_line": 168
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "listener",
-          "order" : 1
+          "modifiers": [],
+          "name": "listener",
+          "order": 1
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "Bool"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "Bool"
         },
-        "description" : "-> Bool"
+        "description": "-> Bool"
       }
     },
-    "type" : "Add attribute refactoring"
+    "type": "Add attribute refactoring"
   },
-  "refactoringIndex" : 432,
-  "refactoringType" : "Add attribute refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 432,
+  "refactoringType": "Add attribute refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Features/NetworkReachabilityManager.swift"
   ]
 }

@@ -1,145 +1,135 @@
 {
-  "caseID" : "case-48fa6f5f72559cdda3b2f04a",
-  "commitHash" : "76f387e3be2855b84ba411c72ef14c9439a413aa",
-  "commitMessage" : "Restore reverted migrations, migrate last tests. (#1880)\n\n- Part of #1833.\n- CLI progress and registry test migrations were inadventently reverted\nby #1857.\n- Migrate TestCLINoParallelCases to TestCLIImagePruneSerial and\nTestCLINetworkPruneSerial.\n- Clean up test selection patterns in Makefile.\n- Remove all legacy CLITests files.\n- Use swift-testing `withKnownIssue` to run but ignore failures on flaky\n`testCreateNameLongestValid` and `testIsolatedNetwork`.\n- Extracts a fixture helper for tests requiring a retry loop.",
-  "commitURL" : "https://github.com/apple/container/commit/76f387e3be2855b84ba411c72ef14c9439a413aa",
-  "durationSeconds" : 8.0211789608001709,
-  "entityNames" : [
+  "caseID": "case-48fa6f5f72559cdda3b2f04a",
+  "commitHash": "76f387e3be2855b84ba411c72ef14c9439a413aa",
+  "commitMessage": "Restore reverted migrations, migrate last tests. (#1880)\n\n- Part of #1833.\n- CLI progress and registry test migrations were inadventently reverted\nby #1857.\n- Migrate TestCLINoParallelCases to TestCLIImagePruneSerial and\nTestCLINetworkPruneSerial.\n- Clean up test selection patterns in Makefile.\n- Remove all legacy CLITests files.\n- Use swift-testing `withKnownIssue` to run but ignore failures on flaky\n`testCreateNameLongestValid` and `testIsolatedNetwork`.\n- Extracts a fixture helper for tests requiring a retry loop.",
+  "commitURL": "https://github.com/apple/container/commit/76f387e3be2855b84ba411c72ef14c9439a413aa",
+  "durationSeconds": 8.021178960800171,
+  "entityNames": [
     "testIsolatedNetwork"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "expression" : {
-        "await_stmt" : {
-          "_0" : {
-            "expression" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
-
-                  ],
-                  "call" : "with",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
-                    "location" : {
-                      "end_position" : 7992,
-                      "start_position" : 5538
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "expression": {
+        "await_stmt": {
+          "_0": {
+            "expression": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [],
+                  "call": "with",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+                    "location": {
+                      "end_position": 7992,
+                      "start_position": 5538,
+                      "start_line": 136,
+                      "end_line": 186
                     }
                   },
-                  "trailing_closure" : {
-                    "attributes" : [
-
-                    ],
-                    "body" : {
-                      "content" : "let net = \"\\(f.testID)-net\"\n            let server = \"\\(f.testID)-server\"\n            let pythonImage = \"docker.io/library/python:alpine\"\n            let curlImage = \"docker.io/curlimages/curl:8.6.0\"\n\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            f.addCleanup {\n                try? f.doStop(server)\n                try? f.doRemove(server)\n            }\n\n            try f.doNetworkCreate(net, args: [\"--internal\"])\n\n            let port = UInt16.random(in: 50000..<60000)\n            try f.doLongRun(\n                name: server, image: pythonImage,\n                args: [\"--network\", net],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(port)\"],\n                autoRemove: false)\n            try await f.waitForContainerRunning(server)\n\n            let container = try f.inspectContainer(server)\n            #expect(container.networks.count > 0)\n            let ip = container.networks[0].ipv4Address.address\n            let serverURL = \"http://\\(ip):\\(port)\"\n\n            // Internal connection should succeed. `waitForContainerRunning` only\n            // proves the container's init is up; the python http.server inside\n            // may still be starting, so let curl retry on connection refused.\n            // FIXME: Task.sleep here is a kludge, figure out why curl fails with error 7 without it.\n            try await Task.sleep(for: .seconds(1))\n            let internalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--retry\", \"10\", \"--retry-connrefused\", \"--retry-delay\", \"1\", serverURL,\n            ])\n            #expect(\n                internalResult.status == 0,\n                \"connection within isolated network should succeed, got exit \\(internalResult.status): \\(internalResult.error)\"\n            )\n\n            // External connection should be blocked — the isolated network has no gateway.\n            let externalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--connect-timeout\", \"5\", \"http://google.com\",\n            ])\n            let hostOnlyBlockedCodes: Set<Int32> = [6, 7, 28]\n            #expect(\n                hostOnlyBlockedCodes.contains(externalResult.status),\n                \"external connection from isolated network should be blocked, got exit \\(externalResult.status)\")"
+                  "trailing_closure": {
+                    "attributes": [],
+                    "body": {
+                      "content": "let net = \"\\(f.testID)-net\"\n            let server = \"\\(f.testID)-server\"\n            let pythonImage = \"docker.io/library/python:alpine\"\n            let curlImage = \"docker.io/curlimages/curl:8.6.0\"\n\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            f.addCleanup {\n                try? f.doStop(server)\n                try? f.doRemove(server)\n            }\n\n            try f.doNetworkCreate(net, args: [\"--internal\"])\n\n            let port = UInt16.random(in: 50000..<60000)\n            try f.doLongRun(\n                name: server, image: pythonImage,\n                args: [\"--network\", net],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(port)\"],\n                autoRemove: false)\n            try await f.waitForContainerRunning(server)\n\n            let container = try f.inspectContainer(server)\n            #expect(container.networks.count > 0)\n            let ip = container.networks[0].ipv4Address.address\n            let serverURL = \"http://\\(ip):\\(port)\"\n\n            // Internal connection should succeed. `waitForContainerRunning` only\n            // proves the container's init is up; the python http.server inside\n            // may still be starting, so let curl retry on connection refused.\n            // FIXME: Task.sleep here is a kludge, figure out why curl fails with error 7 without it.\n            try await Task.sleep(for: .seconds(1))\n            let internalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--retry\", \"10\", \"--retry-connrefused\", \"--retry-delay\", \"1\", serverURL,\n            ])\n            #expect(\n                internalResult.status == 0,\n                \"connection within isolated network should succeed, got exit \\(internalResult.status): \\(internalResult.error)\"\n            )\n\n            // External connection should be blocked — the isolated network has no gateway.\n            let externalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--connect-timeout\", \"5\", \"http://google.com\",\n            ])\n            let hostOnlyBlockedCodes: Set<Int32> = [6, 7, 28]\n            #expect(\n                hostOnlyBlockedCodes.contains(externalResult.status),\n                \"external connection from isolated network should be blocked, got exit \\(externalResult.status)\")"
                     },
-                    "captures" : [
-
-                    ],
-                    "location_info" : {
-                      "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
-                      "location" : {
-                        "end_position" : 7992,
-                        "start_position" : 5560
+                    "captures": [],
+                    "location_info": {
+                      "file_path": "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+                      "location": {
+                        "end_position": 7992,
+                        "start_position": 5560,
+                        "start_line": 136,
+                        "end_line": 186
                       }
                     },
-                    "parameters" : [
-
-                    ]
+                    "parameters": []
                   }
                 }
               }
             },
-            "location_info" : {
-              "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
-              "location" : {
-                "end_position" : 7992,
-                "start_position" : 5532
+            "location_info": {
+              "file_path": "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+              "location": {
+                "end_position": 7992,
+                "start_position": 5532,
+                "start_line": 136,
+                "end_line": 186
               }
             }
           }
         }
       },
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
-        "location" : {
-          "end_position" : 7992,
-          "start_position" : 5519
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+        "location": {
+          "end_position": 7992,
+          "start_position": 5519,
+          "start_line": 135,
+          "end_line": 186
         }
       }
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "available" : {
-
-            }
+          "annotation": {
+            "available": {}
           },
-          "arguments" : [
+          "arguments": [
             {
-              "label" : "macOS",
-              "value" : "26"
+              "label": "macOS",
+              "value": "26"
             },
             {
-              "value" : ","
+              "value": ","
             },
             {
-              "value" : "*"
+              "value": "*"
             }
           ]
         },
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Test"
+          "annotation": {
+            "unsupported": {
+              "_0": "Test"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            let server = \"\\(f.testID)-server\"\n            let pythonImage = \"docker.io/library/python:alpine\"\n            let curlImage = \"docker.io/curlimages/curl:8.6.0\"\n\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            f.addCleanup {\n                try? f.doStop(server)\n                try? f.doRemove(server)\n            }\n\n            try f.doNetworkCreate(net, args: [\"--internal\"])\n\n            let port = UInt16.random(in: 50000..<60000)\n            try f.doLongRun(\n                name: server, image: pythonImage,\n                args: [\"--network\", net],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(port)\"],\n                autoRemove: false)\n            try await f.waitForContainerRunning(server)\n\n            let container = try f.inspectContainer(server)\n            #expect(container.networks.count > 0)\n            let ip = container.networks[0].ipv4Address.address\n            let serverURL = \"http://\\(ip):\\(port)\"\n\n            // Internal connection should succeed. `waitForContainerRunning` only\n            // proves the container's init is up; the python http.server inside\n            // may still be starting, so let curl retry on connection refused.\n            // FIXME: Task.sleep here is a kludge, figure out why curl fails with error 7 without it.\n            try await Task.sleep(for: .seconds(1))\n            let internalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--retry\", \"10\", \"--retry-connrefused\", \"--retry-delay\", \"1\", serverURL,\n            ])\n            #expect(\n                internalResult.status == 0,\n                \"connection within isolated network should succeed, got exit \\(internalResult.status): \\(internalResult.error)\"\n            )\n\n            // External connection should be blocked — the isolated network has no gateway.\n            let externalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--connect-timeout\", \"5\", \"http://google.com\",\n            ])\n            let hostOnlyBlockedCodes: Set<Int32> = [6, 7, 28]\n            #expect(\n                hostOnlyBlockedCodes.contains(externalResult.status),\n                \"external connection from isolated network should be blocked, got exit \\(externalResult.status)\")\n        }"
+      "body": {
+        "content": "try await ContainerFixture.with { f in\n            let net = \"\\(f.testID)-net\"\n            let server = \"\\(f.testID)-server\"\n            let pythonImage = \"docker.io/library/python:alpine\"\n            let curlImage = \"docker.io/curlimages/curl:8.6.0\"\n\n            f.addCleanup { f.doNetworkDeleteIfExists(net) }\n            f.addCleanup {\n                try? f.doStop(server)\n                try? f.doRemove(server)\n            }\n\n            try f.doNetworkCreate(net, args: [\"--internal\"])\n\n            let port = UInt16.random(in: 50000..<60000)\n            try f.doLongRun(\n                name: server, image: pythonImage,\n                args: [\"--network\", net],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(port)\"],\n                autoRemove: false)\n            try await f.waitForContainerRunning(server)\n\n            let container = try f.inspectContainer(server)\n            #expect(container.networks.count > 0)\n            let ip = container.networks[0].ipv4Address.address\n            let serverURL = \"http://\\(ip):\\(port)\"\n\n            // Internal connection should succeed. `waitForContainerRunning` only\n            // proves the container's init is up; the python http.server inside\n            // may still be starting, so let curl retry on connection refused.\n            // FIXME: Task.sleep here is a kludge, figure out why curl fails with error 7 without it.\n            try await Task.sleep(for: .seconds(1))\n            let internalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--retry\", \"10\", \"--retry-connrefused\", \"--retry-delay\", \"1\", serverURL,\n            ])\n            #expect(\n                internalResult.status == 0,\n                \"connection within isolated network should succeed, got exit \\(internalResult.status): \\(internalResult.error)\"\n            )\n\n            // External connection should be blocked — the isolated network has no gateway.\n            let externalResult = try f.run([\n                \"run\", \"--rm\", \"--network\", net, curlImage,\n                \"curl\", \"--connect-timeout\", \"5\", \"http://google.com\",\n            ])\n            let hostOnlyBlockedCodes: Set<Int32> = [6, 7, 28]\n            #expect(\n                hostOnlyBlockedCodes.contains(externalResult.status),\n                \"external connection from isolated network should be blocked, got exit \\(externalResult.status)\")\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Network/TestCLINetwork.swift",
-        "location" : {
-          "end_position" : 7998,
-          "start_position" : 5438
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Network/TestCLINetwork.swift",
+        "location": {
+          "end_position": 7998,
+          "start_position": 5438,
+          "start_line": 132,
+          "end_line": 187
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testIsolatedNetwork",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "modifiers": [],
+      "name": "testIsolatedNetwork",
+      "parameters": [],
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 41,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 41,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Network/TestCLINetwork.swift"
   ]
 }

@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-1382abb29ca92dd826a4d08e",
-  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
-  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
-  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
-  "durationSeconds" : 16.732138991355896,
-  "entityNames" : [
+  "caseID": "case-1382abb29ca92dd826a4d08e",
+  "commitHash": "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage": "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL": "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds": 16.732138991355896,
+  "entityNames": [
     "@escaping ProgressUpdateHandler",
     "ContainerSystemConfig",
     "Int64?",
@@ -14,324 +14,310 @@
     "containerSystemConfig",
     "cpus"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "conditions" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "conditions": [
         {
-          "condition_value" : {
-            "comparison" : {
-              "_0" : {
-                "description" : "defaultNetwork.status.phase == \"running\"",
-                "left_operand" : "defaultNetwork.status.phase",
-                "location_info" : {
-                  "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-                  "location" : {
-                    "end_position" : 11237,
-                    "start_position" : 11196
+          "condition_value": {
+            "comparison": {
+              "_0": {
+                "description": "defaultNetwork.status.phase == \"running\"",
+                "left_operand": "defaultNetwork.status.phase",
+                "location_info": {
+                  "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+                  "location": {
+                    "end_position": 11237,
+                    "start_position": 11196,
+                    "start_line": 269,
+                    "end_line": 269
                   }
                 },
-                "operator_value" : "==",
-                "right_operand" : {
-                  "other" : {
-                    "_0" : "running"
+                "operator_value": "==",
+                "right_operand": {
+                  "other": {
+                    "_0": "running"
                   }
                 }
               }
             }
           },
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 11237,
-              "start_position" : 11196
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 11237,
+              "start_position": 11196,
+              "start_line": 269,
+              "end_line": 269
             }
           }
         }
       ],
-      "location_info" : {
-        "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-        "location" : {
-          "end_position" : 11359,
-          "start_position" : 11177
+      "location_info": {
+        "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+        "location": {
+          "end_position": 11359,
+          "start_position": 11177,
+          "start_line": 268,
+          "end_line": 271
         }
       },
-      "name" : "guard"
+      "name": "guard"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "await progressUpdate([\n                .setDescription(\"Fetching BuildKit image\"),\n                .setItemsName(\"blobs\"),\n            ])\n            let taskManager = ProgressTaskCoordinator()\n            let fetchTask = await taskManager.startTask()\n\n            let builderImage: String = containerSystemConfig.build.image\n            let systemHealth = try await ClientHealthCheck.ping(timeout: .seconds(10))\n            let exportsMount: String = systemHealth.appRoot\n                .appendingPathComponent(Application.BuilderCommand.builderResourceDir)\n                .absolutePath()\n\n            if !FileManager.default.fileExists(atPath: exportsMount) {\n                try FileManager.default.createDirectory(\n                    atPath: exportsMount,\n                    withIntermediateDirectories: true,\n                    attributes: nil\n                )\n            }\n\n            let builderPlatform = ContainerizationOCI.Platform(arch: \"arm64\", os: \"linux\", variant: \"v8\")\n\n            var targetEnvVars: [String] = []\n            if let buildkitColors = ProcessInfo.processInfo.environment[\"BUILDKIT_COLORS\"] {\n                targetEnvVars.append(\"BUILDKIT_COLORS=\\(buildkitColors)\")\n            }\n            if ProcessInfo.processInfo.environment[\"NO_COLOR\"] != nil {\n                targetEnvVars.append(\"NO_COLOR=true\")\n            }\n            targetEnvVars.sort()\n\n            let defaultBuildCPUs: Int = containerSystemConfig.build.cpus\n            let defaultBuildMemory = containerSystemConfig.build.memory\n            let resources = try Parser.resources(\n                cpus: cpus,\n                memory: memory,\n                defaultCPUs: defaultBuildCPUs,\n                defaultMemory: defaultBuildMemory,\n            )\n\n            let client = ContainerClient()\n            let existingContainer = try? await client.get(id: \"buildkit\")\n            if let existingContainer {\n                let existingImage = existingContainer.configuration.image.reference\n                let existingResources = existingContainer.configuration.resources\n                let existingEnv = existingContainer.configuration.initProcess.environment\n                let existingDNS = existingContainer.configuration.dns\n\n                let existingManagedEnv = existingEnv.filter { envVar in\n                    envVar.hasPrefix(\"BUILDKIT_COLORS=\") || envVar.hasPrefix(\"NO_COLOR=\")\n                }.sorted()\n\n                let envChanged = existingManagedEnv != targetEnvVars\n\n                // Check if we need to recreate the builder due to different image\n                let imageChanged = existingImage != builderImage\n                let cpuChanged = existingResources.cpus != resources.cpus\n                let memChanged = existingResources.memoryInBytes != resources.memoryInBytes\n                let dnsChanged = {\n                    if !dnsNameservers.isEmpty {\n                        return existingDNS?.nameservers != dnsNameservers\n                    }\n                    if dnsDomain != nil {\n                        return existingDNS?.domain != dnsDomain\n                    }\n                    if !dnsSearchDomains.isEmpty {\n                        return existingDNS?.searchDomains != dnsSearchDomains\n                    }\n                    if !dnsOptions.isEmpty {\n                        return existingDNS?.options != dnsOptions\n                    }\n                    return false\n                }()\n\n                switch existingContainer.status {\n                case .running:\n                    guard imageChanged || cpuChanged || memChanged || envChanged || dnsChanged else {\n                        // If image, mem, cpu, env, and DNS are the same, continue using the existing builder\n                        return\n                    }\n                    // If they changed, stop and delete the existing builder\n                    try await client.stop(id: existingContainer.id)\n                    try await client.delete(id: existingContainer.id)\n                case .stopped:\n                    // If the builder is stopped and matches our requirements, start it\n                    // Otherwise, delete it and create a new one\n                    guard imageChanged || cpuChanged || memChanged || envChanged || dnsChanged else {\n                        try await startBuildKit(client: client, id: existingContainer.id, progressUpdate, nil)\n                        return\n                    }\n                    try await client.delete(id: existingContainer.id)\n                case .stopping:\n                    throw ContainerizationError(\n                        .invalidState,\n                        message: \"builder is stopping, please wait until it is fully stopped before proceeding\"\n                    )\n                case .unknown:\n                    break\n                }\n            }\n\n            let useRosetta = containerSystemConfig.build.rosetta\n            let shimArguments = [\n                \"--debug\",\n                \"--vsock\",\n                useRosetta ? nil : \"--enable-qemu\",\n            ].compactMap { $0 }\n\n            try ContainerAPIClient.Utility.validEntityName(Builder.builderContainerId)\n\n            let image = try await ClientImage.fetch(\n                reference: builderImage,\n                platform: builderPlatform,\n                containerSystemConfig: containerSystemConfig,\n                progressUpdate: ProgressTaskCoordinator.handler(for: fetchTask, from: progressUpdate)\n            )\n            // Unpack fetched image before use\n            await progressUpdate([\n                .setDescription(\"Unpacking BuildKit image\"),\n                .setItemsName(\"entries\"),\n            ])\n\n            let unpackTask = await taskManager.startTask()\n            _ = try await image.getCreateSnapshot(\n                platform: builderPlatform,\n                progressUpdate: ProgressTaskCoordinator.handler(for: unpackTask, from: progressUpdate)\n            )\n\n            let imageDesc = ImageDescription(\n                reference: builderImage,\n                descriptor: image.descriptor\n            )\n\n            let imageConfig = try await image.config(for: builderPlatform).config\n            var environment = imageConfig?.env ?? []\n            environment.append(contentsOf: targetEnvVars)\n\n            let processConfig = ProcessConfiguration(\n                executable: \"/usr/local/bin/container-builder-shim\",\n                arguments: shimArguments,\n                environment: environment,\n                workingDirectory: \"/\",\n                terminal: false,\n                user: .id(uid: 0, gid: 0)\n            )\n\n            var config = ContainerConfiguration(id: Builder.builderContainerId, image: imageDesc, process: processConfig)\n            config.resources = resources\n            config.labels = [\n                ResourceLabelKeys.plugin: \"builder\",\n                ResourceLabelKeys.role: ResourceRoleValues.builder,\n            ]\n            config.capAdd = [\"ALL\"]\n            config.mounts = [\n                .init(\n                    type: .tmpfs,\n                    source: \"\",\n                    destination: \"/run\",\n                    options: []\n                ),\n                .init(\n                    type: .virtiofs,\n                    source: exportsMount,\n                    destination: \"/var/lib/container-builder-shim/exports\",\n                    options: []\n                ),\n            ]\n            // Enable Rosetta only if the user didn't ask to disable it\n            config.rosetta = useRosetta\n\n            let networkClient = NetworkClient()\n            guard let defaultNetwork = try await networkClient.builtin else {\n                throw ContainerizationError(.invalidState, message: \"default network is not present\")\n            }\n            guard defaultNetwork.status.phase == \"running\" else {\n                throw ContainerizationError(.invalidState, message: \"default network is not running\")\n            }\n            config.networks = [\n                AttachmentConfiguration(network: defaultNetwork.id, options: AttachmentOptions(hostname: Builder.builderContainerId))\n            ]\n            config.dns = ContainerConfiguration.DNSConfiguration(\n                nameservers: dnsNameservers,\n                domain: dnsDomain,\n                searchDomains: dnsSearchDomains,\n                options: dnsOptions\n            )\n\n            let kernel = try await {\n                await progressUpdate([\n                    .setDescription(\"Fetching kernel\"),\n                    .setItemsName(\"binary\"),\n                ])\n\n                let kernel = try await ClientKernel.getDefaultKernel(for: .current)\n                return kernel\n            }()\n\n            await progressUpdate([\n                .setDescription(\"Starting BuildKit container\")\n            ])\n\n            try await client.create(\n                configuration: config,\n                options: .default,\n                kernel: kernel\n            )\n\n            try await startBuildKit(client: client, id: Builder.builderContainerId, progressUpdate, taskManager)\n            log.debug(\"starting BuildKit and BuildKit-shim\")"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "await progressUpdate([\n                .setDescription(\"Fetching BuildKit image\"),\n                .setItemsName(\"blobs\"),\n            ])\n            let taskManager = ProgressTaskCoordinator()\n            let fetchTask = await taskManager.startTask()\n\n            let builderImage: String = containerSystemConfig.build.image\n            let systemHealth = try await ClientHealthCheck.ping(timeout: .seconds(10))\n            let exportsMount: String = systemHealth.appRoot\n                .appendingPathComponent(Application.BuilderCommand.builderResourceDir)\n                .absolutePath()\n\n            if !FileManager.default.fileExists(atPath: exportsMount) {\n                try FileManager.default.createDirectory(\n                    atPath: exportsMount,\n                    withIntermediateDirectories: true,\n                    attributes: nil\n                )\n            }\n\n            let builderPlatform = ContainerizationOCI.Platform(arch: \"arm64\", os: \"linux\", variant: \"v8\")\n\n            var targetEnvVars: [String] = []\n            if let buildkitColors = ProcessInfo.processInfo.environment[\"BUILDKIT_COLORS\"] {\n                targetEnvVars.append(\"BUILDKIT_COLORS=\\(buildkitColors)\")\n            }\n            if ProcessInfo.processInfo.environment[\"NO_COLOR\"] != nil {\n                targetEnvVars.append(\"NO_COLOR=true\")\n            }\n            targetEnvVars.sort()\n\n            let defaultBuildCPUs: Int = containerSystemConfig.build.cpus\n            let defaultBuildMemory = containerSystemConfig.build.memory\n            let resources = try Parser.resources(\n                cpus: cpus,\n                memory: memory,\n                defaultCPUs: defaultBuildCPUs,\n                defaultMemory: defaultBuildMemory,\n            )\n\n            let client = ContainerClient()\n            let existingContainer = try? await client.get(id: \"buildkit\")\n            if let existingContainer {\n                let existingImage = existingContainer.configuration.image.reference\n                let existingResources = existingContainer.configuration.resources\n                let existingEnv = existingContainer.configuration.initProcess.environment\n                let existingDNS = existingContainer.configuration.dns\n\n                let existingManagedEnv = existingEnv.filter { envVar in\n                    envVar.hasPrefix(\"BUILDKIT_COLORS=\") || envVar.hasPrefix(\"NO_COLOR=\")\n                }.sorted()\n\n                let envChanged = existingManagedEnv != targetEnvVars\n\n                // Check if we need to recreate the builder due to different image\n                let imageChanged = existingImage != builderImage\n                let cpuChanged = existingResources.cpus != resources.cpus\n                let memChanged = existingResources.memoryInBytes != resources.memoryInBytes\n                let dnsChanged = {\n                    if !dnsNameservers.isEmpty {\n                        return existingDNS?.nameservers != dnsNameservers\n                    }\n                    if dnsDomain != nil {\n                        return existingDNS?.domain != dnsDomain\n                    }\n                    if !dnsSearchDomains.isEmpty {\n                        return existingDNS?.searchDomains != dnsSearchDomains\n                    }\n                    if !dnsOptions.isEmpty {\n                        return existingDNS?.options != dnsOptions\n                    }\n                    return false\n                }()\n\n                switch existingContainer.status {\n                case .running:\n                    guard imageChanged || cpuChanged || memChanged || envChanged || dnsChanged else {\n                        // If image, mem, cpu, env, and DNS are the same, continue using the existing builder\n                        return\n                    }\n                    // If they changed, stop and delete the existing builder\n                    try await client.stop(id: existingContainer.id)\n                    try await client.delete(id: existingContainer.id)\n                case .stopped:\n                    // If the builder is stopped and matches our requirements, start it\n                    // Otherwise, delete it and create a new one\n                    guard imageChanged || cpuChanged || memChanged || envChanged || dnsChanged else {\n                        try await startBuildKit(client: client, id: existingContainer.id, progressUpdate, nil)\n                        return\n                    }\n                    try await client.delete(id: existingContainer.id)\n                case .stopping:\n                    throw ContainerizationError(\n                        .invalidState,\n                        message: \"builder is stopping, please wait until it is fully stopped before proceeding\"\n                    )\n                case .unknown:\n                    break\n                }\n            }\n\n            let useRosetta = containerSystemConfig.build.rosetta\n            let shimArguments = [\n                \"--debug\",\n                \"--vsock\",\n                useRosetta ? nil : \"--enable-qemu\",\n            ].compactMap { $0 }\n\n            try ContainerAPIClient.Utility.validEntityName(Builder.builderContainerId)\n\n            let image = try await ClientImage.fetch(\n                reference: builderImage,\n                platform: builderPlatform,\n                containerSystemConfig: containerSystemConfig,\n                progressUpdate: ProgressTaskCoordinator.handler(for: fetchTask, from: progressUpdate)\n            )\n            // Unpack fetched image before use\n            await progressUpdate([\n                .setDescription(\"Unpacking BuildKit image\"),\n                .setItemsName(\"entries\"),\n            ])\n\n            let unpackTask = await taskManager.startTask()\n            _ = try await image.getCreateSnapshot(\n                platform: builderPlatform,\n                progressUpdate: ProgressTaskCoordinator.handler(for: unpackTask, from: progressUpdate)\n            )\n\n            let imageDesc = ImageDescription(\n                reference: builderImage,\n                descriptor: image.descriptor\n            )\n\n            let imageConfig = try await image.config(for: builderPlatform).config\n            var environment = imageConfig?.env ?? []\n            environment.append(contentsOf: targetEnvVars)\n\n            let processConfig = ProcessConfiguration(\n                executable: \"/usr/local/bin/container-builder-shim\",\n                arguments: shimArguments,\n                environment: environment,\n                workingDirectory: \"/\",\n                terminal: false,\n                user: .id(uid: 0, gid: 0)\n            )\n\n            var config = ContainerConfiguration(id: Builder.builderContainerId, image: imageDesc, process: processConfig)\n            config.resources = resources\n            config.labels = [\n                ResourceLabelKeys.plugin: \"builder\",\n                ResourceLabelKeys.role: ResourceRoleValues.builder,\n            ]\n            config.capAdd = [\"ALL\"]\n            config.mounts = [\n                .init(\n                    type: .tmpfs,\n                    source: \"\",\n                    destination: \"/run\",\n                    options: []\n                ),\n                .init(\n                    type: .virtiofs,\n                    source: exportsMount,\n                    destination: \"/var/lib/container-builder-shim/exports\",\n                    options: []\n                ),\n            ]\n            // Enable Rosetta only if the user didn't ask to disable it\n            config.rosetta = useRosetta\n\n            let networkClient = NetworkClient()\n            guard let defaultNetwork = try await networkClient.builtin else {\n                throw ContainerizationError(.invalidState, message: \"default network is not present\")\n            }\n            guard defaultNetwork.status.phase == \"running\" else {\n                throw ContainerizationError(.invalidState, message: \"default network is not running\")\n            }\n            config.networks = [\n                AttachmentConfiguration(network: defaultNetwork.id, options: AttachmentOptions(hostname: Builder.builderContainerId))\n            ]\n            config.dns = ContainerConfiguration.DNSConfiguration(\n                nameservers: dnsNameservers,\n                domain: dnsDomain,\n                searchDomains: dnsSearchDomains,\n                options: dnsOptions\n            )\n\n            let kernel = try await {\n                await progressUpdate([\n                    .setDescription(\"Fetching kernel\"),\n                    .setItemsName(\"binary\"),\n                ])\n\n                let kernel = try await ClientKernel.getDefaultKernel(for: .current)\n                return kernel\n            }()\n\n            await progressUpdate([\n                .setDescription(\"Starting BuildKit container\")\n            ])\n\n            try await client.create(\n                configuration: config,\n                options: .default,\n                kernel: kernel\n            )\n\n            try await startBuildKit(client: client, id: Builder.builderContainerId, progressUpdate, taskManager)\n            log.debug(\"starting BuildKit and BuildKit-shim\")"
       },
-      "location_info" : {
-        "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-        "location" : {
-          "end_position" : 12568,
-          "start_position" : 2895
+      "location_info": {
+        "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+        "location": {
+          "end_position": 12568,
+          "start_position": 2895,
+          "start_line": 81,
+          "end_line": 304
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "static"
       ],
-      "name" : "start",
-      "parameters" : [
+      "name": "start",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "Int64?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "Int64?"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 2949,
-              "start_position" : 2923
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 2949,
+              "start_position": 2923,
+              "start_line": 83,
+              "end_line": 84
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "cpus",
-          "order" : 0
+          "modifiers": [],
+          "name": "cpus",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "String?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "String?"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 2978,
-              "start_position" : 2949
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 2978,
+              "start_position": 2949,
+              "start_line": 84,
+              "end_line": 85
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "memory",
-          "order" : 1
+          "modifiers": [],
+          "name": "memory",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Logger"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Logger"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 3003,
-              "start_position" : 2978
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 3003,
+              "start_position": 2978,
+              "start_line": 85,
+              "end_line": 86
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "log",
-          "order" : 2
+          "modifiers": [],
+          "name": "log",
+          "order": 2
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[]"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 3046,
-              "start_position" : 3003
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 3046,
+              "start_position": 3003,
+              "start_line": 86,
+              "end_line": 87
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "dnsNameservers",
-          "order" : 3
+          "modifiers": [],
+          "name": "dnsNameservers",
+          "order": 3
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "String?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "String?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 3084,
-              "start_position" : 3046
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 3084,
+              "start_position": 3046,
+              "start_line": 87,
+              "end_line": 88
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "dnsDomain",
-          "order" : 4
+          "modifiers": [],
+          "name": "dnsDomain",
+          "order": 4
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[]"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 3129,
-              "start_position" : 3084
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 3129,
+              "start_position": 3084,
+              "start_line": 88,
+              "end_line": 89
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "dnsSearchDomains",
-          "order" : 5
+          "modifiers": [],
+          "name": "dnsSearchDomains",
+          "order": 5
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[]"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 3168,
-              "start_position" : 3129
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 3168,
+              "start_position": 3129,
+              "start_line": 89,
+              "end_line": 90
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "dnsOptions",
-          "order" : 6
+          "modifiers": [],
+          "name": "dnsOptions",
+          "order": 6
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "escaping" : {
-
-                }
+              "annotation": {
+                "escaping": {}
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "@escaping ProgressUpdateHandler"
+          "data_type": {
+            "is_optional": false,
+            "name": "@escaping ProgressUpdateHandler"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 3229,
-              "start_position" : 3168
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 3229,
+              "start_position": 3168,
+              "start_line": 90,
+              "end_line": 91
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "progressUpdate",
-          "order" : 7
+          "modifiers": [],
+          "name": "progressUpdate",
+          "order": 7
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "ContainerSystemConfig"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "ContainerSystemConfig"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Builder/BuilderStart.swift",
-            "location" : {
-              "end_position" : 3287,
-              "start_position" : 3229
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Builder/BuilderStart.swift",
+            "location": {
+              "end_position": 3287,
+              "start_position": 3229,
+              "start_line": 91,
+              "end_line": 92
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "containerSystemConfig",
-          "order" : 8
+          "modifiers": [],
+          "name": "containerSystemConfig",
+          "order": 8
         }
       ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 1,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 1,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/ContainerCommands/Builder/BuilderStart.swift"
   ]
 }

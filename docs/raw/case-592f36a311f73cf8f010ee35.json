@@ -1,117 +1,119 @@
 {
-  "caseID" : "case-592f36a311f73cf8f010ee35",
-  "commitHash" : "b2f88fae531aa47354fab2632e9646ef35d6a281",
-  "commitMessage" : "chore: update window loaded guards in MainWindowController\n",
-  "commitURL" : "https://github.com/iina/iina/commit/b2f88fae531aa47354fab2632e9646ef35d6a281",
-  "durationSeconds" : 9.5564110279083252,
-  "entityNames" : [
+  "caseID": "case-592f36a311f73cf8f010ee35",
+  "commitHash": "b2f88fae531aa47354fab2632e9646ef35d6a281",
+  "commitMessage": "chore: update window loaded guards in MainWindowController\n",
+  "commitURL": "https://github.com/iina/iina/commit/b2f88fae531aa47354fab2632e9646ef35d6a281",
+  "durationSeconds": 9.556411027908325,
+  "entityNames": [
     "Bool",
     "guard",
     "handleVideoSizeChange",
     "keepWindowSize",
     "window"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "conditions" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "conditions": [
         {
-          "condition_value" : {
-            "others" : {
-              "_0" : "loaded"
+          "condition_value": {
+            "others": {
+              "_0": "loaded"
             }
           },
-          "location_info" : {
-            "file_path" : "iina/MainWindowController.swift",
-            "location" : {
-              "end_position" : 93630,
-              "start_position" : 93622
+          "location_info": {
+            "file_path": "iina/MainWindowController.swift",
+            "location": {
+              "end_position": 93630,
+              "start_position": 93622,
+              "start_line": 2328,
+              "end_line": 2328
             }
           }
         },
         {
-          "condition_value" : {
-            "optional_binding" : {
-              "_0" : {
-                "description" : "let window",
-                "is_binding_self" : false,
-                "is_in_out" : false,
-                "is_let" : true,
-                "is_var" : false,
-                "name" : "window"
+          "condition_value": {
+            "optional_binding": {
+              "_0": {
+                "description": "let window",
+                "is_binding_self": false,
+                "is_in_out": false,
+                "is_let": true,
+                "is_var": false,
+                "name": "window"
               }
             }
           },
-          "location_info" : {
-            "file_path" : "iina/MainWindowController.swift",
-            "location" : {
-              "end_position" : 93641,
-              "start_position" : 93630
+          "location_info": {
+            "file_path": "iina/MainWindowController.swift",
+            "location": {
+              "end_position": 93641,
+              "start_position": 93630,
+              "start_line": 2328,
+              "end_line": 2328
             }
           }
         }
       ],
-      "location_info" : {
-        "file_path" : "iina/MainWindowController.swift",
-        "location" : {
-          "end_position" : 93656,
-          "start_position" : 93611
+      "location_info": {
+        "file_path": "iina/MainWindowController.swift",
+        "location": {
+          "end_position": 93656,
+          "start_position": 93611,
+          "start_line": 2327,
+          "end_line": 2328
         }
       },
-      "name" : "guard"
+      "name": "guard"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard loaded, let window else { return }\n\n    // When starting to play the file try and find the screen the window was previously on.\n    let screen = player.info.justStartedFile ? determineScreenToUse(window) : window.selectDefaultScreen()\n    let screenRect = screen.visibleFrame\n    let screenSize = screenRect.size\n\n    let (width, height) = player.videoSizeForDisplay\n\n    // set aspect ratio\n    let originalVideoSize = NSSize(width: width, height: height)\n    setWindowAspectRatio(originalVideoSize)\n    pip.aspectRatio = originalVideoSize\n\n    var rect: NSRect\n    let needResizeWindow: Bool\n\n    let frame = fsState.priorWindowedFrame ?? window.frame\n\n    if player.info.justStartedFile {\n      // Many settings can require the window to be resized/repositioned:\n      // - Initial window size\n      // - Initial window position\n      // - Resize the window to fit video size\n      // - Use physical resolution on Retina displays\n      // - Direct use of the mpv geometry option\n      let resizeTiming = Preference.enum(for: .resizeWindowTiming) as Preference.ResizeWindowTiming\n      switch resizeTiming {\n      case .always:\n        needResizeWindow = true\n      case .onlyWhenOpen:\n        needResizeWindow = player.info.justOpenedFile || shouldApplyInitialWindowSize\n      case .never:\n        needResizeWindow = shouldApplyInitialWindowSize\n      }\n    } else {\n      // video size changed during playback\n      needResizeWindow = !keepWindowSize\n    }\n\n    if needResizeWindow {\n      log(\"Need to resize window\")\n      // get videoSize on screen\n      var videoSize = originalVideoSize\n      if Preference.bool(for: .usePhysicalResolution) {\n        videoSize = window.convertFromBacking(\n          NSMakeRect(window.frame.origin.x, window.frame.origin.y, CGFloat(width), CGFloat(height))).size\n        if videoSize != originalVideoSize {\n          log(\"\"\"\n            Adjusted size from \\(originalVideoSize) to \\(videoSize) based on physical \\\n            resolution of display\n            \"\"\")\n        }\n      }\n      let resizePreference = Preference.enum(for: .resizeWindowOption) as Preference.ResizeWindowOption\n      if player.info.justStartedFile {\n        let sizeBefore = videoSize\n        if resizePreference == .fitScreen {\n          videoSize = videoSize.shrink(toSize: screenSize)\n          if sizeBefore != videoSize {\n            log(\"Resized window to \\(videoSize) to fit in screen\")\n          }\n        } else {\n          let resizeRatio = resizePreference.ratio\n          videoSize = videoSize.multiply(CGFloat(resizeRatio))\n          if sizeBefore != videoSize {\n            log(\"Resized window to \\(resizeRatio)x video size \\(videoSize)\")\n          }\n        }\n      }\n      // check screen size\n      videoSize = videoSize.satisfyMaxSizeWithSameAspectRatio(screenSize)\n      // guard min size\n      // must be slightly larger than the min size, or it will crash when the min size is auto saved as window frame size.\n      videoSize = videoSize.satisfyMinSizeWithSameAspectRatio(AppData.mainWindowMinSize)\n      if shouldApplyInitialWindowSize {\n        // check if have geometry set (initial window position/size)\n        if let wfg = windowFrameFromGeometry(newSize: videoSize, screen: screen) {\n          rect = wfg\n          log(\"Adjusted window frame based on geometry option: \\(rect)\")\n        } else {\n          rect = videoSize.centeredRect(in: screenRect)\n          log(\"Centered window in screen: \\(rect)\")\n        }\n      } else if player.info.justStartedFile, resizePreference == .fitScreen {\n        rect = screenRect.centeredResize(to: videoSize)\n        log(\"Centered window in screen and resized: \\(rect)\")\n      } else {\n        rect = frame.centeredResize(to: videoSize)\n        log(\"Resized window preserving centering: \\(rect)\")\n      }\n    } else if shouldApplyInitialWindowSize {\n      rect = originalVideoSize.centeredRect(in: screenRect)\n      log(\"Centered original sized window in screen: \\(rect)\")\n    } else {\n      // user is navigating in playlist. remain same window area.\n      rect = frame.areaPreservingResized(newWidth: CGFloat(width), height: CGFloat(height))\n      log(\"Adjusted height of window preserving area: \\(rect)\")\n    }\n\n    shouldApplyInitialWindowSize = false\n\n    let rectBefore = rect\n    rect = rect.constrain(in: screenRect)\n    if rectBefore != rect {\n      log(\"Constrained window frame to be in screen: \\(rect)\")\n    }\n\n    if player.info.justOpenedFile && !Preference.bool(for: .edgeToEdgeVideo) {\n      rect.size.height += titleBarView.frame.height\n    }\n\n    if Preference.unlockWindowAspectRatio && !player.info.justOpenedFile {\n      // do nothing when window aspect ratio is unlocked\n      // however, if this is the first time opening the window, still apply the sizing logic\n    } else if fsState.isFullscreen {\n      log(\"In full screen mode, setting prior window frame\")\n      fsState.priorWindowedFrame = rect\n    } else {\n      log(\"Setting window frame to: \\(rect)\")\n      if player.disableWindowAnimation || Preference.bool(for: .disableAnimations) || !window.isVisible {\n        window.setFrame(rect, display: true, animate: false)\n      } else {\n        // animated `setFrame` can be inaccurate!\n        window.setFrame(rect, display: true, animate: true)\n        window.setFrame(rect, display: true)\n      }\n      updateWindowParametersForMPV(withFrame: rect)\n    }\n\n    // generate thumbnails after video loaded if it's the first time\n    if !isVideoLoaded {\n      player.generateThumbnails()\n      isVideoLoaded = true\n    }\n\n    // UI and slider\n    updatePlayTime(withDuration: true, andProgressBar: true)\n    player.events.emit(.windowSizeAdjusted, data: rect)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard loaded, let window else { return }\n\n    // When starting to play the file try and find the screen the window was previously on.\n    let screen = player.info.justStartedFile ? determineScreenToUse(window) : window.selectDefaultScreen()\n    let screenRect = screen.visibleFrame\n    let screenSize = screenRect.size\n\n    let (width, height) = player.videoSizeForDisplay\n\n    // set aspect ratio\n    let originalVideoSize = NSSize(width: width, height: height)\n    setWindowAspectRatio(originalVideoSize)\n    pip.aspectRatio = originalVideoSize\n\n    var rect: NSRect\n    let needResizeWindow: Bool\n\n    let frame = fsState.priorWindowedFrame ?? window.frame\n\n    if player.info.justStartedFile {\n      // Many settings can require the window to be resized/repositioned:\n      // - Initial window size\n      // - Initial window position\n      // - Resize the window to fit video size\n      // - Use physical resolution on Retina displays\n      // - Direct use of the mpv geometry option\n      let resizeTiming = Preference.enum(for: .resizeWindowTiming) as Preference.ResizeWindowTiming\n      switch resizeTiming {\n      case .always:\n        needResizeWindow = true\n      case .onlyWhenOpen:\n        needResizeWindow = player.info.justOpenedFile || shouldApplyInitialWindowSize\n      case .never:\n        needResizeWindow = shouldApplyInitialWindowSize\n      }\n    } else {\n      // video size changed during playback\n      needResizeWindow = !keepWindowSize\n    }\n\n    if needResizeWindow {\n      log(\"Need to resize window\")\n      // get videoSize on screen\n      var videoSize = originalVideoSize\n      if Preference.bool(for: .usePhysicalResolution) {\n        videoSize = window.convertFromBacking(\n          NSMakeRect(window.frame.origin.x, window.frame.origin.y, CGFloat(width), CGFloat(height))).size\n        if videoSize != originalVideoSize {\n          log(\"\"\"\n            Adjusted size from \\(originalVideoSize) to \\(videoSize) based on physical \\\n            resolution of display\n            \"\"\")\n        }\n      }\n      let resizePreference = Preference.enum(for: .resizeWindowOption) as Preference.ResizeWindowOption\n      if player.info.justStartedFile {\n        let sizeBefore = videoSize\n        if resizePreference == .fitScreen {\n          videoSize = videoSize.shrink(toSize: screenSize)\n          if sizeBefore != videoSize {\n            log(\"Resized window to \\(videoSize) to fit in screen\")\n          }\n        } else {\n          let resizeRatio = resizePreference.ratio\n          videoSize = videoSize.multiply(CGFloat(resizeRatio))\n          if sizeBefore != videoSize {\n            log(\"Resized window to \\(resizeRatio)x video size \\(videoSize)\")\n          }\n        }\n      }\n      // check screen size\n      videoSize = videoSize.satisfyMaxSizeWithSameAspectRatio(screenSize)\n      // guard min size\n      // must be slightly larger than the min size, or it will crash when the min size is auto saved as window frame size.\n      videoSize = videoSize.satisfyMinSizeWithSameAspectRatio(AppData.mainWindowMinSize)\n      if shouldApplyInitialWindowSize {\n        // check if have geometry set (initial window position/size)\n        if let wfg = windowFrameFromGeometry(newSize: videoSize, screen: screen) {\n          rect = wfg\n          log(\"Adjusted window frame based on geometry option: \\(rect)\")\n        } else {\n          rect = videoSize.centeredRect(in: screenRect)\n          log(\"Centered window in screen: \\(rect)\")\n        }\n      } else if player.info.justStartedFile, resizePreference == .fitScreen {\n        rect = screenRect.centeredResize(to: videoSize)\n        log(\"Centered window in screen and resized: \\(rect)\")\n      } else {\n        rect = frame.centeredResize(to: videoSize)\n        log(\"Resized window preserving centering: \\(rect)\")\n      }\n    } else if shouldApplyInitialWindowSize {\n      rect = originalVideoSize.centeredRect(in: screenRect)\n      log(\"Centered original sized window in screen: \\(rect)\")\n    } else {\n      // user is navigating in playlist. remain same window area.\n      rect = frame.areaPreservingResized(newWidth: CGFloat(width), height: CGFloat(height))\n      log(\"Adjusted height of window preserving area: \\(rect)\")\n    }\n\n    shouldApplyInitialWindowSize = false\n\n    let rectBefore = rect\n    rect = rect.constrain(in: screenRect)\n    if rectBefore != rect {\n      log(\"Constrained window frame to be in screen: \\(rect)\")\n    }\n\n    if player.info.justOpenedFile && !Preference.bool(for: .edgeToEdgeVideo) {\n      rect.size.height += titleBarView.frame.height\n    }\n\n    if Preference.unlockWindowAspectRatio && !player.info.justOpenedFile {\n      // do nothing when window aspect ratio is unlocked\n      // however, if this is the first time opening the window, still apply the sizing logic\n    } else if fsState.isFullscreen {\n      log(\"In full screen mode, setting prior window frame\")\n      fsState.priorWindowedFrame = rect\n    } else {\n      log(\"Setting window frame to: \\(rect)\")\n      if player.disableWindowAnimation || Preference.bool(for: .disableAnimations) || !window.isVisible {\n        window.setFrame(rect, display: true, animate: false)\n      } else {\n        // animated `setFrame` can be inaccurate!\n        window.setFrame(rect, display: true, animate: true)\n        window.setFrame(rect, display: true)\n      }\n      updateWindowParametersForMPV(withFrame: rect)\n    }\n\n    // generate thumbnails after video loaded if it's the first time\n    if !isVideoLoaded {\n      player.generateThumbnails()\n      isVideoLoaded = true\n    }\n\n    // UI and slider\n    updatePlayTime(withDuration: true, andProgressBar: true)\n    player.events.emit(.windowSizeAdjusted, data: rect)"
       },
-      "location_info" : {
-        "file_path" : "iina/MainWindowController.swift",
-        "location" : {
-          "end_position" : 99294,
-          "start_position" : 93488
+      "location_info": {
+        "file_path": "iina/MainWindowController.swift",
+        "location": {
+          "end_position": 99294,
+          "start_position": 93488,
+          "start_line": 2324,
+          "end_line": 2467
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "handleVideoSizeChange",
-      "parameters" : [
+      "modifiers": [],
+      "name": "handleVideoSizeChange",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "iina/MainWindowController.swift",
-            "location" : {
-              "end_position" : 93608,
-              "start_position" : 93588
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "iina/MainWindowController.swift",
+            "location": {
+              "end_position": 93608,
+              "start_position": 93588,
+              "start_line": 2327,
+              "end_line": 2327
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "keepWindowSize",
-          "order" : 0
+          "modifiers": [],
+          "name": "keepWindowSize",
+          "order": 0
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 7,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "iina-iina",
-  "repoName" : "iina/iina",
-  "repoURL" : "https://github.com/iina/iina.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 7,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "iina-iina",
+  "repoName": "iina/iina",
+  "repoURL": "https://github.com/iina/iina.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "iina/MainWindowController.swift"
   ]
 }

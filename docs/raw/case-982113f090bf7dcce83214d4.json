@@ -1,98 +1,92 @@
 {
-  "caseID" : "case-982113f090bf7dcce83214d4",
-  "commitHash" : "85f92c04c7964aba085d108a5d0dc01ea3897bfd",
-  "commitMessage" : "security: pin MASShortcut, confirm URL tasks, harden config auto-load (#1765)\n\nAddresses three issues identified in a source-level security audit\n(see SECURITY_AUDIT.md for the full report):\n\n1. [High] MASShortcut SPM dependency was pinned to `branch = master`,\n   meaning every build pulled the latest tip with no review gate. Pin\n   to the current HEAD revision SHA so future upstream changes require\n   an explicit bump.\n\n2. [Medium] `rectangle://execute-task=ignore-app/unignore-app` URL\n   actions silently mutated the disabled-apps defaults when triggered\n   from outside Rectangle (e.g. a web page). Require an NSAlert\n   confirmation, surfacing the bundle-id, unless Rectangle itself is\n   frontmost.\n\n3. [Medium] `Config.loadFromSupportDir()` silently auto-loaded any\n   RectangleConfig.json dropped in Application Support on launch. Add\n   a confirmation prompt, reject symlinks and world-writable files,\n   and apply a 1 MiB size cap to the loader (defense against OOM via\n   giant config).\n\nAlso includes SECURITY_AUDIT.md documenting the full review, including\nconfirmation that the app contains no telemetry, analytics, or crash\nreporting and that the only outbound network channel is the\nEdDSA-signed Sparkle update feed.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
-  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/85f92c04c7964aba085d108a5d0dc01ea3897bfd",
-  "durationSeconds" : 1.7711130380630493,
-  "entityNames" : [
+  "caseID": "case-982113f090bf7dcce83214d4",
+  "commitHash": "85f92c04c7964aba085d108a5d0dc01ea3897bfd",
+  "commitMessage": "security: pin MASShortcut, confirm URL tasks, harden config auto-load (#1765)\n\nAddresses three issues identified in a source-level security audit\n(see SECURITY_AUDIT.md for the full report):\n\n1. [High] MASShortcut SPM dependency was pinned to `branch = master`,\n   meaning every build pulled the latest tip with no review gate. Pin\n   to the current HEAD revision SHA so future upstream changes require\n   an explicit bump.\n\n2. [Medium] `rectangle://execute-task=ignore-app/unignore-app` URL\n   actions silently mutated the disabled-apps defaults when triggered\n   from outside Rectangle (e.g. a web page). Require an NSAlert\n   confirmation, surfacing the bundle-id, unless Rectangle itself is\n   frontmost.\n\n3. [Medium] `Config.loadFromSupportDir()` silently auto-loaded any\n   RectangleConfig.json dropped in Application Support on launch. Add\n   a confirmation prompt, reject symlinks and world-writable files,\n   and apply a 1 MiB size cap to the loader (defense against OOM via\n   giant config).\n\nAlso includes SECURITY_AUDIT.md documenting the full review, including\nconfirmation that the app contains no telemetry, analytics, or crash\nreporting and that the only outbound network channel is the\nEdDSA-signed Sparkle update feed.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
+  "commitURL": "https://github.com/rxhanson/Rectangle/commit/85f92c04c7964aba085d108a5d0dc01ea3897bfd",
+  "durationSeconds": 1.7711130380630493,
+  "entityNames": [
     "NSApplication",
     "[URL]",
     "application",
     "urls"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "for url in urls {\n                guard\n                    let components = URLComponents(url: url, resolvingAgainstBaseURL: true),\n                    components.path.isEmpty\n                else {\n                    continue\n                }\n                    \n                let name = (components.queryItems?.first { $0.name == \"name\" })?.value\n                switch (components.host, name) {\n                case (\"execute-action\", _):\n                    let action = (WindowAction.active.first { getUrlName($0.name) == name })\n                    action?.postUrl()\n                case (\"execute-task\", \"ignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.disableApp(appBundleId: bundleId)\n                case (\"execute-task\", \"unignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.enableApp(appBundleId: bundleId)\n                default:\n                    continue\n                }\n            }",
-      "index" : 3
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "for url in urls {\n                guard\n                    let components = URLComponents(url: url, resolvingAgainstBaseURL: true),\n                    components.path.isEmpty\n                else {\n                    continue\n                }\n                    \n                let name = (components.queryItems?.first { $0.name == \"name\" })?.value\n                switch (components.host, name) {\n                case (\"execute-action\", _):\n                    let action = (WindowAction.active.first { getUrlName($0.name) == name })\n                    action?.postUrl()\n                case (\"execute-task\", \"ignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.disableApp(appBundleId: bundleId)\n                case (\"execute-task\", \"unignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.enableApp(appBundleId: bundleId)\n                default:\n                    continue\n                }\n            }",
+      "index": 3
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "if NSWorkspace.shared.frontmostApplication == NSRunningApplication.current {\n            prevActiveApp?.activate()\n        }\n        DispatchQueue.main.async {\n            \n            func getUrlName(_ name: String) -> String {\n                return name.map { $0.isUppercase ? \"-\" + $0.lowercased() : String($0) }.joined()\n            }\n            \n            func extractBundleIdParameter(fromComponents components: URLComponents) -> String? {\n                (components.queryItems?.first { $0.name == \"app-bundle-id\" })?.value ?? ApplicationToggle.frontAppId\n            }\n            \n            func isValidParameter(bundleId: String?) -> Bool {\n                let isValid = bundleId?.isEmpty != true\n                if !isValid {\n                    Logger.log(\"Received an empty app-bundle-id parameter. Either pass a valid app bundle id or remove the parameter.\")\n                }\n                return isValid\n            }\n            \n            for url in urls {\n                guard\n                    let components = URLComponents(url: url, resolvingAgainstBaseURL: true),\n                    components.path.isEmpty\n                else {\n                    continue\n                }\n                    \n                let name = (components.queryItems?.first { $0.name == \"name\" })?.value\n                switch (components.host, name) {\n                case (\"execute-action\", _):\n                    let action = (WindowAction.active.first { getUrlName($0.name) == name })\n                    action?.postUrl()\n                case (\"execute-task\", \"ignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.disableApp(appBundleId: bundleId)\n                case (\"execute-task\", \"unignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.enableApp(appBundleId: bundleId)\n                default:\n                    continue\n                }\n            }\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "if NSWorkspace.shared.frontmostApplication == NSRunningApplication.current {\n            prevActiveApp?.activate()\n        }\n        DispatchQueue.main.async {\n            \n            func getUrlName(_ name: String) -> String {\n                return name.map { $0.isUppercase ? \"-\" + $0.lowercased() : String($0) }.joined()\n            }\n            \n            func extractBundleIdParameter(fromComponents components: URLComponents) -> String? {\n                (components.queryItems?.first { $0.name == \"app-bundle-id\" })?.value ?? ApplicationToggle.frontAppId\n            }\n            \n            func isValidParameter(bundleId: String?) -> Bool {\n                let isValid = bundleId?.isEmpty != true\n                if !isValid {\n                    Logger.log(\"Received an empty app-bundle-id parameter. Either pass a valid app bundle id or remove the parameter.\")\n                }\n                return isValid\n            }\n            \n            for url in urls {\n                guard\n                    let components = URLComponents(url: url, resolvingAgainstBaseURL: true),\n                    components.path.isEmpty\n                else {\n                    continue\n                }\n                    \n                let name = (components.queryItems?.first { $0.name == \"name\" })?.value\n                switch (components.host, name) {\n                case (\"execute-action\", _):\n                    let action = (WindowAction.active.first { getUrlName($0.name) == name })\n                    action?.postUrl()\n                case (\"execute-task\", \"ignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.disableApp(appBundleId: bundleId)\n                case (\"execute-task\", \"unignore-app\"):\n                    let bundleId = extractBundleIdParameter(fromComponents: components)\n                    guard isValidParameter(bundleId: bundleId) else { continue }\n                    self.applicationToggle.enableApp(appBundleId: bundleId)\n                default:\n                    continue\n                }\n            }\n        }"
       },
-      "location_info" : {
-        "file_path" : "Rectangle/AppDelegate.swift",
-        "location" : {
-          "end_position" : 27355,
-          "start_position" : 25029
+      "location_info": {
+        "file_path": "Rectangle/AppDelegate.swift",
+        "location": {
+          "end_position": 27355,
+          "start_position": 25029,
+          "start_line": 624,
+          "end_line": 673
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "application",
-      "parameters" : [
+      "modifiers": [],
+      "name": "application",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "NSApplication"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "NSApplication"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Rectangle/AppDelegate.swift",
-            "location" : {
-              "end_position" : 25081,
-              "start_position" : 25051
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Rectangle/AppDelegate.swift",
+            "location": {
+              "end_position": 25081,
+              "start_position": 25051,
+              "start_line": 625,
+              "end_line": 625
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "application",
-          "order" : 0
+          "modifiers": [],
+          "name": "application",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[URL]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[URL]"
           },
-          "is_variadic" : false,
-          "label" : "open",
-          "location_info" : {
-            "file_path" : "Rectangle/AppDelegate.swift",
-            "location" : {
-              "end_position" : 25097,
-              "start_position" : 25081
+          "is_variadic": false,
+          "label": "open",
+          "location_info": {
+            "file_path": "Rectangle/AppDelegate.swift",
+            "location": {
+              "end_position": 25097,
+              "start_position": 25081,
+              "start_line": 625,
+              "end_line": 625
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "urls",
-          "order" : 1
+          "modifiers": [],
+          "name": "urls",
+          "order": 1
         }
       ]
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 0,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "rxhanson-rectangle",
-  "repoName" : "rxhanson/Rectangle",
-  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 0,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "rxhanson-rectangle",
+  "repoName": "rxhanson/Rectangle",
+  "repoURL": "https://github.com/rxhanson/Rectangle.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Rectangle/AppDelegate.swift"
   ]
 }

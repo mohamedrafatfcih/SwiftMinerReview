@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-166b46ee23e2432b0998fd5f",
-  "commitHash" : "cfc77d53d6aea9863cec0f9db409c4154b5d976b",
-  "commitMessage" : "Various fixes and improvements for v4.0.1 (#769)\n\n- Fixed: display properties reset turns off hardware DDC\r\n- Fixed: brief black screen upon changing space when using shade dimming\r\n- Asynchronous thread-safe debouncing DDC write for smoother sliders\r\n- Improved support for [BetterDummy](https://github.com/waydabber/BetterDummy)\r\n- Better support for common physical dummies identifying as 28E850\r\n- Inert dummy menu sliders are now hidden\r\n- Improved support for nongamma->nongamma mirroring scenarios\r\n- Compiled to run 10.14 (needed some minor changes) - compatibility is unofficial!\r\n- Updated README\r\n- Bumped version number to 4.0.1 (service release)",
-  "commitURL" : "https://github.com/MonitorControl/MonitorControl/commit/cfc77d53d6aea9863cec0f9db409c4154b5d976b",
-  "durationSeconds" : 7.2387109994888306,
-  "entityNames" : [
+  "caseID": "case-166b46ee23e2432b0998fd5f",
+  "commitHash": "cfc77d53d6aea9863cec0f9db409c4154b5d976b",
+  "commitMessage": "Various fixes and improvements for v4.0.1 (#769)\n\n- Fixed: display properties reset turns off hardware DDC\r\n- Fixed: brief black screen upon changing space when using shade dimming\r\n- Asynchronous thread-safe debouncing DDC write for smoother sliders\r\n- Improved support for [BetterDummy](https://github.com/waydabber/BetterDummy)\r\n- Better support for common physical dummies identifying as 28E850\r\n- Inert dummy menu sliders are now hidden\r\n- Improved support for nongamma->nongamma mirroring scenarios\r\n- Compiled to run 10.14 (needed some minor changes) - compatibility is unofficial!\r\n- Updated README\r\n- Bumped version number to 4.0.1 (service release)",
+  "commitURL": "https://github.com/MonitorControl/MonitorControl/commit/cfc77d53d6aea9863cec0f9db409c4154b5d976b",
+  "durationSeconds": 7.238710999488831,
+  "entityNames": [
     "(current: UInt16, max: UInt16)?",
     "Bool",
     "CFTimeInterval",
@@ -14,2103 +14,1901 @@
     "Float",
     "IOAVService?"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "[Command: UInt16]"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "[Command: UInt16]"
       },
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "other" : {
-            "_0" : "[:]"
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "other": {
+            "_0": "[:]"
           }
         }
       },
-      "is_constant" : false,
-      "location_info" : {
-        "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-        "location" : {
-          "end_position" : 441,
-          "start_position" : 394
+      "is_constant": false,
+      "location_info": {
+        "file_path": "MonitorControl/Model/OtherDisplay.swift",
+        "location": {
+          "end_position": 441,
+          "start_position": 394,
+          "start_line": 14,
+          "end_line": 14
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "writeDDCLastSavedValue"
+      "modifiers": [],
+      "name": "writeDDCLastSavedValue"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "Display"
+          "name": "Display"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "if isReadFromDisplay {\n      var currentValue = self.convDDCToValue(for: command, from: currentDDCValue)\n      if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue), command == .brightness {\n        os_log(\"- Combined brightness mapping on DDC data.\", type: .info)\n        if currentValue > 0 {\n          currentValue = self.combinedBrightnessSwitchingValue() + currentValue * (1 - self.combinedBrightnessSwitchingValue())\n        } else if currentValue == 0, firstrun, prefs.integer(forKey: PrefKey.startupAction.rawValue) != StartupAction.write.rawValue {\n          currentValue = self.combinedBrightnessSwitchingValue()\n        } else if self.prefExists(for: command), self.readPrefAsFloat(for: command) <= self.combinedBrightnessSwitchingValue() {\n          currentValue = self.readPrefAsFloat(for: command)\n        } else {\n          currentValue = self.combinedBrightnessSwitchingValue()\n        }\n      }\n      self.savePref(currentValue, for: command)\n      if command == .brightness {\n        self.smoothBrightnessTransient = currentValue\n      }\n    } else {\n      var currentValue: Float = self.readPrefAsFloat(for: command)\n      if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue), command == .brightness {\n        os_log(\"- Combined brightness mapping on saved data.\", type: .info)\n        if !self.prefExists(for: command) {\n          currentValue = self.combinedBrightnessSwitchingValue() + self.convDDCToValue(for: command, from: currentDDCValue) * (1 - self.combinedBrightnessSwitchingValue())\n        } else if firstrun, currentValue < self.combinedBrightnessSwitchingValue(), prefs.integer(forKey: PrefKey.startupAction.rawValue) != StartupAction.write.rawValue {\n          currentValue = self.combinedBrightnessSwitchingValue()\n        }\n      } else {\n        currentValue = self.prefExists(for: command) ? self.readPrefAsFloat(for: command) : self.convDDCToValue(for: command, from: currentDDCValue)\n      }\n      self.savePref(currentValue, for: command)\n      if command == .brightness {\n        self.smoothBrightnessTransient = currentValue\n      }\n    }"
+          "attributes": [],
+          "body": {
+            "content": "if isReadFromDisplay {\n      var currentValue = self.convDDCToValue(for: command, from: currentDDCValue)\n      if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue), command == .brightness {\n        os_log(\"- Combined brightness mapping on DDC data.\", type: .info)\n        if currentValue > 0 {\n          currentValue = self.combinedBrightnessSwitchingValue() + currentValue * (1 - self.combinedBrightnessSwitchingValue())\n        } else if currentValue == 0, firstrun, prefs.integer(forKey: PrefKey.startupAction.rawValue) != StartupAction.write.rawValue {\n          currentValue = self.combinedBrightnessSwitchingValue()\n        } else if self.prefExists(for: command), self.readPrefAsFloat(for: command) <= self.combinedBrightnessSwitchingValue() {\n          currentValue = self.readPrefAsFloat(for: command)\n        } else {\n          currentValue = self.combinedBrightnessSwitchingValue()\n        }\n      }\n      self.savePref(currentValue, for: command)\n      if command == .brightness {\n        self.smoothBrightnessTransient = currentValue\n      }\n    } else {\n      var currentValue: Float = self.readPrefAsFloat(for: command)\n      if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue), command == .brightness {\n        os_log(\"- Combined brightness mapping on saved data.\", type: .info)\n        if !self.prefExists(for: command) {\n          currentValue = self.combinedBrightnessSwitchingValue() + self.convDDCToValue(for: command, from: currentDDCValue) * (1 - self.combinedBrightnessSwitchingValue())\n        } else if firstrun, currentValue < self.combinedBrightnessSwitchingValue(), prefs.integer(forKey: PrefKey.startupAction.rawValue) != StartupAction.write.rawValue {\n          currentValue = self.combinedBrightnessSwitchingValue()\n        }\n      } else {\n        currentValue = self.prefExists(for: command) ? self.readPrefAsFloat(for: command) : self.convDDCToValue(for: command, from: currentDDCValue)\n      }\n      self.savePref(currentValue, for: command)\n      if command == .brightness {\n        self.smoothBrightnessTransient = currentValue\n      }\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 3610,
-              "start_position" : 1376
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 3610,
+              "start_position": 1376,
+              "start_line": 34,
+              "end_line": 72
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "processCurrentDDCValue",
-          "parameters" : [
+          "modifiers": [],
+          "name": "processCurrentDDCValue",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1433,
-                  "start_position" : 1408
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1433,
+                  "start_position": 1408,
+                  "start_line": 36,
+                  "end_line": 36
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isReadFromDisplay",
-              "order" : 0
+              "modifiers": [],
+              "name": "isReadFromDisplay",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1451,
-                  "start_position" : 1433
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1451,
+                  "start_position": 1433,
+                  "start_line": 36,
+                  "end_line": 36
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 1
+              "modifiers": [],
+              "name": "command",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1467,
-                  "start_position" : 1451
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1467,
+                  "start_position": 1451,
+                  "start_line": 36,
+                  "end_line": 36
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "firstrun",
-              "order" : 2
+              "modifiers": [],
+              "name": "firstrun",
+              "order": 2
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "UInt16"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "UInt16"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1490,
-                  "start_position" : 1467
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1490,
+                  "start_position": 1467,
+                  "start_line": 36,
+                  "end_line": 36
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "currentDDCValue",
-              "order" : 3
+              "modifiers": [],
+              "name": "currentDDCValue",
+              "order": 3
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "return self.convValueToDDC(for: command, from: (!prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue) && command == .brightness) ? max(0, self.readPrefAsFloat(for: command) - self.combinedBrightnessSwitchingValue()) * (1 / (1 - self.combinedBrightnessSwitchingValue())) : self.readPrefAsFloat(for: command))"
+          "attributes": [],
+          "body": {
+            "content": "return self.convValueToDDC(for: command, from: (!prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue) && command == .brightness) ? max(0, self.readPrefAsFloat(for: command) - self.combinedBrightnessSwitchingValue()) * (1 / (1 - self.combinedBrightnessSwitchingValue())) : self.readPrefAsFloat(for: command))"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 3997,
-              "start_position" : 3610
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 3997,
+              "start_position": 3610,
+              "start_line": 72,
+              "end_line": 76
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "getDDCValueFromPrefs",
-          "parameters" : [
+          "modifiers": [],
+          "name": "getDDCValueFromPrefs",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 3658,
-                  "start_position" : 3640
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 3658,
+                  "start_position": 3640,
+                  "start_line": 74,
+                  "end_line": 74
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "UInt16"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "UInt16"
             },
-            "description" : "-> UInt16"
+            "description": "-> UInt16"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "if !self.smoothBrightnessRunning, !self.isSw(), !self.readPrefAsBool(key: .unavailableDDC, for: command), self.readPrefAsBool(key: .isTouched, for: command), prefs.integer(forKey: PrefKey.startupAction.rawValue) == StartupAction.write.rawValue, !app.safeMode {\n      let restoreValue = self.getDDCValueFromPrefs(command)\n      os_log(\"Restoring %{public}@ DDC value %{public}@ for %{public}@\", type: .info, String(reflecting: command), String(restoreValue), self.name)\n      self.writeDDCValues(command: command, value: restoreValue)\n      if command == .audioSpeakerVolume, self.readPrefAsBool(key: .enableMuteUnmute) {\n        let currentMuteValue = self.readPrefAsInt(for: .audioMuteScreenBlank) == 0 ? 2 : self.readPrefAsInt(for: .audioMuteScreenBlank)\n        os_log(\"- Writing last saved DDC value for Mute: %{public}@\", type: .info, String(currentMuteValue))\n        self.writeDDCValues(command: .audioMuteScreenBlank, value: UInt16(currentMuteValue))\n      }\n    }"
+          "attributes": [],
+          "body": {
+            "content": "if !self.smoothBrightnessRunning, !self.isSw(), !self.readPrefAsBool(key: .unavailableDDC, for: command), self.readPrefAsBool(key: .isTouched, for: command), prefs.integer(forKey: PrefKey.startupAction.rawValue) == StartupAction.write.rawValue, !app.safeMode {\n      let restoreValue = self.getDDCValueFromPrefs(command)\n      os_log(\"Restoring %{public}@ DDC value %{public}@ for %{public}@\", type: .info, String(reflecting: command), String(restoreValue), self.name)\n      self.writeDDCValues(command: command, value: restoreValue)\n      if command == .audioSpeakerVolume, self.readPrefAsBool(key: .enableMuteUnmute) {\n        let currentMuteValue = self.readPrefAsInt(for: .audioMuteScreenBlank) == 0 ? 2 : self.readPrefAsInt(for: .audioMuteScreenBlank)\n        os_log(\"- Writing last saved DDC value for Mute: %{public}@\", type: .info, String(currentMuteValue))\n        self.writeDDCValues(command: .audioMuteScreenBlank, value: UInt16(currentMuteValue))\n      }\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 5034,
-              "start_position" : 3997
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 5034,
+              "start_position": 3997,
+              "start_line": 76,
+              "end_line": 89
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "restoreDDCSettingsToDisplay",
-          "parameters" : [
+          "modifiers": [],
+          "name": "restoreDDCSettingsToDisplay",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 4050,
-                  "start_position" : 4034
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 4050,
+                  "start_position": 4034,
+                  "start_line": 78,
+                  "end_line": 78
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "var ddcValues: (UInt16, UInt16)?\n    var maxDDCValue = UInt16(DDC_MAX_DETECT_LIMIT)\n    var currentDDCValue: UInt16\n    switch command {\n    case .audioSpeakerVolume: currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 0.125)\n    case .contrast: currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 0.750)\n    default: currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 1.000)\n    }\n    if command == .audioSpeakerVolume {\n      currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 0.125) // lower default audio value as high volume might rattle the user.\n    }\n    os_log(\"Setting up display %{public}@ for %{public}@\", type: .info, String(self.identifier), String(reflecting: command))\n    if !self.isSw() {\n      if prefs.integer(forKey: PrefKey.startupAction.rawValue) == StartupAction.read.rawValue, self.pollingCount != 0, !app.safeMode {\n        os_log(\"- Reading DDC from display %{public}@ times\", type: .info, String(self.pollingCount))\n        let delay = self.readPrefAsBool(key: .longerDelay) ? UInt64(40 * kMillisecondScale) : nil\n        ddcValues = self.readDDCValues(for: command, tries: UInt(self.pollingCount), minReplyDelay: delay)\n        if ddcValues != nil {\n          (currentDDCValue, maxDDCValue) = ddcValues ?? (currentDDCValue, maxDDCValue)\n          self.processCurrentDDCValue(isReadFromDisplay: true, command: command, firstrun: firstrun, currentDDCValue: currentDDCValue)\n          os_log(\"- DDC read successful.\", type: .info)\n        } else {\n          os_log(\"- DDC read failed.\", type: .info)\n        }\n      } else {\n        os_log(\"- DDC read disabled.\", type: .info)\n      }\n      if self.readPrefAsInt(key: .maxDDCOverride, for: command) > self.readPrefAsInt(key: .minDDCOverride, for: command) {\n        self.savePref(self.readPrefAsInt(key: .maxDDCOverride, for: command), key: .maxDDC, for: command)\n      } else {\n        self.savePref(min(Int(maxDDCValue), DDC_MAX_DETECT_LIMIT), key: .maxDDC, for: command)\n      }\n      if ddcValues == nil {\n        self.processCurrentDDCValue(isReadFromDisplay: false, command: command, firstrun: firstrun, currentDDCValue: currentDDCValue)\n        currentDDCValue = self.getDDCValueFromPrefs(command)\n      }\n      os_log(\"- Current DDC value: %{public}@\", type: .info, String(currentDDCValue))\n      os_log(\"- Minimum DDC value: %{public}@ (overrides 0)\", type: .info, String(self.readPrefAsInt(key: .minDDCOverride, for: command)))\n      os_log(\"- Maximum DDC value: %{public}@ (overrides %{public}@)\", type: .info, String(self.readPrefAsInt(key: .maxDDC, for: command)), String(maxDDCValue))\n      os_log(\"- Current internal value: %{public}@\", type: .info, String(self.readPrefAsFloat(for: command)))\n      os_log(\"- Command status: %{public}@\", type: .info, self.readPrefAsBool(key: .isTouched, for: command) ? \"Touched\" : \"Untouched\")\n      if command == .audioSpeakerVolume {\n        self.setupMuteUnMute()\n      }\n      self.restoreDDCSettingsToDisplay(command: command)\n    } else {\n      self.savePref(self.prefExists(for: command) ? self.readPrefAsFloat(for: command) : Float(1), for: command)\n      self.savePref(self.readPrefAsFloat(for: command), key: .SwBrightness)\n      self.brightnessSyncSourceValue = self.readPrefAsFloat(for: command)\n      self.smoothBrightnessTransient = self.readPrefAsFloat(for: command)\n      os_log(\"- Software controlled display current internal value: %{public}@\", type: .info, String(self.readPrefAsFloat(for: command)))\n    }"
+          "attributes": [],
+          "body": {
+            "content": "var ddcValues: (UInt16, UInt16)?\n    var maxDDCValue = UInt16(DDC_MAX_DETECT_LIMIT)\n    var currentDDCValue: UInt16\n    switch command {\n    case .audioSpeakerVolume: currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 0.125)\n    case .contrast: currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 0.750)\n    default: currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 1.000)\n    }\n    if command == .audioSpeakerVolume {\n      currentDDCValue = UInt16(Float(DDC_MAX_DETECT_LIMIT) * 0.125) // lower default audio value as high volume might rattle the user.\n    }\n    os_log(\"Setting up display %{public}@ for %{public}@\", type: .info, String(self.identifier), String(reflecting: command))\n    if !self.isSw() {\n      if prefs.integer(forKey: PrefKey.startupAction.rawValue) == StartupAction.read.rawValue, self.pollingCount != 0, !app.safeMode {\n        os_log(\"- Reading DDC from display %{public}@ times\", type: .info, String(self.pollingCount))\n        let delay = self.readPrefAsBool(key: .longerDelay) ? UInt64(40 * kMillisecondScale) : nil\n        ddcValues = self.readDDCValues(for: command, tries: UInt(self.pollingCount), minReplyDelay: delay)\n        if ddcValues != nil {\n          (currentDDCValue, maxDDCValue) = ddcValues ?? (currentDDCValue, maxDDCValue)\n          self.processCurrentDDCValue(isReadFromDisplay: true, command: command, firstrun: firstrun, currentDDCValue: currentDDCValue)\n          os_log(\"- DDC read successful.\", type: .info)\n        } else {\n          os_log(\"- DDC read failed.\", type: .info)\n        }\n      } else {\n        os_log(\"- DDC read disabled.\", type: .info)\n      }\n      if self.readPrefAsInt(key: .maxDDCOverride, for: command) > self.readPrefAsInt(key: .minDDCOverride, for: command) {\n        self.savePref(self.readPrefAsInt(key: .maxDDCOverride, for: command), key: .maxDDC, for: command)\n      } else {\n        self.savePref(min(Int(maxDDCValue), DDC_MAX_DETECT_LIMIT), key: .maxDDC, for: command)\n      }\n      if ddcValues == nil {\n        self.processCurrentDDCValue(isReadFromDisplay: false, command: command, firstrun: firstrun, currentDDCValue: currentDDCValue)\n        currentDDCValue = self.getDDCValueFromPrefs(command)\n      }\n      os_log(\"- Current DDC value: %{public}@\", type: .info, String(currentDDCValue))\n      os_log(\"- Minimum DDC value: %{public}@ (overrides 0)\", type: .info, String(self.readPrefAsInt(key: .minDDCOverride, for: command)))\n      os_log(\"- Maximum DDC value: %{public}@ (overrides %{public}@)\", type: .info, String(self.readPrefAsInt(key: .maxDDC, for: command)), String(maxDDCValue))\n      os_log(\"- Current internal value: %{public}@\", type: .info, String(self.readPrefAsFloat(for: command)))\n      os_log(\"- Command status: %{public}@\", type: .info, self.readPrefAsBool(key: .isTouched, for: command) ? \"Touched\" : \"Untouched\")\n      if command == .audioSpeakerVolume {\n        self.setupMuteUnMute()\n      }\n      self.restoreDDCSettingsToDisplay(command: command)\n    } else {\n      self.savePref(self.prefExists(for: command) ? self.readPrefAsFloat(for: command) : Float(1), for: command)\n      self.savePref(self.readPrefAsFloat(for: command), key: .SwBrightness)\n      self.brightnessSyncSourceValue = self.readPrefAsFloat(for: command)\n      self.smoothBrightnessTransient = self.readPrefAsFloat(for: command)\n      os_log(\"- Software controlled display current internal value: %{public}@\", type: .info, String(self.readPrefAsFloat(for: command)))\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 8586,
-              "start_position" : 5034
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 8586,
+              "start_position": 5034,
+              "start_line": 89,
+              "end_line": 144
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "setupCurrentAndMaxValues",
-          "parameters" : [
+          "modifiers": [],
+          "name": "setupCurrentAndMaxValues",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 5086,
-                  "start_position" : 5068
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 5086,
+                  "start_position": 5068,
+                  "start_line": 91,
+                  "end_line": 91
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 5108,
-                  "start_position" : 5086
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 5108,
+                  "start_position": 5086,
+                  "start_line": 91,
+                  "end_line": 91
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "firstrun",
-              "order" : 1
+              "modifiers": [],
+              "name": "firstrun",
+              "order": 1
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard !self.isSw(), !self.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume), self.readPrefAsBool(key: .enableMuteUnmute) else {\n      return\n    }\n    var currentMuteValue = self.readPrefAsInt(for: .audioMuteScreenBlank) == 0 ? 2 : self.readPrefAsInt(for: .audioMuteScreenBlank)\n    if self.pollingCount != 0, !app.safeMode, prefs.integer(forKey: PrefKey.startupAction.rawValue) == StartupAction.read.rawValue {\n      os_log(\"- Reading DDC from display %{public}@ times for Mute\", type: .info, String(self.pollingCount))\n      let delay = self.readPrefAsBool(key: .longerDelay) ? UInt64(40 * kMillisecondScale) : nil\n      if let muteValues: (current: UInt16, max: UInt16) = self.readDDCValues(for: .audioMuteScreenBlank, tries: UInt(self.pollingCount), minReplyDelay: delay) {\n        os_log(\"- Success, current Mute setting: %{public}@\", type: .info, String(muteValues.current))\n        currentMuteValue = Int(muteValues.current)\n      } else {\n        os_log(\"- Mute read failed\", type: .info)\n      }\n    }\n    self.savePref(Int(currentMuteValue), for: .audioMuteScreenBlank)"
+          "attributes": [],
+          "body": {
+            "content": "guard !self.isSw(), !self.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume), self.readPrefAsBool(key: .enableMuteUnmute) else {\n      return\n    }\n    var currentMuteValue = self.readPrefAsInt(for: .audioMuteScreenBlank) == 0 ? 2 : self.readPrefAsInt(for: .audioMuteScreenBlank)\n    if self.pollingCount != 0, !app.safeMode, prefs.integer(forKey: PrefKey.startupAction.rawValue) == StartupAction.read.rawValue {\n      os_log(\"- Reading DDC from display %{public}@ times for Mute\", type: .info, String(self.pollingCount))\n      let delay = self.readPrefAsBool(key: .longerDelay) ? UInt64(40 * kMillisecondScale) : nil\n      if let muteValues: (current: UInt16, max: UInt16) = self.readDDCValues(for: .audioMuteScreenBlank, tries: UInt(self.pollingCount), minReplyDelay: delay) {\n        os_log(\"- Success, current Mute setting: %{public}@\", type: .info, String(muteValues.current))\n        currentMuteValue = Int(muteValues.current)\n      } else {\n        os_log(\"- Mute read failed\", type: .info)\n      }\n    }\n    self.savePref(Int(currentMuteValue), for: .audioMuteScreenBlank)"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 9715,
-              "start_position" : 8586
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 9715,
+              "start_position": 8586,
+              "start_line": 144,
+              "end_line": 162
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "setupMuteUnMute",
-          "parameters" : [
-
-          ]
+          "modifiers": [],
+          "name": "setupMuteUnMute",
+          "parameters": []
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "return (command == .audioSpeakerVolume && self.readPrefAsBool(key: .enableMuteUnmute) && self.readPrefAsInt(for: .audioMuteScreenBlank) == 1) ? 0 : self.readPrefAsFloat(for: command)"
+          "attributes": [],
+          "body": {
+            "content": "return (command == .audioSpeakerVolume && self.readPrefAsBool(key: .enableMuteUnmute) && self.readPrefAsInt(for: .audioMuteScreenBlank) == 1) ? 0 : self.readPrefAsFloat(for: command)"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 9967,
-              "start_position" : 9715
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 9967,
+              "start_position": 9715,
+              "start_line": 162,
+              "end_line": 166
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "setupSliderCurrentValue",
-          "parameters" : [
+          "modifiers": [],
+          "name": "setupSliderCurrentValue",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 9764,
-                  "start_position" : 9748
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 9764,
+                  "start_position": 9748,
+                  "start_line": 164,
+                  "end_line": 164
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Float"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Float"
             },
-            "description" : "-> Float"
+            "description": "-> Float"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard !self.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume) else {\n      OSDUtils.showOsdVolumeDisabled(displayID: self.identifier)\n      return\n    }\n    let currentValue = self.readPrefAsFloat(for: .audioSpeakerVolume)\n    var muteValue: Int?\n    let volumeOSDValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement)\n    if self.readPrefAsInt(for: .audioMuteScreenBlank) == 1, volumeOSDValue > 0 {\n      muteValue = 2\n    } else if self.readPrefAsInt(for: .audioMuteScreenBlank) != 1, volumeOSDValue == 0 {\n      muteValue = 1\n    }\n    let isAlreadySet = volumeOSDValue == self.readPrefAsFloat(for: .audioSpeakerVolume)\n    if !isAlreadySet {\n      if let muteValue = muteValue, self.readPrefAsBool(key: .enableMuteUnmute) {\n        self.writeDDCValues(command: .audioMuteScreenBlank, value: UInt16(muteValue))\n        self.savePref(muteValue, for: .audioMuteScreenBlank)\n      }\n      if !self.readPrefAsBool(key: .enableMuteUnmute) || volumeOSDValue != 0 {\n        self.writeDDCValues(command: .audioSpeakerVolume, value: self.convValueToDDC(for: .audioSpeakerVolume, from: volumeOSDValue))\n      }\n    }\n    if !self.readPrefAsBool(key: .hideOsd) {\n      OSDUtils.showOsd(displayID: self.identifier, command: .audioSpeakerVolume, value: volumeOSDValue, roundChiclet: !isSmallIncrement)\n    }\n    if !isAlreadySet {\n      self.savePref(volumeOSDValue, for: .audioSpeakerVolume)\n      if let slider = self.sliderHandler[.audioSpeakerVolume] {\n        slider.setValue(volumeOSDValue, displayID: self.identifier)\n      }\n    }"
+          "attributes": [],
+          "body": {
+            "content": "guard !self.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume) else {\n      OSDUtils.showOsdVolumeDisabled(displayID: self.identifier)\n      return\n    }\n    let currentValue = self.readPrefAsFloat(for: .audioSpeakerVolume)\n    var muteValue: Int?\n    let volumeOSDValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement)\n    if self.readPrefAsInt(for: .audioMuteScreenBlank) == 1, volumeOSDValue > 0 {\n      muteValue = 2\n    } else if self.readPrefAsInt(for: .audioMuteScreenBlank) != 1, volumeOSDValue == 0 {\n      muteValue = 1\n    }\n    let isAlreadySet = volumeOSDValue == self.readPrefAsFloat(for: .audioSpeakerVolume)\n    if !isAlreadySet {\n      if let muteValue = muteValue, self.readPrefAsBool(key: .enableMuteUnmute) {\n        self.writeDDCValues(command: .audioMuteScreenBlank, value: UInt16(muteValue))\n        self.savePref(muteValue, for: .audioMuteScreenBlank)\n      }\n      if !self.readPrefAsBool(key: .enableMuteUnmute) || volumeOSDValue != 0 {\n        self.writeDDCValues(command: .audioSpeakerVolume, value: self.convValueToDDC(for: .audioSpeakerVolume, from: volumeOSDValue))\n      }\n    }\n    if !self.readPrefAsBool(key: .hideOsd) {\n      OSDUtils.showOsd(displayID: self.identifier, command: .audioSpeakerVolume, value: volumeOSDValue, roundChiclet: !isSmallIncrement)\n    }\n    if !isAlreadySet {\n      self.savePref(volumeOSDValue, for: .audioSpeakerVolume)\n      if let slider = self.sliderHandler[.audioSpeakerVolume] {\n        slider.setValue(volumeOSDValue, displayID: self.identifier)\n      }\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 11621,
-              "start_position" : 9967
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 11621,
+              "start_position": 9967,
+              "start_line": 166,
+              "end_line": 200
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "stepVolume",
-          "parameters" : [
+          "modifiers": [],
+          "name": "stepVolume",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 9999,
-                  "start_position" : 9987
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 9999,
+                  "start_position": 9987,
+                  "start_line": 168,
+                  "end_line": 168
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isUp",
-              "order" : 0
+              "modifiers": [],
+              "name": "isUp",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 10021,
-                  "start_position" : 9999
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 10021,
+                  "start_position": 9999,
+                  "start_line": 168,
+                  "end_line": 168
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isSmallIncrement",
-              "order" : 1
+              "modifiers": [],
+              "name": "isSmallIncrement",
+              "order": 1
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard !self.readPrefAsBool(key: .unavailableDDC, for: .contrast), !self.isSw() else {\n      return\n    }\n    let currentValue = self.readPrefAsFloat(for: .contrast)\n    let contrastOSDValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement)\n    let isAlreadySet = contrastOSDValue == self.readPrefAsFloat(for: .contrast)\n    if !isAlreadySet {\n      self.writeDDCValues(command: .contrast, value: self.convValueToDDC(for: .contrast, from: contrastOSDValue))\n    }\n    OSDUtils.showOsd(displayID: self.identifier, command: .contrast, value: contrastOSDValue, roundChiclet: !isSmallIncrement)\n    if !isAlreadySet {\n      self.savePref(contrastOSDValue, for: .contrast)\n      if let slider = self.sliderHandler[.contrast] {\n        slider.setValue(contrastOSDValue, displayID: self.identifier)\n      }\n    }"
+          "attributes": [],
+          "body": {
+            "content": "guard !self.readPrefAsBool(key: .unavailableDDC, for: .contrast), !self.isSw() else {\n      return\n    }\n    let currentValue = self.readPrefAsFloat(for: .contrast)\n    let contrastOSDValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement)\n    let isAlreadySet = contrastOSDValue == self.readPrefAsFloat(for: .contrast)\n    if !isAlreadySet {\n      self.writeDDCValues(command: .contrast, value: self.convValueToDDC(for: .contrast, from: contrastOSDValue))\n    }\n    OSDUtils.showOsd(displayID: self.identifier, command: .contrast, value: contrastOSDValue, roundChiclet: !isSmallIncrement)\n    if !isAlreadySet {\n      self.savePref(contrastOSDValue, for: .contrast)\n      if let slider = self.sliderHandler[.contrast] {\n        slider.setValue(contrastOSDValue, displayID: self.identifier)\n      }\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 12539,
-              "start_position" : 11621
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 12539,
+              "start_position": 11621,
+              "start_line": 200,
+              "end_line": 219
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "stepContrast",
-          "parameters" : [
+          "modifiers": [],
+          "name": "stepContrast",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 11655,
-                  "start_position" : 11643
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 11655,
+                  "start_position": 11643,
+                  "start_line": 202,
+                  "end_line": 202
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isUp",
-              "order" : 0
+              "modifiers": [],
+              "name": "isUp",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 11677,
-                  "start_position" : 11655
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 11677,
+                  "start_position": 11655,
+                  "start_line": 202,
+                  "end_line": 202
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isSmallIncrement",
-              "order" : 1
+              "modifiers": [],
+              "name": "isSmallIncrement",
+              "order": 1
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard !self.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume) else {\n      OSDUtils.showOsdMuteDisabled(displayID: self.identifier)\n      return\n    }\n    var muteValue: Int\n    var volumeOSDValue: Float\n    if self.readPrefAsInt(for: .audioMuteScreenBlank) != 1 {\n      muteValue = 1\n      volumeOSDValue = 0\n    } else {\n      muteValue = 2\n      volumeOSDValue = self.readPrefAsFloat(for: .audioSpeakerVolume)\n      // The volume that will be set immediately after setting unmute while the old set volume was 0 is unpredictable. Hence, just set it to a single filled chiclet\n      if volumeOSDValue == 0 {\n        volumeOSDValue = 1 / OSDUtils.chicletCount\n        self.savePref(volumeOSDValue, for: .audioSpeakerVolume)\n      }\n    }\n    if self.readPrefAsBool(key: .enableMuteUnmute) {\n      self.writeDDCValues(command: .audioMuteScreenBlank, value: UInt16(muteValue))\n    }\n    self.savePref(muteValue, for: .audioMuteScreenBlank)\n    if !self.readPrefAsBool(key: .enableMuteUnmute) || volumeOSDValue > 0 {\n      self.writeDDCValues(command: .audioSpeakerVolume, value: self.convValueToDDC(for: .audioSpeakerVolume, from: volumeOSDValue))\n    }\n    if !fromVolumeSlider {\n      if !self.readPrefAsBool(key: .hideOsd) {\n        OSDUtils.showOsd(displayID: self.identifier, command: volumeOSDValue > 0 ? .audioSpeakerVolume : .audioMuteScreenBlank, value: volumeOSDValue, roundChiclet: true)\n      }\n      if let slider = self.sliderHandler[.audioSpeakerVolume] {\n        slider.setValue(volumeOSDValue)\n      }\n    }"
+          "attributes": [],
+          "body": {
+            "content": "guard !self.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume) else {\n      OSDUtils.showOsdMuteDisabled(displayID: self.identifier)\n      return\n    }\n    var muteValue: Int\n    var volumeOSDValue: Float\n    if self.readPrefAsInt(for: .audioMuteScreenBlank) != 1 {\n      muteValue = 1\n      volumeOSDValue = 0\n    } else {\n      muteValue = 2\n      volumeOSDValue = self.readPrefAsFloat(for: .audioSpeakerVolume)\n      // The volume that will be set immediately after setting unmute while the old set volume was 0 is unpredictable. Hence, just set it to a single filled chiclet\n      if volumeOSDValue == 0 {\n        volumeOSDValue = 1 / OSDUtils.chicletCount\n        self.savePref(volumeOSDValue, for: .audioSpeakerVolume)\n      }\n    }\n    if self.readPrefAsBool(key: .enableMuteUnmute) {\n      self.writeDDCValues(command: .audioMuteScreenBlank, value: UInt16(muteValue))\n    }\n    self.savePref(muteValue, for: .audioMuteScreenBlank)\n    if !self.readPrefAsBool(key: .enableMuteUnmute) || volumeOSDValue > 0 {\n      self.writeDDCValues(command: .audioSpeakerVolume, value: self.convValueToDDC(for: .audioSpeakerVolume, from: volumeOSDValue))\n    }\n    if !fromVolumeSlider {\n      if !self.readPrefAsBool(key: .hideOsd) {\n        OSDUtils.showOsd(displayID: self.identifier, command: volumeOSDValue > 0 ? .audioSpeakerVolume : .audioMuteScreenBlank, value: volumeOSDValue, roundChiclet: true)\n      }\n      if let slider = self.sliderHandler[.audioSpeakerVolume] {\n        slider.setValue(volumeOSDValue)\n      }\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 14136,
-              "start_position" : 12539
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 14136,
+              "start_position": 12539,
+              "start_line": 219,
+              "end_line": 255
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "toggleMute",
-          "parameters" : [
+          "modifiers": [],
+          "name": "toggleMute",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 12589,
-                  "start_position" : 12559
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 12589,
+                  "start_position": 12559,
+                  "start_line": 221,
+                  "end_line": 221
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "fromVolumeSlider",
-              "order" : 0
+              "modifiers": [],
+              "name": "fromVolumeSlider",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "return (!self.arm64ddc && self.ddc == nil) || self.isVirtual || self.isDummy"
+          "attributes": [],
+          "body": {
+            "content": "return (!self.arm64ddc && self.ddc == nil) || self.isVirtual || self.isDummy"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 14250,
-              "start_position" : 14136
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 14250,
+              "start_position": 14136,
+              "start_line": 255,
+              "end_line": 259
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "isSwOnly",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Bool"
+          "modifiers": [],
+          "name": "isSwOnly",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Bool"
             },
-            "description" : "-> Bool"
+            "description": "-> Bool"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "if prefs.bool(forKey: PrefKey.forceSw.rawValue + self.prefsId) || self.isSwOnly() {\n      return true\n    } else {\n      return false\n    }"
+          "attributes": [],
+          "body": {
+            "content": "if prefs.bool(forKey: PrefKey.forceSw.rawValue + self.prefsId) || self.isSwOnly() {\n      return true\n    } else {\n      return false\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 14423,
-              "start_position" : 14250
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 14423,
+              "start_position": 14250,
+              "start_line": 259,
+              "end_line": 267
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "isSw",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Bool"
+          "modifiers": [],
+          "name": "isSw",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Bool"
             },
-            "description" : "-> Bool"
+            "description": "-> Bool"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "self.lastAnimationStartedTime = CACurrentMediaTime()\n    DispatchQueue.global(qos: .userInteractive).async {\n      self.swAfterOsdAnimationSemaphore.wait()\n      guard CACurrentMediaTime() < self.lastAnimationStartedTime + 0.05 else {\n        self.swAfterOsdAnimationSemaphore.signal()\n        return\n      }\n      for value: Int in stride(from: 1, to: 6, by: 1) {\n        guard self.readPrefAsFloat(for: .brightness) <= self.combinedBrightnessSwitchingValue() else {\n          self.swAfterOsdAnimationSemaphore.signal()\n          return\n        }\n        OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: Float(value), maxValue: 100, roundChiclet: false)\n        Thread.sleep(forTimeInterval: Double(value * 2) / 300)\n      }\n      for value: Int in stride(from: 5, to: 0, by: -1) {\n        guard self.readPrefAsFloat(for: .brightness) <= self.combinedBrightnessSwitchingValue() else {\n          self.swAfterOsdAnimationSemaphore.signal()\n          return\n        }\n        OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: Float(value), maxValue: 100, roundChiclet: false)\n        Thread.sleep(forTimeInterval: Double(value * 2) / 300)\n      }\n      OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: 0, roundChiclet: true)\n      self.swAfterOsdAnimationSemaphore.signal()\n    }"
+          "attributes": [],
+          "body": {
+            "content": "self.lastAnimationStartedTime = CACurrentMediaTime()\n    DispatchQueue.global(qos: .userInteractive).async {\n      self.swAfterOsdAnimationSemaphore.wait()\n      guard CACurrentMediaTime() < self.lastAnimationStartedTime + 0.05 else {\n        self.swAfterOsdAnimationSemaphore.signal()\n        return\n      }\n      for value: Int in stride(from: 1, to: 6, by: 1) {\n        guard self.readPrefAsFloat(for: .brightness) <= self.combinedBrightnessSwitchingValue() else {\n          self.swAfterOsdAnimationSemaphore.signal()\n          return\n        }\n        OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: Float(value), maxValue: 100, roundChiclet: false)\n        Thread.sleep(forTimeInterval: Double(value * 2) / 300)\n      }\n      for value: Int in stride(from: 5, to: 0, by: -1) {\n        guard self.readPrefAsFloat(for: .brightness) <= self.combinedBrightnessSwitchingValue() else {\n          self.swAfterOsdAnimationSemaphore.signal()\n          return\n        }\n        OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: Float(value), maxValue: 100, roundChiclet: false)\n        Thread.sleep(forTimeInterval: Double(value * 2) / 300)\n      }\n      OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: 0, roundChiclet: true)\n      self.swAfterOsdAnimationSemaphore.signal()\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 15952,
-              "start_position" : 14559
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 15952,
+              "start_position": 14559,
+              "start_line": 270,
+              "end_line": 298
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "doSwAfterOsdAnimation",
-          "parameters" : [
-
-          ]
+          "modifiers": [],
+          "name": "doSwAfterOsdAnimation",
+          "parameters": []
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "if self.isSw() {\n      super.stepBrightness(isUp: isUp, isSmallIncrement: isSmallIncrement)\n      return\n    }\n    guard !self.readPrefAsBool(key: .unavailableDDC, for: .brightness) else {\n      return\n    }\n    let currentValue = self.readPrefAsFloat(for: .brightness)\n    var osdValue: Float = 1\n    if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue), prefs.bool(forKey: PrefKey.separateCombinedScale.rawValue) {\n      osdValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement, half: true)\n      _ = self.setBrightness(osdValue)\n      if osdValue > self.combinedBrightnessSwitchingValue() {\n        OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: osdValue - self.combinedBrightnessSwitchingValue(), maxValue: self.combinedBrightnessSwitchingValue(), roundChiclet: !isSmallIncrement)\n      } else {\n        self.doSwAfterOsdAnimation()\n      }\n    } else {\n      osdValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement)\n      _ = self.setBrightness(osdValue)\n      OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: osdValue, roundChiclet: !isSmallIncrement)\n    }\n    if let slider = self.sliderHandler[.brightness] {\n      slider.setValue(osdValue, displayID: self.identifier)\n      self.brightnessSyncSourceValue = osdValue\n    }"
+          "attributes": [],
+          "body": {
+            "content": "if self.isSw() {\n      super.stepBrightness(isUp: isUp, isSmallIncrement: isSmallIncrement)\n      return\n    }\n    guard !self.readPrefAsBool(key: .unavailableDDC, for: .brightness) else {\n      return\n    }\n    let currentValue = self.readPrefAsFloat(for: .brightness)\n    var osdValue: Float = 1\n    if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue), prefs.bool(forKey: PrefKey.separateCombinedScale.rawValue) {\n      osdValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement, half: true)\n      _ = self.setBrightness(osdValue)\n      if osdValue > self.combinedBrightnessSwitchingValue() {\n        OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: osdValue - self.combinedBrightnessSwitchingValue(), maxValue: self.combinedBrightnessSwitchingValue(), roundChiclet: !isSmallIncrement)\n      } else {\n        self.doSwAfterOsdAnimation()\n      }\n    } else {\n      osdValue = self.calcNewValue(currentValue: currentValue, isUp: isUp, isSmallIncrement: isSmallIncrement)\n      _ = self.setBrightness(osdValue)\n      OSDUtils.showOsd(displayID: self.identifier, command: .brightness, value: osdValue, roundChiclet: !isSmallIncrement)\n    }\n    if let slider = self.sliderHandler[.brightness] {\n      slider.setValue(osdValue, displayID: self.identifier)\n      self.brightnessSyncSourceValue = osdValue\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 17423,
-              "start_position" : 15952
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 17423,
+              "start_position": 15952,
+              "start_line": 298,
+              "end_line": 327
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "stepBrightness",
-          "parameters" : [
+          "name": "stepBrightness",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 15997,
-                  "start_position" : 15985
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 15997,
+                  "start_position": 15985,
+                  "start_line": 300,
+                  "end_line": 300
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isUp",
-              "order" : 0
+              "modifiers": [],
+              "name": "isUp",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 16019,
-                  "start_position" : 15997
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 16019,
+                  "start_position": 15997,
+                  "start_line": 300,
+                  "end_line": 300
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isSmallIncrement",
-              "order" : 1
+              "modifiers": [],
+              "name": "isSmallIncrement",
+              "order": 1
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "self.checkGammaInterference()\n    return super.setBrightness(to, slow: slow)"
+          "attributes": [],
+          "body": {
+            "content": "self.checkGammaInterference()\n    return super.setBrightness(to, slow: slow)"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 17587,
-              "start_position" : 17423
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 17587,
+              "start_position": 17423,
+              "start_line": 327,
+              "end_line": 332
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "setBrightness",
-          "parameters" : [
+          "name": "setBrightness",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Float"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Float"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "-1"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "-1"
                   }
                 }
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 17473,
-                  "start_position" : 17455
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 17473,
+                  "start_position": 17455,
+                  "start_line": 329,
+                  "end_line": 329
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "to",
-              "order" : 0
+              "modifiers": [],
+              "name": "to",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 17491,
-                  "start_position" : 17473
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 17491,
+                  "start_position": 17473,
+                  "start_line": 329,
+                  "end_line": 329
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "slow",
-              "order" : 1
+              "modifiers": [],
+              "name": "slow",
+              "order": 1
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Bool"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Bool"
             },
-            "description" : "-> Bool"
+            "description": "-> Bool"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let value = max(min(to, 1), 0)\n    if !self.isSw() {\n      if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue) {\n        var brightnessValue: Float = 0\n        var brightnessSwValue: Float = 1\n        if value >= self.combinedBrightnessSwitchingValue() {\n          brightnessValue = (value - self.combinedBrightnessSwitchingValue()) * (1 / (1 - self.combinedBrightnessSwitchingValue()))\n          brightnessSwValue = 1\n        } else {\n          brightnessValue = 0\n          brightnessSwValue = (value / self.combinedBrightnessSwitchingValue())\n        }\n        self.writeDDCValues(command: .brightness, value: self.convValueToDDC(for: .brightness, from: brightnessValue))\n        if self.readPrefAsFloat(key: .SwBrightness) != brightnessSwValue {\n          _ = self.setSwBrightness(brightnessSwValue)\n        }\n      } else {\n        self.writeDDCValues(command: .brightness, value: self.convValueToDDC(for: .brightness, from: value))\n      }\n      if !transient {\n        self.savePref(value, for: .brightness)\n        self.smoothBrightnessTransient = value\n      }\n    } else {\n      _ = super.setDirectBrightness(to, transient: transient)\n    }\n    return true"
+          "attributes": [],
+          "body": {
+            "content": "let value = max(min(to, 1), 0)\n    if !self.isSw() {\n      if !prefs.bool(forKey: PrefKey.disableCombinedBrightness.rawValue) {\n        var brightnessValue: Float = 0\n        var brightnessSwValue: Float = 1\n        if value >= self.combinedBrightnessSwitchingValue() {\n          brightnessValue = (value - self.combinedBrightnessSwitchingValue()) * (1 / (1 - self.combinedBrightnessSwitchingValue()))\n          brightnessSwValue = 1\n        } else {\n          brightnessValue = 0\n          brightnessSwValue = (value / self.combinedBrightnessSwitchingValue())\n        }\n        self.writeDDCValues(command: .brightness, value: self.convValueToDDC(for: .brightness, from: brightnessValue))\n        if self.readPrefAsFloat(key: .SwBrightness) != brightnessSwValue {\n          _ = self.setSwBrightness(brightnessSwValue)\n        }\n      } else {\n        self.writeDDCValues(command: .brightness, value: self.convValueToDDC(for: .brightness, from: value))\n      }\n      if !transient {\n        self.savePref(value, for: .brightness)\n        self.smoothBrightnessTransient = value\n      }\n    } else {\n      _ = super.setDirectBrightness(to, transient: transient)\n    }\n    return true"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 18862,
-              "start_position" : 17587
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 18862,
+              "start_position": 17587,
+              "start_line": 332,
+              "end_line": 362
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "setDirectBrightness",
-          "parameters" : [
+          "name": "setDirectBrightness",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Float"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Float"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 17638,
-                  "start_position" : 17625
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 17638,
+                  "start_position": 17625,
+                  "start_line": 334,
+                  "end_line": 334
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "to",
-              "order" : 0
+              "modifiers": [],
+              "name": "to",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 17661,
-                  "start_position" : 17638
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 17661,
+                  "start_position": 17638,
+                  "start_line": 334,
+                  "end_line": 334
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "transient",
-              "order" : 1
+              "modifiers": [],
+              "name": "transient",
+              "order": 1
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Bool"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Bool"
             },
-            "description" : "-> Bool"
+            "description": "-> Bool"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "return self.prefExists(for: .brightness) ? self.readPrefAsFloat(for: .brightness) : 1"
+          "attributes": [],
+          "body": {
+            "content": "return self.prefExists(for: .brightness) ? self.readPrefAsFloat(for: .brightness) : 1"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 19000,
-              "start_position" : 18862
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 19000,
+              "start_position": 18862,
+              "start_line": 362,
+              "end_line": 366
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "getBrightness",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Float"
+          "name": "getBrightness",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Float"
             },
-            "description" : "-> Float"
+            "description": "-> Float"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let codes = self.readPrefAsString(key: PrefKey.remapDDC, for: command).components(separatedBy: \",\")\n    var intCodes: [UInt8] = []\n    for code in codes {\n      let trimmedCode = code.trimmingCharacters(in: CharacterSet(charactersIn: \" \"))\n      if !trimmedCode.isEmpty, let intCode = UInt8(trimmedCode, radix: 16), intCode != 0 {\n        intCodes.append(intCode)\n      }\n    }\n    return intCodes"
+          "attributes": [],
+          "body": {
+            "content": "let codes = self.readPrefAsString(key: PrefKey.remapDDC, for: command).components(separatedBy: \",\")\n    var intCodes: [UInt8] = []\n    for code in codes {\n      let trimmedCode = code.trimmingCharacters(in: CharacterSet(charactersIn: \" \"))\n      if !trimmedCode.isEmpty, let intCode = UInt8(trimmedCode, radix: 16), intCode != 0 {\n        intCodes.append(intCode)\n      }\n    }\n    return intCodes"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 19466,
-              "start_position" : 19000
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 19466,
+              "start_position": 19000,
+              "start_line": 366,
+              "end_line": 378
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "getRemapControlCodes",
-          "parameters" : [
+          "modifiers": [],
+          "name": "getRemapControlCodes",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 19046,
-                  "start_position" : 19030
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 19046,
+                  "start_position": 19030,
+                  "start_line": 368,
+                  "end_line": 368
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "[UInt8]"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "[UInt8]"
             },
-            "description" : "-> [UInt8]"
+            "description": "-> [UInt8]"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard app.sleepID == 0, app.reconfigureID == 0, !self.readPrefAsBool(key: .forceSw), !self.readPrefAsBool(key: .unavailableDDC, for: command) else {\n      return\n    }\n    self.writeDDCQueue.async(flags: .barrier) {\n      self.writeDDCNextValue[command] = value\n    }\n    DisplayManager.shared.globalDDCQueue.async(flags: .barrier) {\n      self.asyncPerformWriteDDCValues(command: command)\n    }"
+          "attributes": [],
+          "body": {
+            "content": "guard app.sleepID == 0, app.reconfigureID == 0, !self.readPrefAsBool(key: .forceSw), !self.readPrefAsBool(key: .unavailableDDC, for: command) else {\n      return\n    }\n    self.writeDDCQueue.async(flags: .barrier) {\n      self.writeDDCNextValue[command] = value\n    }\n    DisplayManager.shared.globalDDCQueue.async(flags: .barrier) {\n      self.asyncPerformWriteDDCValues(command: command)\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 19935,
-              "start_position" : 19466
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 19935,
+              "start_position": 19466,
+              "start_line": 378,
+              "end_line": 390
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "writeDDCValues",
-          "parameters" : [
+          "name": "writeDDCValues",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 19515,
-                  "start_position" : 19497
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 19515,
+                  "start_position": 19497,
+                  "start_line": 380,
+                  "end_line": 380
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "UInt16"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "UInt16"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 19528,
-                  "start_position" : 19515
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 19528,
+                  "start_position": 19515,
+                  "start_line": 380,
+                  "end_line": 380
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "value",
-              "order" : 1
+              "modifiers": [],
+              "name": "value",
+              "order": 1
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "var value = UInt16.max\n    var lastValue = UInt16.max\n    self.writeDDCQueue.sync {\n      value = self.writeDDCNextValue[command] ?? UInt16.max\n      lastValue = self.writeDDCLastSavedValue[command] ?? UInt16.max\n    }\n    guard value != UInt16.max, value != lastValue else {\n      return\n    }\n    self.writeDDCQueue.async(flags: .barrier) {\n      self.writeDDCLastSavedValue[command] = value\n      self.savePref(true, key: PrefKey.isTouched, for: command)\n    }\n    var controlCodes = self.getRemapControlCodes(command: command)\n    if controlCodes.count == 0 {\n      controlCodes.append(command.rawValue)\n    }\n    for controlCode in controlCodes {\n      if Arm64DDC.isArm64 {\n        if self.arm64ddc {\n          _ = Arm64DDC.write(service: self.arm64avService, command: controlCode, value: value)\n        }\n      } else {\n        _ = self.ddc?.write(command: controlCode, value: value, errorRecoveryWaitTime: 2000) ?? false\n      }\n    }"
+          "attributes": [],
+          "body": {
+            "content": "var value = UInt16.max\n    var lastValue = UInt16.max\n    self.writeDDCQueue.sync {\n      value = self.writeDDCNextValue[command] ?? UInt16.max\n      lastValue = self.writeDDCLastSavedValue[command] ?? UInt16.max\n    }\n    guard value != UInt16.max, value != lastValue else {\n      return\n    }\n    self.writeDDCQueue.async(flags: .barrier) {\n      self.writeDDCLastSavedValue[command] = value\n      self.savePref(true, key: PrefKey.isTouched, for: command)\n    }\n    var controlCodes = self.getRemapControlCodes(command: command)\n    if controlCodes.count == 0 {\n      controlCodes.append(command.rawValue)\n    }\n    for controlCode in controlCodes {\n      if Arm64DDC.isArm64 {\n        if self.arm64ddc {\n          _ = Arm64DDC.write(service: self.arm64avService, command: controlCode, value: value)\n        }\n      } else {\n        _ = self.ddc?.write(command: controlCode, value: value, errorRecoveryWaitTime: 2000) ?? false\n      }\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 20941,
-              "start_position" : 19935
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 20941,
+              "start_position": 19935,
+              "start_line": 390,
+              "end_line": 419
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "asyncPerformWriteDDCValues",
-          "parameters" : [
+          "modifiers": [],
+          "name": "asyncPerformWriteDDCValues",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 19987,
-                  "start_position" : 19971
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 19987,
+                  "start_position": 19971,
+                  "start_line": 392,
+                  "end_line": 392
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "var values: (UInt16, UInt16)?\n    guard app.sleepID == 0, app.reconfigureID == 0, !self.readPrefAsBool(key: .forceSw), !self.readPrefAsBool(key: .unavailableDDC, for: command) else {\n      return values\n    }\n    let controlCodes = self.getRemapControlCodes(command: command)\n    let controlCode = controlCodes.count == 0 ? command.rawValue : controlCodes[0]\n    if Arm64DDC.isArm64 {\n      guard self.arm64ddc else {\n        return nil\n      }\n      DisplayManager.shared.globalDDCQueue.sync {\n        if let unwrappedDelay = delay {\n          values = Arm64DDC.read(service: self.arm64avService, command: controlCode, tries: UInt8(min(tries, 255)), minReplyDelay: UInt32(unwrappedDelay / 1000))\n        } else {\n          values = Arm64DDC.read(service: self.arm64avService, command: controlCode, tries: UInt8(min(tries, 255)))\n        }\n      }\n    } else {\n      DisplayManager.shared.globalDDCQueue.sync {\n        values = self.ddc?.read(command: controlCode, tries: tries, minReplyDelay: delay)\n      }\n    }\n    return values"
+          "attributes": [],
+          "body": {
+            "content": "var values: (UInt16, UInt16)?\n    guard app.sleepID == 0, app.reconfigureID == 0, !self.readPrefAsBool(key: .forceSw), !self.readPrefAsBool(key: .unavailableDDC, for: command) else {\n      return values\n    }\n    let controlCodes = self.getRemapControlCodes(command: command)\n    let controlCode = controlCodes.count == 0 ? command.rawValue : controlCodes[0]\n    if Arm64DDC.isArm64 {\n      guard self.arm64ddc else {\n        return nil\n      }\n      DisplayManager.shared.globalDDCQueue.sync {\n        if let unwrappedDelay = delay {\n          values = Arm64DDC.read(service: self.arm64avService, command: controlCode, tries: UInt8(min(tries, 255)), minReplyDelay: UInt32(unwrappedDelay / 1000))\n        } else {\n          values = Arm64DDC.read(service: self.arm64avService, command: controlCode, tries: UInt8(min(tries, 255)))\n        }\n      }\n    } else {\n      DisplayManager.shared.globalDDCQueue.sync {\n        values = self.ddc?.read(command: controlCode, tries: tries, minReplyDelay: delay)\n      }\n    }\n    return values"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 22106,
-              "start_position" : 20941
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 22106,
+              "start_position": 20941,
+              "start_line": 419,
+              "end_line": 445
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "readDDCValues",
-          "parameters" : [
+          "modifiers": [],
+          "name": "readDDCValues",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 20986,
-                  "start_position" : 20964
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 20986,
+                  "start_position": 20964,
+                  "start_line": 421,
+                  "end_line": 421
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "UInt"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "UInt"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 20999,
-                  "start_position" : 20986
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 20999,
+                  "start_position": 20986,
+                  "start_line": 421,
+                  "end_line": 421
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "tries",
-              "order" : 1
+              "modifiers": [],
+              "name": "tries",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "UInt64?"
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "UInt64?"
               },
-              "is_variadic" : false,
-              "label" : "minReplyDelay",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 21027,
-                  "start_position" : 20999
+              "is_variadic": false,
+              "label": "minReplyDelay",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 21027,
+                  "start_position": 20999,
+                  "start_line": 421,
+                  "end_line": 421
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "delay",
-              "order" : 2
+              "modifiers": [],
+              "name": "delay",
+              "order": 2
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : true,
-              "name" : "(current: UInt16, max: UInt16)?"
+          "return_clause": {
+            "data_type": {
+              "is_optional": true,
+              "name": "(current: UInt16, max: UInt16)?"
             },
-            "description" : "-> (current: UInt16, max: UInt16)?"
+            "description": "-> (current: UInt16, max: UInt16)?"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let nextValue: Float\n    if isSmallIncrement {\n      nextValue = currentValue + (isUp ? 0.01 : -0.01)\n    } else {\n      let osdChicletFromValue = OSDUtils.chiclet(fromValue: currentValue, maxValue: 1, half: half)\n      let distance = OSDUtils.getDistance(fromNearestChiclet: osdChicletFromValue)\n      var nextFilledChiclet = isUp ? ceil(osdChicletFromValue) : floor(osdChicletFromValue)\n      let distanceThreshold: Float = 0.25 // 25% of the distance between the edges of an osd box\n      if distance == 0 {\n        nextFilledChiclet += (isUp ? 1 : -1)\n      } else if !isUp, distance < distanceThreshold {\n        nextFilledChiclet -= 1\n      } else if isUp, distance > (1 - distanceThreshold) {\n        nextFilledChiclet += 1\n      }\n      nextValue = OSDUtils.value(fromChiclet: nextFilledChiclet, maxValue: 1, half: half)\n    }\n    return max(0, min(1, nextValue))"
+          "attributes": [],
+          "body": {
+            "content": "let nextValue: Float\n    if isSmallIncrement {\n      nextValue = currentValue + (isUp ? 0.01 : -0.01)\n    } else {\n      let osdChicletFromValue = OSDUtils.chiclet(fromValue: currentValue, maxValue: 1, half: half)\n      let distance = OSDUtils.getDistance(fromNearestChiclet: osdChicletFromValue)\n      var nextFilledChiclet = isUp ? ceil(osdChicletFromValue) : floor(osdChicletFromValue)\n      let distanceThreshold: Float = 0.25 // 25% of the distance between the edges of an osd box\n      if distance == 0 {\n        nextFilledChiclet += (isUp ? 1 : -1)\n      } else if !isUp, distance < distanceThreshold {\n        nextFilledChiclet -= 1\n      } else if isUp, distance > (1 - distanceThreshold) {\n        nextFilledChiclet += 1\n      }\n      nextValue = OSDUtils.value(fromChiclet: nextFilledChiclet, maxValue: 1, half: half)\n    }\n    return max(0, min(1, nextValue))"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 23095,
-              "start_position" : 22106
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 23095,
+              "start_position": 22106,
+              "start_line": 445,
+              "end_line": 466
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "calcNewValue",
-          "parameters" : [
+          "modifiers": [],
+          "name": "calcNewValue",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Float"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Float"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 22149,
-                  "start_position" : 22128
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 22149,
+                  "start_position": 22128,
+                  "start_line": 447,
+                  "end_line": 447
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "currentValue",
-              "order" : 0
+              "modifiers": [],
+              "name": "currentValue",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 22161,
-                  "start_position" : 22149
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 22161,
+                  "start_position": 22149,
+                  "start_line": 447,
+                  "end_line": 447
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isUp",
-              "order" : 1
+              "modifiers": [],
+              "name": "isUp",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 22185,
-                  "start_position" : 22161
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 22185,
+                  "start_position": 22161,
+                  "start_line": 447,
+                  "end_line": 447
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isSmallIncrement",
-              "order" : 2
+              "modifiers": [],
+              "name": "isSmallIncrement",
+              "order": 2
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 22203,
-                  "start_position" : 22185
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 22203,
+                  "start_position": 22185,
+                  "start_line": 447,
+                  "end_line": 447
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "half",
-              "order" : 3
+              "modifiers": [],
+              "name": "half",
+              "order": 3
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Float"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Float"
             },
-            "description" : "-> Float"
+            "description": "-> Float"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "switch curveDDC {\n    case 1: return 0.6\n    case 2: return 0.7\n    case 3: return 0.8\n    case 4: return 0.9\n    case 6: return 1.3\n    case 7: return 1.5\n    case 8: return 1.7\n    case 9: return 1.88\n    default: return 1.0\n    }"
+          "attributes": [],
+          "body": {
+            "content": "switch curveDDC {\n    case 1: return 0.6\n    case 2: return 0.7\n    case 3: return 0.8\n    case 4: return 0.9\n    case 6: return 1.3\n    case 7: return 1.5\n    case 8: return 1.7\n    case 9: return 1.88\n    default: return 1.0\n    }"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 23391,
-              "start_position" : 23095
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 23391,
+              "start_position": 23095,
+              "start_line": 466,
+              "end_line": 480
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "getCurveMultiplier",
-          "parameters" : [
+          "modifiers": [],
+          "name": "getCurveMultiplier",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Int"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Int"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 23138,
-                  "start_position" : 23123
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 23138,
+                  "start_position": 23123,
+                  "start_line": 468,
+                  "end_line": 468
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "curveDDC",
-              "order" : 0
+              "modifiers": [],
+              "name": "curveDDC",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Float"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Float"
             },
-            "description" : "-> Float"
+            "description": "-> Float"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "var value = from\n    if self.readPrefAsBool(key: .invertDDC, for: command) {\n      value = 1 - value\n    }\n    let curveMultiplier = self.getCurveMultiplier(self.readPrefAsInt(key: .curveDDC, for: command))\n    let minDDCValue = Float(self.readPrefAsInt(key: .minDDCOverride, for: command))\n    let maxDDCValue = Float(self.readPrefAsInt(key: .maxDDC, for: command))\n    let curvedValue = pow(max(min(value, 1), 0), curveMultiplier)\n    let deNormalizedValue = (maxDDCValue - minDDCValue) * curvedValue + minDDCValue\n    var intDDCValue = UInt16(min(max(deNormalizedValue, minDDCValue), maxDDCValue))\n    if from > 0, command == Command.audioSpeakerVolume {\n      intDDCValue = max(1, intDDCValue) // Never let sound to mute accidentally, keep it digitally to at digital 1 if needed as muting breaks some displays\n    }\n    return intDDCValue"
+          "attributes": [],
+          "body": {
+            "content": "var value = from\n    if self.readPrefAsBool(key: .invertDDC, for: command) {\n      value = 1 - value\n    }\n    let curveMultiplier = self.getCurveMultiplier(self.readPrefAsInt(key: .curveDDC, for: command))\n    let minDDCValue = Float(self.readPrefAsInt(key: .minDDCOverride, for: command))\n    let maxDDCValue = Float(self.readPrefAsInt(key: .maxDDC, for: command))\n    let curvedValue = pow(max(min(value, 1), 0), curveMultiplier)\n    let deNormalizedValue = (maxDDCValue - minDDCValue) * curvedValue + minDDCValue\n    var intDDCValue = UInt16(min(max(deNormalizedValue, minDDCValue), maxDDCValue))\n    if from > 0, command == Command.audioSpeakerVolume {\n      intDDCValue = max(1, intDDCValue) // Never let sound to mute accidentally, keep it digitally to at digital 1 if needed as muting breaks some displays\n    }\n    return intDDCValue"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 24312,
-              "start_position" : 23391
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 24312,
+              "start_position": 23391,
+              "start_line": 480,
+              "end_line": 497
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "convValueToDDC",
-          "parameters" : [
+          "modifiers": [],
+          "name": "convValueToDDC",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 23437,
-                  "start_position" : 23415
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 23437,
+                  "start_position": 23415,
+                  "start_line": 482,
+                  "end_line": 482
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Float"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Float"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 23448,
-                  "start_position" : 23437
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 23448,
+                  "start_position": 23437,
+                  "start_line": 482,
+                  "end_line": 482
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "from",
-              "order" : 1
+              "modifiers": [],
+              "name": "from",
+              "order": 1
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "UInt16"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "UInt16"
             },
-            "description" : "-> UInt16"
+            "description": "-> UInt16"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let curveMultiplier = self.getCurveMultiplier(self.readPrefAsInt(key: .curveDDC, for: command))\n    let minDDCValue = Float(self.readPrefAsInt(key: .minDDCOverride, for: command))\n    let maxDDCValue = Float(self.readPrefAsInt(key: .maxDDC, for: command))\n    let normalizedValue = ((min(max(Float(from), minDDCValue), maxDDCValue) - minDDCValue) / (maxDDCValue - minDDCValue))\n    let deCurvedValue = pow(normalizedValue, 1.0 / curveMultiplier)\n    var value = deCurvedValue\n    if self.readPrefAsBool(key: .invertDDC, for: command) {\n      value = 1 - value\n    }\n    return max(min(value, 1), 0)"
+          "attributes": [],
+          "body": {
+            "content": "let curveMultiplier = self.getCurveMultiplier(self.readPrefAsInt(key: .curveDDC, for: command))\n    let minDDCValue = Float(self.readPrefAsInt(key: .minDDCOverride, for: command))\n    let maxDDCValue = Float(self.readPrefAsInt(key: .maxDDC, for: command))\n    let normalizedValue = ((min(max(Float(from), minDDCValue), maxDDCValue) - minDDCValue) / (maxDDCValue - minDDCValue))\n    let deCurvedValue = pow(normalizedValue, 1.0 / curveMultiplier)\n    var value = deCurvedValue\n    if self.readPrefAsBool(key: .invertDDC, for: command) {\n      value = 1 - value\n    }\n    return max(min(value, 1), 0)"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 24989,
-              "start_position" : 24312
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 24989,
+              "start_position": 24312,
+              "start_line": 497,
+              "end_line": 510
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "convDDCToValue",
-          "parameters" : [
+          "modifiers": [],
+          "name": "convDDCToValue",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Command"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Command"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 24358,
-                  "start_position" : 24336
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 24358,
+                  "start_position": 24336,
+                  "start_line": 499,
+                  "end_line": 499
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "command",
-              "order" : 0
+              "modifiers": [],
+              "name": "command",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "UInt16"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "UInt16"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 24370,
-                  "start_position" : 24358
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 24370,
+                  "start_position": 24358,
+                  "start_line": 499,
+                  "end_line": 499
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "from",
-              "order" : 1
+              "modifiers": [],
+              "name": "from",
+              "order": 1
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Float"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Float"
             },
-            "description" : "-> Float"
+            "description": "-> Float"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "return Float(self.readPrefAsInt(key: .combinedBrightnessSwitchingPoint) + 8) / 16"
+          "attributes": [],
+          "body": {
+            "content": "return Float(self.readPrefAsInt(key: .combinedBrightnessSwitchingPoint) + 8) / 16"
           },
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 25133,
-              "start_position" : 24989
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 25133,
+              "start_position": 24989,
+              "start_line": 510,
+              "end_line": 514
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "combinedBrightnessSwitchingValue",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Float"
+          "modifiers": [],
+          "name": "combinedBrightnessSwitchingValue",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Float"
             },
-            "description" : "-> Float"
+            "description": "-> Float"
           }
         }
       ],
-      "initializers" : [
+      "initializers": [
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 1376,
-              "start_position" : 992
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 1376,
+              "start_position": 992,
+              "start_line": 27,
+              "end_line": 34
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "init",
-          "parameters" : [
+          "name": "init",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "CGDirectDisplayID"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "CGDirectDisplayID"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1043,
-                  "start_position" : 1010
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1043,
+                  "start_position": 1010,
+                  "start_line": 29,
+                  "end_line": 29
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "identifier",
-              "order" : 0
+              "modifiers": [],
+              "name": "identifier",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "String"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "String"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1057,
-                  "start_position" : 1043
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1057,
+                  "start_position": 1043,
+                  "start_line": 29,
+                  "end_line": 29
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "name",
-              "order" : 1
+              "modifiers": [],
+              "name": "name",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "UInt32?"
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "UInt32?"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1080,
-                  "start_position" : 1057
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1080,
+                  "start_position": 1057,
+                  "start_line": 29,
+                  "end_line": 29
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "vendorNumber",
-              "order" : 2
+              "modifiers": [],
+              "name": "vendorNumber",
+              "order": 2
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "UInt32?"
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "UInt32?"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1102,
-                  "start_position" : 1080
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1102,
+                  "start_position": 1080,
+                  "start_line": 29,
+                  "end_line": 29
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "modelNumber",
-              "order" : 3
+              "modifiers": [],
+              "name": "modelNumber",
+              "order": 3
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1127,
-                  "start_position" : 1102
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1127,
+                  "start_position": 1102,
+                  "start_line": 29,
+                  "end_line": 29
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isVirtual",
-              "order" : 4
+              "modifiers": [],
+              "name": "isVirtual",
+              "order": 4
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                "location" : {
-                  "end_position" : 1148,
-                  "start_position" : 1127
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                "location": {
+                  "end_position": 1148,
+                  "start_position": 1127,
+                  "start_line": 29,
+                  "end_line": 29
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isDummy",
-              "order" : 5
+              "modifiers": [],
+              "name": "isDummy",
+              "order": 5
             }
           ]
         }
       ],
-      "location_info" : {
-        "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-        "location" : {
-          "end_position" : 25135,
-          "start_position" : 120
+      "location_info": {
+        "file_path": "MonitorControl/Model/OtherDisplay.swift",
+        "location": {
+          "end_position": 25135,
+          "start_position": 120,
+          "start_line": 5,
+          "end_line": 515
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "OtherDisplay",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
+      "modifiers": [],
+      "name": "OtherDisplay",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "IntelDDC?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "IntelDDC?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 172,
-              "start_position" : 158
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 172,
+              "start_position": 158,
+              "start_line": 8,
+              "end_line": 8
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "ddc"
+          "modifiers": [],
+          "name": "ddc"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 201,
-              "start_position" : 179
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 201,
+              "start_position": 179,
+              "start_line": 9,
+              "end_line": 9
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "arm64ddc"
+          "modifiers": [],
+          "name": "arm64ddc"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "IOAVService?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "IOAVService?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 236,
-              "start_position" : 208
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 236,
+              "start_position": 208,
+              "start_line": 10,
+              "end_line": 10
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "arm64avService"
+          "modifiers": [],
+          "name": "arm64avService"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 270,
-              "start_position" : 243
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 270,
+              "start_position": 243,
+              "start_line": 11,
+              "end_line": 11
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "isDiscouraged"
+          "modifiers": [],
+          "name": "isDiscouraged"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "accessors": [],
+          "attributes": [],
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "label" : "label",
-                      "value" : "\"Local write DDC queue\""
+                      "label": "label",
+                      "value": "\"Local write DDC queue\""
                     }
                   ],
-                  "call" : "DispatchQueue",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                    "location" : {
-                      "end_position" : 338,
-                      "start_position" : 293
+                  "call": "DispatchQueue",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                    "location": {
+                      "end_position": 338,
+                      "start_position": 293,
+                      "start_line": 12,
+                      "end_line": 12
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 338,
-              "start_position" : 277
+          "is_constant": true,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 338,
+              "start_position": 277,
+              "start_line": 12,
+              "end_line": 12
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "writeDDCQueue"
+          "modifiers": [],
+          "name": "writeDDCQueue"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[Command: UInt16]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[Command: UInt16]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[:]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[:]"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 387,
-              "start_position" : 345
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 387,
+              "start_position": 345,
+              "start_line": 13,
+              "end_line": 13
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "writeDDCNextValue"
+          "modifiers": [],
+          "name": "writeDDCNextValue"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[Command: UInt16]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[Command: UInt16]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[:]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[:]"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 441,
-              "start_position" : 394
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 441,
+              "start_position": 394,
+              "start_line": 14,
+              "end_line": 14
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "writeDDCLastSavedValue"
+          "modifiers": [],
+          "name": "writeDDCLastSavedValue"
         },
         {
-          "accessors" : [
+          "accessors": [
             {
-              "body" : {
-                "content" : "switch self.readPrefAsInt(key: .pollingMode) {\n      case PollingMode.none.rawValue: return 0\n      case PollingMode.minimal.rawValue: return 1\n      case PollingMode.normal.rawValue: return 5\n      case PollingMode.heavy.rawValue: return 20\n      case PollingMode.custom.rawValue: return prefs.integer(forKey: PrefKey.pollingCount.rawValue + self.prefsId)\n      default: return PollingMode.none.rawValue\n      }"
+              "body": {
+                "content": "switch self.readPrefAsInt(key: .pollingMode) {\n      case PollingMode.none.rawValue: return 0\n      case PollingMode.minimal.rawValue: return 1\n      case PollingMode.normal.rawValue: return 5\n      case PollingMode.heavy.rawValue: return 20\n      case PollingMode.custom.rawValue: return prefs.integer(forKey: PrefKey.pollingCount.rawValue + self.prefsId)\n      default: return PollingMode.none.rawValue\n      }"
               },
-              "modifier" : "get"
+              "modifier": "get"
             },
             {
-              "body" : {
-                "content" : "prefs.set(newValue, forKey: PrefKey.pollingCount.rawValue + self.prefsId)"
+              "body": {
+                "content": "prefs.set(newValue, forKey: PrefKey.pollingCount.rawValue + self.prefsId)"
               },
-              "modifier" : "set"
+              "modifier": "set"
             }
           ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Int"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Int"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 992,
-              "start_position" : 448
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 992,
+              "start_position": 448,
+              "start_line": 15,
+              "end_line": 27
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "pollingCount"
+          "modifiers": [],
+          "name": "pollingCount"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "accessors": [],
+          "attributes": [],
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "label" : "value",
-                      "value" : "1"
+                      "label": "value",
+                      "value": "1"
                     }
                   ],
-                  "call" : "DispatchSemaphore",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                    "location" : {
-                      "end_position" : 14489,
-                      "start_position" : 14462
+                  "call": "DispatchSemaphore",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                    "location": {
+                      "end_position": 14489,
+                      "start_position": 14462,
+                      "start_line": 269,
+                      "end_line": 269
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 14489,
-              "start_position" : 14431
+          "is_constant": true,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 14489,
+              "start_position": 14431,
+              "start_line": 269,
+              "end_line": 269
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "swAfterOsdAnimationSemaphore"
+          "modifiers": [],
+          "name": "swAfterOsdAnimationSemaphore"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "CFTimeInterval"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "CFTimeInterval"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
-
-                  ],
-                  "call" : "CACurrentMediaTime",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-                    "location" : {
-                      "end_position" : 14559,
-                      "start_position" : 14539
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [],
+                  "call": "CACurrentMediaTime",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "MonitorControl/Model/OtherDisplay.swift",
+                    "location": {
+                      "end_position": 14559,
+                      "start_position": 14539,
+                      "start_line": 270,
+                      "end_line": 270
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "MonitorControl/Model/OtherDisplay.swift",
-            "location" : {
-              "end_position" : 14559,
-              "start_position" : 14496
+          "is_constant": false,
+          "location_info": {
+            "file_path": "MonitorControl/Model/OtherDisplay.swift",
+            "location": {
+              "end_position": 14559,
+              "start_position": 14496,
+              "start_line": 270,
+              "end_line": 270
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "lastAnimationStartedTime"
+          "modifiers": [],
+          "name": "lastAnimationStartedTime"
         }
       ]
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 37,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "monitorcontrol-monitorcontrol",
-  "repoName" : "MonitorControl/MonitorControl",
-  "repoURL" : "https://github.com/MonitorControl/MonitorControl.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 37,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "monitorcontrol-monitorcontrol",
+  "repoName": "MonitorControl/MonitorControl",
+  "repoURL": "https://github.com/MonitorControl/MonitorControl.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "MonitorControl/Model/OtherDisplay.swift"
   ]
 }

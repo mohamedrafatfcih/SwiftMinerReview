@@ -1,94 +1,92 @@
 {
-  "caseID" : "case-14b9f1fbc0f76c737ccff9b6",
-  "commitHash" : "7174b877a445ce78b291175b08cfdf3f7713d166",
-  "commitMessage" : "feat: improvements in the Remote module\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/7174b877a445ce78b291175b08cfdf3f7713d166",
-  "durationSeconds" : 3.142071008682251,
-  "entityNames" : [
+  "caseID": "case-14b9f1fbc0f76c737ccff9b6",
+  "commitHash": "7174b877a445ce78b291175b08cfdf3f7713d166",
+  "commitMessage": "feat: improvements in the Remote module\n",
+  "commitURL": "https://github.com/exelban/stats/commit/7174b877a445ce78b291175b08cfdf3f7713d166",
+  "durationSeconds": 3.142071008682251,
+  "entityNames": [
     "@escaping (Error?) -> Void",
     "completion",
     "pollForToken"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "description" : "self.interval += 5",
-      "left_operand" : "self.interval",
-      "location_info" : {
-        "file_path" : "Kit/plugins/Remote.swift",
-        "location" : {
-          "end_position" : 25516,
-          "start_position" : 25477
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "description": "self.interval += 5",
+      "left_operand": "self.interval",
+      "location_info": {
+        "file_path": "Kit/plugins/Remote.swift",
+        "location": {
+          "end_position": 25516,
+          "start_position": 25477,
+          "start_line": 700,
+          "end_line": 701
         }
       },
-      "operator_value" : "+=",
-      "right_operand" : {
-        "other" : {
-          "_0" : "5"
+      "operator_value": "+=",
+      "right_operand": {
+        "other": {
+          "_0": "5"
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard let url = URL(string: \"\\(Remote.authHost)/token\") else {\n            completion(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"client_id\", self.clientID),\n            (\"device_code\", self.deviceCode),\n            (\"grant_type\", \"urn:ietf:params:oauth:grant-type:device_code\")\n        ])\n        \n        self.session.dataTask(with: request) { data, response, error in\n            if let error = error {\n                completion(error)\n                return\n            }\n            \n            guard let httpResponse = response as? HTTPURLResponse else {\n                completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"Invalid response\"]))\n                return\n            }\n            \n            if httpResponse.statusCode == 200 {\n                guard let data = data else {\n                    completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"No data returned\"]))\n                    return\n                }\n                \n                do {\n                    let result = try JSONDecoder().decode(TokenResponse.self, from: data)\n                    self.accessToken = result.access_token\n                    self.refreshToken = result.refresh_token\n                    NotificationCenter.default.post(name: .remoteLoginSuccess, object: nil)\n                    completion(nil)\n                } catch {\n                    completion(error)\n                }\n            } else if httpResponse.statusCode == 400 {\n                guard let data = data, let responseString = String(data: data, encoding: .utf8) else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Bad request\"]))\n                    return\n                }\n                \n                if responseString.contains(\"authorization_pending\") {\n                    completion(nil)\n                } else if responseString.contains(\"expired_token\") {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Device code expired, please re-register\"]))\n                } else if responseString.contains(\"slow_down\") {\n                    self.interval += 5\n                    self.repeater?.reset(seconds: self.interval)\n                    self.repeater?.start()\n                    completion(nil)\n                } else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: responseString]))\n                }\n            } else {\n                let errorMessage = data.flatMap { String(data: $0, encoding: .utf8) } ?? \"Unknown error\"\n                completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Failed to get token (\\(httpResponse.statusCode)): \\(errorMessage)\"]))\n            }\n        }.resume()"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard let url = URL(string: \"\\(Remote.authHost)/token\") else {\n            completion(nil)\n            return\n        }\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"POST\"\n        request.setValue(\"application/x-www-form-urlencoded\", forHTTPHeaderField: \"Content-Type\")\n        \n        request.httpBody = RemoteAuth.formBody([\n            (\"client_id\", self.clientID),\n            (\"device_code\", self.deviceCode),\n            (\"grant_type\", \"urn:ietf:params:oauth:grant-type:device_code\")\n        ])\n        \n        self.session.dataTask(with: request) { data, response, error in\n            if let error = error {\n                completion(error)\n                return\n            }\n            \n            guard let httpResponse = response as? HTTPURLResponse else {\n                completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"Invalid response\"]))\n                return\n            }\n            \n            if httpResponse.statusCode == 200 {\n                guard let data = data else {\n                    completion(NSError(domain: \"\", code: -1, userInfo: [NSLocalizedDescriptionKey: \"No data returned\"]))\n                    return\n                }\n                \n                do {\n                    let result = try JSONDecoder().decode(TokenResponse.self, from: data)\n                    self.accessToken = result.access_token\n                    self.refreshToken = result.refresh_token\n                    NotificationCenter.default.post(name: .remoteLoginSuccess, object: nil)\n                    completion(nil)\n                } catch {\n                    completion(error)\n                }\n            } else if httpResponse.statusCode == 400 {\n                guard let data = data, let responseString = String(data: data, encoding: .utf8) else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Bad request\"]))\n                    return\n                }\n                \n                if responseString.contains(\"authorization_pending\") {\n                    completion(nil)\n                } else if responseString.contains(\"expired_token\") {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Device code expired, please re-register\"]))\n                } else if responseString.contains(\"slow_down\") {\n                    self.interval += 5\n                    self.repeater?.reset(seconds: self.interval)\n                    self.repeater?.start()\n                    completion(nil)\n                } else {\n                    completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: responseString]))\n                }\n            } else {\n                let errorMessage = data.flatMap { String(data: $0, encoding: .utf8) } ?? \"Unknown error\"\n                completion(NSError(domain: \"\", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: \"Failed to get token (\\(httpResponse.statusCode)): \\(errorMessage)\"]))\n            }\n        }.resume()"
       },
-      "location_info" : {
-        "file_path" : "Kit/plugins/Remote.swift",
-        "location" : {
-          "end_position" : 26193,
-          "start_position" : 22935
+      "location_info": {
+        "file_path": "Kit/plugins/Remote.swift",
+        "location": {
+          "end_position": 26193,
+          "start_position": 22935,
+          "start_line": 646,
+          "end_line": 713
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "pollForToken",
-      "parameters" : [
+      "name": "pollForToken",
+      "parameters": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "escaping" : {
-
-                }
+              "annotation": {
+                "escaping": {}
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "@escaping (Error?) -> Void"
+          "data_type": {
+            "is_optional": false,
+            "name": "@escaping (Error?) -> Void"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Remote.swift",
-            "location" : {
-              "end_position" : 23009,
-              "start_position" : 22971
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Remote.swift",
+            "location": {
+              "end_position": 23009,
+              "start_position": 22971,
+              "start_line": 648,
+              "end_line": 648
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "completion",
-          "order" : 0
+          "modifiers": [],
+          "name": "completion",
+          "order": 0
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 38,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 38,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Kit/plugins/Remote.swift"
   ]
 }

@@ -1,74 +1,72 @@
 {
-  "caseID" : "case-82e65ad39d1cbfb5e7fbd1eb",
-  "commitHash" : "d6e4c98cd8ae794ceb418d6112572870721c6775",
-  "commitMessage" : "chore: further whitelist mpv options in url scheme\n",
-  "commitURL" : "https://github.com/iina/iina/commit/d6e4c98cd8ae794ceb418d6112572870721c6775",
-  "durationSeconds" : 2.9329060316085815,
-  "entityNames" : [
+  "caseID": "case-82e65ad39d1cbfb5e7fbd1eb",
+  "commitHash": "d6e4c98cd8ae794ceb418d6112572870721c6775",
+  "commitMessage": "chore: further whitelist mpv options in url scheme\n",
+  "commitURL": "https://github.com/iina/iina/commit/d6e4c98cd8ae794ceb418d6112572870721c6775",
+  "durationSeconds": 2.9329060316085815,
+  "entityNames": [
     "String",
     "parsePendingURL",
     "url"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "depth" : 1,
-      "description" : "for query in queries {\n        if query.name.hasPrefix(\"mpv_\") {\n          let mpvOptionName = String(query.name.dropFirst(4))\n          guard safeMPVOptions.contains(mpvOptionName) else {\n            Logger.log(\"mpv option \\(mpvOptionName) rejected when parsing URL\", level: .warning)\n            continue\n          }\n          guard let mpvOptionValue = query.value else { continue }\n          Logger.log(\"Setting \\(mpvOptionName) to \\(mpvOptionValue)\")\n          player.mpv.setString(mpvOptionName, mpvOptionValue)\n        }\n      }",
-      "index" : 8
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "depth": 1,
+      "description": "for query in queries {\n        if query.name.hasPrefix(\"mpv_\") {\n          let mpvOptionName = String(query.name.dropFirst(4))\n          guard safeMPVOptions.contains(mpvOptionName) else {\n            Logger.log(\"mpv option \\(mpvOptionName) rejected when parsing URL\", level: .warning)\n            continue\n          }\n          guard let mpvOptionValue = query.value else { continue }\n          Logger.log(\"Setting \\(mpvOptionName) to \\(mpvOptionValue)\")\n          player.mpv.setString(mpvOptionName, mpvOptionValue)\n        }\n      }",
+      "index": 8
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "Logger.log(\"Parsing URL \\(url)\")\n    guard let parsed = URLComponents(string: url) else {\n      Logger.log(\"Cannot parse URL using URLComponents\", level: .warning)\n      return\n    }\n    \n    if parsed.scheme != \"iina\" {\n      // try to open the URL directly\n      PlayerCore.activeOrNewForMenuAction(isAlternative: false).openURLString(url)\n      return\n    }\n    \n    // handle url scheme\n    guard let host = parsed.host else { return }\n\n    if host == \"open\" || host == \"weblink\" {\n      // open a file or link\n      guard let queries = parsed.queryItems else { return }\n      let queryDict = [String: String](uniqueKeysWithValues: queries.map { ($0.name, $0.value ?? \"\") })\n\n      // url\n      guard let urlValue = queryDict[\"url\"], !urlValue.isEmpty else {\n        Logger.log(\"Cannot find parameter \\\"url\\\", stopped\")\n        return\n      }\n\n      // new_window\n      let player: PlayerCore\n      if let newWindowValue = queryDict[\"new_window\"], newWindowValue == \"1\" {\n        player = PlayerCore.newPlayerCore\n      } else {\n        player = PlayerCore.activeOrNewForMenuAction(isAlternative: false)\n      }\n\n      // enqueue\n      let playlistEmpty = PlayerCore.lastActive.info.$playlist.withLock { $0.isEmpty }\n      if let enqueueValue = queryDict[\"enqueue\"], enqueueValue == \"1\", !playlistEmpty {\n        PlayerCore.lastActive.appendToPlaylist(urlValue)\n        PlayerCore.lastActive.postNotification(.iinaPlaylistChanged)\n        PlayerCore.lastActive.sendOSD(.addToPlaylist(1))\n      } else {\n        player.openURLString(urlValue)\n      }\n\n      // presentation options\n      if let fsValue = queryDict[\"full_screen\"], fsValue == \"1\" {\n        // full_screen\n        player.mpv.setFlag(MPVOption.Window.fullscreen, true)\n      } else if let pipValue = queryDict[\"pip\"], pipValue == \"1\" {\n        // pip\n        player.mainWindow.enterPIP()\n      }\n\n      // mpv options\n      for query in queries {\n        if query.name.hasPrefix(\"mpv_\") {\n          let mpvOptionName = String(query.name.dropFirst(4))\n          guard safeMPVOptions.contains(mpvOptionName) else {\n            Logger.log(\"mpv option \\(mpvOptionName) rejected when parsing URL\", level: .warning)\n            continue\n          }\n          guard let mpvOptionValue = query.value else { continue }\n          Logger.log(\"Setting \\(mpvOptionName) to \\(mpvOptionValue)\")\n          player.mpv.setString(mpvOptionName, mpvOptionValue)\n        }\n      }\n\n      Logger.log(\"Finished URL scheme handling\")\n    }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "Logger.log(\"Parsing URL \\(url)\")\n    guard let parsed = URLComponents(string: url) else {\n      Logger.log(\"Cannot parse URL using URLComponents\", level: .warning)\n      return\n    }\n    \n    if parsed.scheme != \"iina\" {\n      // try to open the URL directly\n      PlayerCore.activeOrNewForMenuAction(isAlternative: false).openURLString(url)\n      return\n    }\n    \n    // handle url scheme\n    guard let host = parsed.host else { return }\n\n    if host == \"open\" || host == \"weblink\" {\n      // open a file or link\n      guard let queries = parsed.queryItems else { return }\n      let queryDict = [String: String](uniqueKeysWithValues: queries.map { ($0.name, $0.value ?? \"\") })\n\n      // url\n      guard let urlValue = queryDict[\"url\"], !urlValue.isEmpty else {\n        Logger.log(\"Cannot find parameter \\\"url\\\", stopped\")\n        return\n      }\n\n      // new_window\n      let player: PlayerCore\n      if let newWindowValue = queryDict[\"new_window\"], newWindowValue == \"1\" {\n        player = PlayerCore.newPlayerCore\n      } else {\n        player = PlayerCore.activeOrNewForMenuAction(isAlternative: false)\n      }\n\n      // enqueue\n      let playlistEmpty = PlayerCore.lastActive.info.$playlist.withLock { $0.isEmpty }\n      if let enqueueValue = queryDict[\"enqueue\"], enqueueValue == \"1\", !playlistEmpty {\n        PlayerCore.lastActive.appendToPlaylist(urlValue)\n        PlayerCore.lastActive.postNotification(.iinaPlaylistChanged)\n        PlayerCore.lastActive.sendOSD(.addToPlaylist(1))\n      } else {\n        player.openURLString(urlValue)\n      }\n\n      // presentation options\n      if let fsValue = queryDict[\"full_screen\"], fsValue == \"1\" {\n        // full_screen\n        player.mpv.setFlag(MPVOption.Window.fullscreen, true)\n      } else if let pipValue = queryDict[\"pip\"], pipValue == \"1\" {\n        // pip\n        player.mainWindow.enterPIP()\n      }\n\n      // mpv options\n      for query in queries {\n        if query.name.hasPrefix(\"mpv_\") {\n          let mpvOptionName = String(query.name.dropFirst(4))\n          guard safeMPVOptions.contains(mpvOptionName) else {\n            Logger.log(\"mpv option \\(mpvOptionName) rejected when parsing URL\", level: .warning)\n            continue\n          }\n          guard let mpvOptionValue = query.value else { continue }\n          Logger.log(\"Setting \\(mpvOptionName) to \\(mpvOptionValue)\")\n          player.mpv.setString(mpvOptionName, mpvOptionValue)\n        }\n      }\n\n      Logger.log(\"Finished URL scheme handling\")\n    }"
       },
-      "location_info" : {
-        "file_path" : "iina/AppDelegate.swift",
-        "location" : {
-          "end_position" : 39840,
-          "start_position" : 36604
+      "location_info": {
+        "file_path": "iina/AppDelegate.swift",
+        "location": {
+          "end_position": 39840,
+          "start_position": 36604,
+          "start_line": 839,
+          "end_line": 927
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "parsePendingURL",
-      "parameters" : [
+      "name": "parsePendingURL",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "iina/AppDelegate.swift",
-            "location" : {
-              "end_position" : 37346,
-              "start_position" : 37333
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "iina/AppDelegate.swift",
+            "location": {
+              "end_position": 37346,
+              "start_position": 37333,
+              "start_line": 857,
+              "end_line": 857
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "url",
-          "order" : 0
+          "modifiers": [],
+          "name": "url",
+          "order": 0
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 1,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "iina-iina",
-  "repoName" : "iina/iina",
-  "repoURL" : "https://github.com/iina/iina.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 1,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "iina-iina",
+  "repoName": "iina/iina",
+  "repoURL": "https://github.com/iina/iina.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "iina/AppDelegate.swift"
   ]
 }

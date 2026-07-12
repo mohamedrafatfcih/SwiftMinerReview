@@ -1,119 +1,103 @@
 {
-  "caseID" : "case-0bc5ca8e867466c6b7e7ef6a",
-  "commitHash" : "9ec78dee16adf642cdcb23b8e304857e2e259758",
-  "commitMessage" : "More Atomic Locking (#3984)\n\n### Issue Link :link:\nAttempts to fix #3978 \n\n### Goals :soccer:\nThis PR is a speculative attempt to fix the continuation resumption\ncrash seen in #3978. However, I was unable to reproduce that issues,\neven with more complicated test cases and over 50 million test\niterations. So this PR makes a few parts of `Request`'s state management\nmore atomic, especially around response serializer handling. It also\nremoves `@dynamicMemberLookup` from `Protected`, which should encourage\nmore atomic usage.\n\n### Implementation Details :construction:\nThis PR attempts to unify what were separate lock access in the same\nflow into single accesses that accomplish the same thing. Behaviorally\nshould be the same but may prevent any intermediate accesses to state\nthat might cause this issue.\n\n### Testing Details :mag:\nNo new test scenarios, as no reproduction could be found.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9ec78dee16adf642cdcb23b8e304857e2e259758",
-  "durationSeconds" : 10.915109992027283,
-  "entityNames" : [
+  "caseID": "case-0bc5ca8e867466c6b7e7ef6a",
+  "commitHash": "9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "commitMessage": "More Atomic Locking (#3984)\n\n### Issue Link :link:\nAttempts to fix #3978 \n\n### Goals :soccer:\nThis PR is a speculative attempt to fix the continuation resumption\ncrash seen in #3978. However, I was unable to reproduce that issues,\neven with more complicated test cases and over 50 million test\niterations. So this PR makes a few parts of `Request`'s state management\nmore atomic, especially around response serializer handling. It also\nremoves `@dynamicMemberLookup` from `Protected`, which should encourage\nmore atomic usage.\n\n### Implementation Details :construction:\nThis PR attempts to unify what were separate lock access in the same\nflow into single accesses that accomplish the same thing. Behaviorally\nshould be the same but may prevent any intermediate accesses to state\nthat might cause this issue.\n\n### Testing Details :mag:\nNo new test scenarios, as no reproduction could be found.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "durationSeconds": 10.915109992027283,
+  "entityNames": [
     "() -> Void",
     "executeOutside",
     "processNextResponseSerializer"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "() -> Void"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "() -> Void"
       },
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "function_call" : {
-            "_0" : {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
-
-              ],
-              "call" : "write",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Core/Request.swift",
-                "location" : {
-                  "end_position" : 26355,
-                  "start_position" : 24710
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "function_call": {
+            "_0": {
+              "additional_trailing_closures": [],
+              "arguments": [],
+              "call": "write",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Source/Core/Request.swift",
+                "location": {
+                  "end_position": 26355,
+                  "start_position": 24710,
+                  "start_line": 563,
+                  "end_line": 593
                 }
               },
-              "trailing_closure" : {
-                "attributes" : [
-
-                ],
-                "body" : {
-                  "content" : "let responseSerializerIndex = mutableState.responseSerializerCompletions.count\n            let isAvailableSerializer = responseSerializerIndex < mutableState.responseSerializers.count\n            let responseSerializer = isAvailableSerializer ? mutableState.responseSerializers[responseSerializerIndex] : nil\n\n            if let responseSerializer {\n                return { self.serializationQueue.async { responseSerializer() } }\n            } else {\n                let completions = mutableState.responseSerializerCompletions\n                // Clear out all response serializers and response serializer completions in mutable state since the\n                // request is complete. It's important to do this prior to calling the completion closures in case\n                // the completions call back into the request triggering a re-processing of the response serializers.\n                // An example of how this can happen is by calling cancel inside a response completion closure.\n                mutableState.responseSerializers.removeAll()\n                mutableState.responseSerializerCompletions.removeAll()\n\n                if mutableState.state.canTransitionTo(.finished) {\n                    mutableState.state = .finished\n                }\n\n                mutableState.responseSerializerProcessingFinished = true\n                mutableState.isFinishing = false\n\n                return {\n                    completions.forEach { $0() }\n\n                    // Cleanup the request outside the lock\n                    self.cleanup()\n                }\n            }"
+              "trailing_closure": {
+                "attributes": [],
+                "body": {
+                  "content": "let responseSerializerIndex = mutableState.responseSerializerCompletions.count\n            let isAvailableSerializer = responseSerializerIndex < mutableState.responseSerializers.count\n            let responseSerializer = isAvailableSerializer ? mutableState.responseSerializers[responseSerializerIndex] : nil\n\n            if let responseSerializer {\n                return { self.serializationQueue.async { responseSerializer() } }\n            } else {\n                let completions = mutableState.responseSerializerCompletions\n                // Clear out all response serializers and response serializer completions in mutable state since the\n                // request is complete. It's important to do this prior to calling the completion closures in case\n                // the completions call back into the request triggering a re-processing of the response serializers.\n                // An example of how this can happen is by calling cancel inside a response completion closure.\n                mutableState.responseSerializers.removeAll()\n                mutableState.responseSerializerCompletions.removeAll()\n\n                if mutableState.state.canTransitionTo(.finished) {\n                    mutableState.state = .finished\n                }\n\n                mutableState.responseSerializerProcessingFinished = true\n                mutableState.isFinishing = false\n\n                return {\n                    completions.forEach { $0() }\n\n                    // Cleanup the request outside the lock\n                    self.cleanup()\n                }\n            }"
                 },
-                "captures" : [
-
-                ],
-                "location_info" : {
-                  "file_path" : "Source/Core/Request.swift",
-                  "location" : {
-                    "end_position" : 26355,
-                    "start_position" : 24729
+                "captures": [],
+                "location_info": {
+                  "file_path": "Source/Core/Request.swift",
+                  "location": {
+                    "end_position": 26355,
+                    "start_position": 24729,
+                    "start_line": 563,
+                    "end_line": 593
                   }
                 },
-                "parameters" : [
-
-                ]
+                "parameters": []
               }
             }
           }
         }
       },
-      "is_constant" : true,
-      "location_info" : {
-        "file_path" : "Source/Core/Request.swift",
-        "location" : {
-          "end_position" : 26355,
-          "start_position" : 24681
+      "is_constant": true,
+      "location_info": {
+        "file_path": "Source/Core/Request.swift",
+        "location": {
+          "end_position": 26355,
+          "start_position": 24681,
+          "start_line": 563,
+          "end_line": 593
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "executeOutside"
+      "modifiers": [],
+      "name": "executeOutside"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let executeOutside: () -> Void = mutableState.write { mutableState in\n            let responseSerializerIndex = mutableState.responseSerializerCompletions.count\n            let isAvailableSerializer = responseSerializerIndex < mutableState.responseSerializers.count\n            let responseSerializer = isAvailableSerializer ? mutableState.responseSerializers[responseSerializerIndex] : nil\n\n            if let responseSerializer {\n                return { self.serializationQueue.async { responseSerializer() } }\n            } else {\n                let completions = mutableState.responseSerializerCompletions\n                // Clear out all response serializers and response serializer completions in mutable state since the\n                // request is complete. It's important to do this prior to calling the completion closures in case\n                // the completions call back into the request triggering a re-processing of the response serializers.\n                // An example of how this can happen is by calling cancel inside a response completion closure.\n                mutableState.responseSerializers.removeAll()\n                mutableState.responseSerializerCompletions.removeAll()\n\n                if mutableState.state.canTransitionTo(.finished) {\n                    mutableState.state = .finished\n                }\n\n                mutableState.responseSerializerProcessingFinished = true\n                mutableState.isFinishing = false\n\n                return {\n                    completions.forEach { $0() }\n\n                    // Cleanup the request outside the lock\n                    self.cleanup()\n                }\n            }\n        }\n\n        executeOutside()"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let executeOutside: () -> Void = mutableState.write { mutableState in\n            let responseSerializerIndex = mutableState.responseSerializerCompletions.count\n            let isAvailableSerializer = responseSerializerIndex < mutableState.responseSerializers.count\n            let responseSerializer = isAvailableSerializer ? mutableState.responseSerializers[responseSerializerIndex] : nil\n\n            if let responseSerializer {\n                return { self.serializationQueue.async { responseSerializer() } }\n            } else {\n                let completions = mutableState.responseSerializerCompletions\n                // Clear out all response serializers and response serializer completions in mutable state since the\n                // request is complete. It's important to do this prior to calling the completion closures in case\n                // the completions call back into the request triggering a re-processing of the response serializers.\n                // An example of how this can happen is by calling cancel inside a response completion closure.\n                mutableState.responseSerializers.removeAll()\n                mutableState.responseSerializerCompletions.removeAll()\n\n                if mutableState.state.canTransitionTo(.finished) {\n                    mutableState.state = .finished\n                }\n\n                mutableState.responseSerializerProcessingFinished = true\n                mutableState.isFinishing = false\n\n                return {\n                    completions.forEach { $0() }\n\n                    // Cleanup the request outside the lock\n                    self.cleanup()\n                }\n            }\n        }\n\n        executeOutside()"
       },
-      "location_info" : {
-        "file_path" : "Source/Core/Request.swift",
-        "location" : {
-          "end_position" : 26387,
-          "start_position" : 24512
+      "location_info": {
+        "file_path": "Source/Core/Request.swift",
+        "location": {
+          "end_position": 26387,
+          "start_position": 24512,
+          "start_line": 559,
+          "end_line": 596
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "processNextResponseSerializer",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "processNextResponseSerializer",
+      "parameters": []
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 37,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 37,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Core/Request.swift"
   ]
 }

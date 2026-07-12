@@ -1,131 +1,117 @@
 {
-  "caseID" : "case-6c5118598c7ee55f4cc7073f",
-  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
-  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
-  "durationSeconds" : 14.10075306892395,
-  "entityNames" : [
+  "caseID": "case-6c5118598c7ee55f4cc7073f",
+  "commitHash": "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage": "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds": 14.10075306892395,
+  "entityNames": [
     "bindResult",
     "testSSHForwarding"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "function_call" : {
-            "_0" : {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "accessors": [],
+      "attributes": [],
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "function_call": {
+            "_0": {
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "label" : "to",
-                  "value" : "addr"
+                  "label": "to",
+                  "value": "addr"
                 }
               ],
-              "call" : "withUnsafePointer",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
-                "location" : {
-                  "end_position" : 37385,
-                  "start_position" : 37163
+              "call": "withUnsafePointer",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+                "location": {
+                  "end_position": 37385,
+                  "start_position": 37163,
+                  "start_line": 906,
+                  "end_line": 910
                 }
               },
-              "trailing_closure" : {
-                "attributes" : [
-
-                ],
-                "body" : {
-                  "content" : "ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {\n                    bind(serverFd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))\n                }"
+              "trailing_closure": {
+                "attributes": [],
+                "body": {
+                  "content": "ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {\n                    bind(serverFd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))\n                }"
                 },
-                "captures" : [
-
-                ],
-                "location_info" : {
-                  "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
-                  "location" : {
-                    "end_position" : 37385,
-                    "start_position" : 37191
+                "captures": [],
+                "location_info": {
+                  "file_path": "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+                  "location": {
+                    "end_position": 37385,
+                    "start_position": 37191,
+                    "start_line": 906,
+                    "end_line": 910
                   }
                 },
-                "parameters" : [
-
-                ]
+                "parameters": []
               }
             }
           }
         }
       },
-      "is_constant" : true,
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
-        "location" : {
-          "end_position" : 37385,
-          "start_position" : 37150
+      "is_constant": true,
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+        "location": {
+          "end_position": 37385,
+          "start_position": 37150,
+          "start_line": 906,
+          "end_line": 910
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "bindResult"
+      "modifiers": [],
+      "name": "bindResult"
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Test"
+          "annotation": {
+            "unsupported": {
+              "_0": "Test"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n\n            // sockaddr_un.sun_path is 104 bytes on macOS — use /tmp to keep\n            // the path short enough to fit regardless of the project directory depth.\n            let socketDir = \"/tmp/\\(f.testID)-ssh\"\n            try FileManager.default.createDirectory(\n                atPath: socketDir, withIntermediateDirectories: true)\n            f.addCleanup { try? FileManager.default.removeItem(atPath: socketDir) }\n            let socketPath = socketDir + \"/ssh-auth.sock\"\n\n            let serverFd = socket(AF_UNIX, SOCK_STREAM, 0)\n            guard serverFd >= 0 else {\n                Issue.record(\"socket() failed\")\n                return\n            }\n            defer { Darwin.close(serverFd) }\n\n            var addr = sockaddr_un()\n            addr.sun_family = sa_family_t(AF_UNIX)\n            withUnsafeMutableBytes(of: &addr.sun_path) { bytes in\n                socketPath.withCString { cStr in\n                    bytes.copyMemory(\n                        from: UnsafeRawBufferPointer(\n                            start: cStr, count: socketPath.utf8.count + 1))\n                }\n            }\n            let bindResult = withUnsafePointer(to: addr) { ptr in\n                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {\n                    bind(serverFd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))\n                }\n            }\n            guard bindResult == 0 else {\n                Issue.record(\"bind() failed\")\n                return\n            }\n            guard listen(serverFd, 5) == 0 else {\n                Issue.record(\"listen() failed\")\n                return\n            }\n\n            let acceptThread = Thread {\n                while true {\n                    let clientFd = accept(serverFd, nil, nil)\n                    if clientFd < 0 { break }\n                    Darwin.close(clientFd)\n                }\n            }\n            acceptThread.start()\n            try await Task.sleep(for: .seconds(1))\n\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.runMachine(\n                [\"run\", \"--root\", \"-n\", name, \"true\"],\n                env: [\"SSH_AUTH_SOCK\": socketPath]\n            ).check()\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let sockValue = try f.doMachineRun(\n                name: name, root: true,\n                command: [\"echo\", \"$SSH_AUTH_SOCK\"]\n            )\n            .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(sockValue == \"/var/host-services/ssh-auth.sock\")\n\n            let exists = try f.doMachineRun(\n                name: name, root: true,\n                command: [\n                    \"[ -S /var/host-services/ssh-auth.sock ]\", \"&&\", \"echo\", \"exists\", \"||\", \"echo\", \"missing\",\n                ]\n            ).trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(exists == \"exists\")\n        }"
+      "body": {
+        "content": "try await ContainerFixture.with { f in\n            let name = \"\\(f.testID)-machine\"\n            f.addCleanup { f.cleanupMachine(name) }\n\n            // sockaddr_un.sun_path is 104 bytes on macOS — use /tmp to keep\n            // the path short enough to fit regardless of the project directory depth.\n            let socketDir = \"/tmp/\\(f.testID)-ssh\"\n            try FileManager.default.createDirectory(\n                atPath: socketDir, withIntermediateDirectories: true)\n            f.addCleanup { try? FileManager.default.removeItem(atPath: socketDir) }\n            let socketPath = socketDir + \"/ssh-auth.sock\"\n\n            let serverFd = socket(AF_UNIX, SOCK_STREAM, 0)\n            guard serverFd >= 0 else {\n                Issue.record(\"socket() failed\")\n                return\n            }\n            defer { Darwin.close(serverFd) }\n\n            var addr = sockaddr_un()\n            addr.sun_family = sa_family_t(AF_UNIX)\n            withUnsafeMutableBytes(of: &addr.sun_path) { bytes in\n                socketPath.withCString { cStr in\n                    bytes.copyMemory(\n                        from: UnsafeRawBufferPointer(\n                            start: cStr, count: socketPath.utf8.count + 1))\n                }\n            }\n            let bindResult = withUnsafePointer(to: addr) { ptr in\n                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {\n                    bind(serverFd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))\n                }\n            }\n            guard bindResult == 0 else {\n                Issue.record(\"bind() failed\")\n                return\n            }\n            guard listen(serverFd, 5) == 0 else {\n                Issue.record(\"listen() failed\")\n                return\n            }\n\n            let acceptThread = Thread {\n                while true {\n                    let clientFd = accept(serverFd, nil, nil)\n                    if clientFd < 0 { break }\n                    Darwin.close(clientFd)\n                }\n            }\n            acceptThread.start()\n            try await Task.sleep(for: .seconds(1))\n\n            try f.doMachineCreate(name: name, image: machineImage)\n            try f.runMachine(\n                [\"run\", \"--root\", \"-n\", name, \"true\"],\n                env: [\"SSH_AUTH_SOCK\": socketPath]\n            ).check()\n            try await f.waitForMachineStatus(name, status: \"running\")\n\n            let sockValue = try f.doMachineRun(\n                name: name, root: true,\n                command: [\"echo\", \"$SSH_AUTH_SOCK\"]\n            )\n            .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(sockValue == \"/var/host-services/ssh-auth.sock\")\n\n            let exists = try f.doMachineRun(\n                name: name, root: true,\n                command: [\n                    \"[ -S /var/host-services/ssh-auth.sock ]\", \"&&\", \"echo\", \"exists\", \"||\", \"echo\", \"missing\",\n                ]\n            ).trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(exists == \"exists\")\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
-        "location" : {
-          "end_position" : 38923,
-          "start_position" : 35791
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift",
+        "location": {
+          "end_position": 38923,
+          "start_position": 35791,
+          "start_line": 873,
+          "end_line": 952
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testSSHForwarding",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "modifiers": [],
+      "name": "testSSHForwarding",
+      "parameters": [],
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove variable refactoring"
+    "type": "Remove variable refactoring"
   },
-  "refactoringIndex" : 54,
-  "refactoringType" : "Remove variable refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 54,
+  "refactoringType": "Remove variable refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Machine/TestCLIMachineRuntimeSerial.swift"
   ]
 }

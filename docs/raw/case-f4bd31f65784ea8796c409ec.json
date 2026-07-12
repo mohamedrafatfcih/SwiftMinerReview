@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-f4bd31f65784ea8796c409ec",
-  "commitHash" : "4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
-  "commitMessage" : "Merge pull request #1311 from dev4u/develop\n\nrevert fast-open option",
-  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
-  "durationSeconds" : 63.590353965759277,
-  "entityNames" : [
+  "caseID": "case-f4bd31f65784ea8796c409ec",
+  "commitHash": "4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
+  "commitMessage": "Merge pull request #1311 from dev4u/develop\n\nrevert fast-open option",
+  "commitURL": "https://github.com/shadowsocks/ShadowsocksX-NG/commit/4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
+  "durationSeconds": 63.59035396575928,
+  "entityNames": [
     "@escaping (AFDownloadResponse<Serializer.SerializedObject>) -> Void",
     "DispatchQueue",
     "Self",
@@ -14,141 +14,129 @@
     "queue",
     "response"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "discardable_result" : {
-
-            }
+          "annotation": {
+            "discardable_result": {}
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "appendResponseSerializer {\n            // Start work that should be on the serialization queue.\n            let start = ProcessInfo.processInfo.systemUptime\n            let result: AFResult<Serializer.SerializedObject> = Result {\n                try responseSerializer.serializeDownload(request: self.request,\n                                                         response: self.response,\n                                                         fileURL: self.fileURL,\n                                                         error: self.error)\n            }.mapError { error in\n                error.asAFError(or: .responseSerializationFailed(reason: .customSerializationFailed(error: error)))\n            }\n            let end = ProcessInfo.processInfo.systemUptime\n            // End work that should be on the serialization queue.\n\n            self.underlyingQueue.async {\n                let response = DownloadResponse(request: self.request,\n                                                response: self.response,\n                                                fileURL: self.fileURL,\n                                                resumeData: self.resumeData,\n                                                metrics: self.metrics,\n                                                serializationDuration: end - start,\n                                                result: result)\n\n                self.eventMonitor?.request(self, didParseResponse: response)\n\n                guard let serializerError = result.failure, let delegate = self.delegate else {\n                    self.responseSerializerDidComplete { queue.async { completionHandler(response) } }\n                    return\n                }\n\n                delegate.retryResult(for: self, dueTo: serializerError) { retryResult in\n                    var didComplete: (() -> Void)?\n\n                    defer {\n                        if let didComplete = didComplete {\n                            self.responseSerializerDidComplete { queue.async { didComplete() } }\n                        }\n                    }\n\n                    switch retryResult {\n                    case .doNotRetry:\n                        didComplete = { completionHandler(response) }\n\n                    case let .doNotRetryWithError(retryError):\n                        let result: AFResult<Serializer.SerializedObject> = .failure(retryError.asAFError(orFailWith: \"Received retryError was not already AFError\"))\n\n                        let response = DownloadResponse(request: self.request,\n                                                        response: self.response,\n                                                        fileURL: self.fileURL,\n                                                        resumeData: self.resumeData,\n                                                        metrics: self.metrics,\n                                                        serializationDuration: end - start,\n                                                        result: result)\n\n                        didComplete = { completionHandler(response) }\n\n                    case .retry, .retryWithDelay:\n                        delegate.retryRequest(self, withDelay: retryResult.delay)\n                    }\n                }\n            }\n        }\n\n        return self"
+      "body": {
+        "content": "appendResponseSerializer {\n            // Start work that should be on the serialization queue.\n            let start = ProcessInfo.processInfo.systemUptime\n            let result: AFResult<Serializer.SerializedObject> = Result {\n                try responseSerializer.serializeDownload(request: self.request,\n                                                         response: self.response,\n                                                         fileURL: self.fileURL,\n                                                         error: self.error)\n            }.mapError { error in\n                error.asAFError(or: .responseSerializationFailed(reason: .customSerializationFailed(error: error)))\n            }\n            let end = ProcessInfo.processInfo.systemUptime\n            // End work that should be on the serialization queue.\n\n            self.underlyingQueue.async {\n                let response = DownloadResponse(request: self.request,\n                                                response: self.response,\n                                                fileURL: self.fileURL,\n                                                resumeData: self.resumeData,\n                                                metrics: self.metrics,\n                                                serializationDuration: end - start,\n                                                result: result)\n\n                self.eventMonitor?.request(self, didParseResponse: response)\n\n                guard let serializerError = result.failure, let delegate = self.delegate else {\n                    self.responseSerializerDidComplete { queue.async { completionHandler(response) } }\n                    return\n                }\n\n                delegate.retryResult(for: self, dueTo: serializerError) { retryResult in\n                    var didComplete: (() -> Void)?\n\n                    defer {\n                        if let didComplete = didComplete {\n                            self.responseSerializerDidComplete { queue.async { didComplete() } }\n                        }\n                    }\n\n                    switch retryResult {\n                    case .doNotRetry:\n                        didComplete = { completionHandler(response) }\n\n                    case let .doNotRetryWithError(retryError):\n                        let result: AFResult<Serializer.SerializedObject> = .failure(retryError.asAFError(orFailWith: \"Received retryError was not already AFError\"))\n\n                        let response = DownloadResponse(request: self.request,\n                                                        response: self.response,\n                                                        fileURL: self.fileURL,\n                                                        resumeData: self.resumeData,\n                                                        metrics: self.metrics,\n                                                        serializationDuration: end - start,\n                                                        result: result)\n\n                        didComplete = { completionHandler(response) }\n\n                    case .retry, .retryWithDelay:\n                        delegate.retryRequest(self, withDelay: retryResult.delay)\n                    }\n                }\n            }\n        }\n\n        return self"
       },
-      "generic_clause" : "<Serializer: DownloadResponseSerializerProtocol>",
-      "location_info" : {
-        "file_path" : "Pods/Alamofire/Source/ResponseSerialization.swift",
-        "location" : {
-          "end_position" : 19062,
-          "start_position" : 14782
+      "generic_clause": "<Serializer: DownloadResponseSerializerProtocol>",
+      "location_info": {
+        "file_path": "Pods/Alamofire/Source/ResponseSerialization.swift",
+        "location": {
+          "end_position": 19062,
+          "start_position": 14782,
+          "start_line": 314,
+          "end_line": 394
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "response",
-      "parameters" : [
+      "name": "response",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "DispatchQueue"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "DispatchQueue"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "reference" : {
-                "arguments" : [
-
-                ],
-                "name" : "main"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "reference": {
+                "arguments": [],
+                "name": "main"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Pods/Alamofire/Source/ResponseSerialization.swift",
-            "location" : {
-              "end_position" : 15439,
-              "start_position" : 15410
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Pods/Alamofire/Source/ResponseSerialization.swift",
+            "location": {
+              "end_position": 15439,
+              "start_position": 15410,
+              "start_line": 326,
+              "end_line": 326
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "queue",
-          "order" : 0
+          "modifiers": [],
+          "name": "queue",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Serializer"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Serializer"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Pods/Alamofire/Source/ResponseSerialization.swift",
-            "location" : {
-              "end_position" : 15544,
-              "start_position" : 15439
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Pods/Alamofire/Source/ResponseSerialization.swift",
+            "location": {
+              "end_position": 15544,
+              "start_position": 15439,
+              "start_line": 326,
+              "end_line": 327
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "responseSerializer",
-          "order" : 1
+          "modifiers": [],
+          "name": "responseSerializer",
+          "order": 1
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "escaping" : {
-
-                }
+              "annotation": {
+                "escaping": {}
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "@escaping (AFDownloadResponse<Serializer.SerializedObject>) -> Void"
+          "data_type": {
+            "is_optional": false,
+            "name": "@escaping (AFDownloadResponse<Serializer.SerializedObject>) -> Void"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Pods/Alamofire/Source/ResponseSerialization.swift",
-            "location" : {
-              "end_position" : 15704,
-              "start_position" : 15544
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Pods/Alamofire/Source/ResponseSerialization.swift",
+            "location": {
+              "end_position": 15704,
+              "start_position": 15544,
+              "start_line": 327,
+              "end_line": 328
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "completionHandler",
-          "order" : 2
+          "modifiers": [],
+          "name": "completionHandler",
+          "order": 2
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "Self"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "Self"
         },
-        "description" : "-> Self"
+        "description": "-> Self"
       }
     },
-    "type" : "Add function refactoring"
+    "type": "Add function refactoring"
   },
-  "refactoringIndex" : 873,
-  "refactoringType" : "Add function refactoring",
-  "repoID" : "shadowsocks-shadowsocksx-ng",
-  "repoName" : "shadowsocks/ShadowsocksX-NG",
-  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 873,
+  "refactoringType": "Add function refactoring",
+  "repoID": "shadowsocks-shadowsocksx-ng",
+  "repoName": "shadowsocks/ShadowsocksX-NG",
+  "repoURL": "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Pods/Alamofire/Source/ResponseSerialization.swift"
   ]
 }

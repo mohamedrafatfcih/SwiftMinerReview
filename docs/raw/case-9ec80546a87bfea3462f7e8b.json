@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-9ec80546a87bfea3462f7e8b",
-  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "durationSeconds" : 31.880328059196472,
-  "entityNames" : [
+  "caseID": "case-9ec80546a87bfea3462f7e8b",
+  "commitHash": "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage": "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds": 31.880328059196472,
+  "entityNames": [
     "((_ result: Result<URLRequest, any Error>) -> Void)?",
     "((_ retryResult: RetryResult) -> Void)?",
     "@escaping (Result<URLRequest, any Error>) -> Void",
@@ -14,1180 +14,972 @@
     "Date",
     "InspectorInterceptor"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "Protected<State>"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "Protected<State>"
       },
-      "is_constant" : true,
-      "location_info" : {
-        "file_path" : "Tests/RequestInterceptorTests.swift",
-        "location" : {
-          "end_position" : 20250,
-          "start_position" : 20227
+      "is_constant": true,
+      "location_info": {
+        "file_path": "Tests/RequestInterceptorTests.swift",
+        "location": {
+          "end_position": 20250,
+          "start_position": 20227,
+          "start_line": 637,
+          "end_line": 637
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "state"
+      "name": "state"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "RequestInterceptor"
+          "name": "RequestInterceptor"
         },
         {
-          "name" : "Sendable"
+          "name": "Sendable"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let sessionID = ObjectIdentifier(session)\n        interceptor.adapt(urlRequest, for: session) { result in\n            let onAdaptation = self.state.write { state in\n                state.adaptations.append(.init(urlRequest: urlRequest, state: .init(requestID: .zero, sessionID: sessionID), result: result, date: .now))\n                return state.onAdaptation\n            }\n\n            completion(result)\n            onAdaptation?(result)\n        }"
+          "attributes": [],
+          "body": {
+            "content": "let sessionID = ObjectIdentifier(session)\n        interceptor.adapt(urlRequest, for: session) { result in\n            let onAdaptation = self.state.write { state in\n                state.adaptations.append(.init(urlRequest: urlRequest, state: .init(requestID: .zero, sessionID: sessionID), result: result, date: .now))\n                return state.onAdaptation\n            }\n\n            completion(result)\n            onAdaptation?(result)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 21960,
-              "start_position" : 21366
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 21960,
+              "start_position": 21366,
+              "start_line": 672,
+              "end_line": 685
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "adapt",
-          "parameters" : [
+          "modifiers": [],
+          "name": "adapt",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URLRequest"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URLRequest"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 21409,
-                  "start_position" : 21383
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 21409,
+                  "start_position": 21383,
+                  "start_line": 674,
+                  "end_line": 674
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "urlRequest",
-              "order" : 0
+              "modifiers": [],
+              "name": "urlRequest",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Session"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Session"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 21431,
-                  "start_position" : 21409
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 21431,
+                  "start_position": 21409,
+                  "start_line": 674,
+                  "end_line": 674
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "session",
-              "order" : 1
+              "modifiers": [],
+              "name": "session",
+              "order": 1
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "escaping" : {
-
-                    }
+                  "annotation": {
+                    "escaping": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "@escaping (Result<URLRequest, any Error>) -> Void"
+              "data_type": {
+                "is_optional": false,
+                "name": "@escaping (Result<URLRequest, any Error>) -> Void"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 21492,
-                  "start_position" : 21431
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 21492,
+                  "start_position": 21431,
+                  "start_line": 674,
+                  "end_line": 674
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "completion",
-              "order" : 2
+              "modifiers": [],
+              "name": "completion",
+              "order": 2
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let requestID = adapterState.requestID\n        let sessionID = ObjectIdentifier(adapterState.session)\n        interceptor.adapt(urlRequest, using: adapterState) { result in\n            let onAdaptation = self.state.write { state in\n                state.adaptations.append(.init(urlRequest: urlRequest, state: .init(requestID: requestID, sessionID: sessionID), result: result, date: .now))\n                return state.onAdaptation\n            }\n\n            completion(result)\n            onAdaptation?(result)\n        }"
+          "attributes": [],
+          "body": {
+            "content": "let requestID = adapterState.requestID\n        let sessionID = ObjectIdentifier(adapterState.session)\n        interceptor.adapt(urlRequest, using: adapterState) { result in\n            let onAdaptation = self.state.write { state in\n                state.adaptations.append(.init(urlRequest: urlRequest, state: .init(requestID: requestID, sessionID: sessionID), result: result, date: .now))\n                return state.onAdaptation\n            }\n\n            completion(result)\n            onAdaptation?(result)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 22654,
-              "start_position" : 21960
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 22654,
+              "start_position": 21960,
+              "start_line": 685,
+              "end_line": 699
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "adapt",
-          "parameters" : [
+          "modifiers": [],
+          "name": "adapt",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URLRequest"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URLRequest"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 22003,
-                  "start_position" : 21977
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 22003,
+                  "start_position": 21977,
+                  "start_line": 687,
+                  "end_line": 687
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "urlRequest",
-              "order" : 0
+              "modifiers": [],
+              "name": "urlRequest",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "RequestAdapterState"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "RequestAdapterState"
               },
-              "is_variadic" : false,
-              "label" : "using",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 22044,
-                  "start_position" : 22003
+              "is_variadic": false,
+              "label": "using",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 22044,
+                  "start_position": 22003,
+                  "start_line": 687,
+                  "end_line": 687
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "adapterState",
-              "order" : 1
+              "modifiers": [],
+              "name": "adapterState",
+              "order": 1
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "escaping" : {
-
-                    }
+                  "annotation": {
+                    "escaping": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 },
                 {
-                  "annotation" : {
-                    "sendable" : {
-
-                    }
+                  "annotation": {
+                    "sendable": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "@escaping @Sendable (Result<URLRequest, any Error>) -> Void"
+              "data_type": {
+                "is_optional": false,
+                "name": "@escaping @Sendable (Result<URLRequest, any Error>) -> Void"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 22115,
-                  "start_position" : 22044
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 22115,
+                  "start_position": 22044,
+                  "start_line": 687,
+                  "end_line": 687
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "completion",
-              "order" : 2
+              "modifiers": [],
+              "name": "completion",
+              "order": 2
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "interceptor.retry(request, for: session, dueTo: error) { result in\n            let onRetry = self.state.write { state in\n                state.retries.append(.init(result: result, date: .now))\n                return state.onRetry\n            }\n\n            completion(result)\n            onRetry?(result)\n        }"
+          "attributes": [],
+          "body": {
+            "content": "interceptor.retry(request, for: session, dueTo: error) { result in\n            let onRetry = self.state.write { state in\n                state.retries.append(.init(result: result, date: .now))\n                return state.onRetry\n            }\n\n            completion(result)\n            onRetry?(result)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 23122,
-              "start_position" : 22654
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 23122,
+              "start_position": 22654,
+              "start_line": 699,
+              "end_line": 711
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "retry",
-          "parameters" : [
+          "modifiers": [],
+          "name": "retry",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Request"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Request"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 22691,
-                  "start_position" : 22671
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 22691,
+                  "start_position": 22671,
+                  "start_line": 701,
+                  "end_line": 701
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "request",
-              "order" : 0
+              "modifiers": [],
+              "name": "request",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Session"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Session"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 22713,
-                  "start_position" : 22691
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 22713,
+                  "start_position": 22691,
+                  "start_line": 701,
+                  "end_line": 701
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "session",
-              "order" : 1
+              "modifiers": [],
+              "name": "session",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "any Error"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "any Error"
               },
-              "is_variadic" : false,
-              "label" : "dueTo",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 22737,
-                  "start_position" : 22713
+              "is_variadic": false,
+              "label": "dueTo",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 22737,
+                  "start_position": 22713,
+                  "start_line": 701,
+                  "end_line": 701
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "error",
-              "order" : 2
+              "modifiers": [],
+              "name": "error",
+              "order": 2
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "escaping" : {
-
-                    }
+                  "annotation": {
+                    "escaping": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 },
                 {
-                  "annotation" : {
-                    "sendable" : {
-
-                    }
+                  "annotation": {
+                    "sendable": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "@escaping @Sendable (RetryResult) -> Void"
+              "data_type": {
+                "is_optional": false,
+                "name": "@escaping @Sendable (RetryResult) -> Void"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 22790,
-                  "start_position" : 22737
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 22790,
+                  "start_position": 22737,
+                  "start_line": 701,
+                  "end_line": 701
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "completion",
-              "order" : 3
+              "modifiers": [],
+              "name": "completion",
+              "order": 3
             }
           ]
         }
       ],
-      "initializers" : [
+      "initializers": [
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 21366,
-              "start_position" : 21054
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 21366,
+              "start_position": 21054,
+              "start_line": 665,
+              "end_line": 672
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "init",
-          "parameters" : [
+          "modifiers": [],
+          "name": "init",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Interceptor"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Interceptor"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 21092,
-                  "start_position" : 21065
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 21092,
+                  "start_position": 21065,
+                  "start_line": 667,
+                  "end_line": 667
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "interceptor",
-              "order" : 0
+              "modifiers": [],
+              "name": "interceptor",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "((_ result: Result<URLRequest, any Error>) -> Void)?"
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "((_ result: Result<URLRequest, any Error>) -> Void)?"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "nil"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "nil"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 21175,
-                  "start_position" : 21092
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 21175,
+                  "start_position": 21092,
+                  "start_line": 667,
+                  "end_line": 668
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "onAdaptation",
-              "order" : 1
+              "modifiers": [],
+              "name": "onAdaptation",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "((_ retryResult: RetryResult) -> Void)?"
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "((_ retryResult: RetryResult) -> Void)?"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "nil"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "nil"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 21239,
-                  "start_position" : 21175
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 21239,
+                  "start_position": 21175,
+                  "start_line": 668,
+                  "end_line": 669
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "onRetry",
-              "order" : 2
+              "modifiers": [],
+              "name": "onRetry",
+              "order": 2
             }
           ]
         }
       ],
-      "location_info" : {
-        "file_path" : "Tests/RequestInterceptorTests.swift",
-        "location" : {
-          "end_position" : 23124,
-          "start_position" : 19763
+      "location_info": {
+        "file_path": "Tests/RequestInterceptorTests.swift",
+        "location": {
+          "end_position": 23124,
+          "start_position": 19763,
+          "start_line": 623,
+          "end_line": 712
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "final"
       ],
-      "name" : "InspectorInterceptor",
-      "protocols" : [
-
-      ],
-      "structs" : [
+      "name": "InspectorInterceptor",
+      "protocols": [],
+      "structs": [
         {
-          "attributes" : [
-
-          ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20209,
-              "start_position" : 19958
+          "attributes": [],
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [],
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20209,
+              "start_position": 19958,
+              "start_line": 628,
+              "end_line": 635
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "State",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
+          "name": "State",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": [
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "((_ result: Result<URLRequest, any Error>) -> Void)?"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "((_ result: Result<URLRequest, any Error>) -> Void)?"
               },
-              "is_constant" : true,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20064,
-                  "start_position" : 19998
+              "is_constant": true,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20064,
+                  "start_position": 19998,
+                  "start_line": 630,
+                  "end_line": 630
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "onAdaptation"
+              "modifiers": [],
+              "name": "onAdaptation"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "((_ retryResult: RetryResult) -> Void)?"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "((_ retryResult: RetryResult) -> Void)?"
               },
-              "is_constant" : true,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20125,
-                  "start_position" : 20077
+              "is_constant": true,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20125,
+                  "start_position": 20077,
+                  "start_line": 631,
+                  "end_line": 631
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "onRetry"
+              "modifiers": [],
+              "name": "onRetry"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "[Adaptation]"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "[Adaptation]"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "[]"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "[]"
                   }
                 }
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20169,
-                  "start_position" : 20139
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20169,
+                  "start_position": 20139,
+                  "start_line": 633,
+                  "end_line": 633
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "adaptations"
+              "modifiers": [],
+              "name": "adaptations"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "[Retry]"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "[Retry]"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "[]"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "[]"
                   }
                 }
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20203,
-                  "start_position" : 20182
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20203,
+                  "start_position": 20182,
+                  "start_line": 634,
+                  "end_line": 634
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "retries"
+              "modifiers": [],
+              "name": "retries"
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20524,
-              "start_position" : 20250
+          "attributes": [],
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [],
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20524,
+              "start_position": 20250,
+              "start_line": 637,
+              "end_line": 649
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "Adaptation",
-          "protocols" : [
-
-          ],
-          "structs" : [
+          "modifiers": [],
+          "name": "Adaptation",
+          "protocols": [],
+          "structs": [
             {
-              "attributes" : [
-
-              ],
-              "classes" : [
-
-              ],
-              "conformed_types" : [
-
-              ],
-              "enums" : [
-
-              ],
-              "functions" : [
-
-              ],
-              "initializers" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20518,
-                  "start_position" : 20408
+              "attributes": [],
+              "classes": [],
+              "conformed_types": [],
+              "enums": [],
+              "functions": [],
+              "initializers": [],
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20518,
+                  "start_position": 20408,
+                  "start_line": 643,
+                  "end_line": 648
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "State",
-              "protocols" : [
-
-              ],
-              "structs" : [
-
-              ],
-              "subscripts" : [
-
-              ],
-              "type_aliases" : [
-
-              ],
-              "variables" : [
+              "modifiers": [],
+              "name": "State",
+              "protocols": [],
+              "structs": [],
+              "subscripts": [],
+              "type_aliases": [],
+              "variables": [
                 {
-                  "accessors" : [
-
-                  ],
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "UUID"
+                  "accessors": [],
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "UUID"
                   },
-                  "is_constant" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/RequestInterceptorTests.swift",
-                    "location" : {
-                      "end_position" : 20464,
-                      "start_position" : 20449
+                  "is_constant": false,
+                  "location_info": {
+                    "file_path": "Tests/RequestInterceptorTests.swift",
+                    "location": {
+                      "end_position": 20464,
+                      "start_position": 20449,
+                      "start_line": 646,
+                      "end_line": 646
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "requestID"
+                  "modifiers": [],
+                  "name": "requestID"
                 },
                 {
-                  "accessors" : [
-
-                  ],
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "ObjectIdentifier"
+                  "accessors": [],
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "ObjectIdentifier"
                   },
-                  "is_constant" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/RequestInterceptorTests.swift",
-                    "location" : {
-                      "end_position" : 20508,
-                      "start_position" : 20481
+                  "is_constant": false,
+                  "location_info": {
+                    "file_path": "Tests/RequestInterceptorTests.swift",
+                    "location": {
+                      "end_position": 20508,
+                      "start_position": 20481,
+                      "start_line": 647,
+                      "end_line": 647
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "sessionID"
+                  "modifiers": [],
+                  "name": "sessionID"
                 }
               ]
             }
           ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": [
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URLRequest"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URLRequest"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20310,
-                  "start_position" : 20288
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20310,
+                  "start_position": 20288,
+                  "start_line": 640,
+                  "end_line": 640
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "urlRequest"
+              "modifiers": [],
+              "name": "urlRequest"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "State"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "State"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20335,
-                  "start_position" : 20323
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20335,
+                  "start_position": 20323,
+                  "start_line": 641,
+                  "end_line": 641
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "state"
+              "modifiers": [],
+              "name": "state"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Result<URLRequest, any Error>"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Result<URLRequest, any Error>"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20385,
-                  "start_position" : 20348
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20385,
+                  "start_position": 20348,
+                  "start_line": 642,
+                  "end_line": 642
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "result"
+              "modifiers": [],
+              "name": "result"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Date"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Date"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20408,
-                  "start_position" : 20398
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20408,
+                  "start_position": 20398,
+                  "start_line": 643,
+                  "end_line": 643
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "date"
+              "modifiers": [],
+              "name": "date"
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20605,
-              "start_position" : 20524
+          "attributes": [],
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [],
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20605,
+              "start_position": 20524,
+              "start_line": 649,
+              "end_line": 654
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "Retry",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
+          "modifiers": [],
+          "name": "Retry",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": [
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "RetryResult"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "RetryResult"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20576,
-                  "start_position" : 20557
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20576,
+                  "start_position": 20557,
+                  "start_line": 652,
+                  "end_line": 652
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "result"
+              "modifiers": [],
+              "name": "result"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Date"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Date"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/RequestInterceptorTests.swift",
-                "location" : {
-                  "end_position" : 20599,
-                  "start_position" : 20589
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/RequestInterceptorTests.swift",
+                "location": {
+                  "end_position": 20599,
+                  "start_position": 20589,
+                  "start_line": 653,
+                  "end_line": 653
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "date"
+              "modifiers": [],
+              "name": "date"
             }
           ]
         }
       ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Protected<State>"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Protected<State>"
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20250,
-              "start_position" : 20227
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20250,
+              "start_position": 20227,
+              "start_line": 637,
+              "end_line": 637
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "state"
+          "name": "state"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Interceptor"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Interceptor"
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20671,
-              "start_position" : 20647
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20671,
+              "start_position": 20647,
+              "start_line": 657,
+              "end_line": 657
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "interceptor"
+          "modifiers": [],
+          "name": "interceptor"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[Adaptation]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[Adaptation]"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "state.read(\\.adaptations)"
+          "getter_block": {
+            "body": {
+              "content": "state.read(\\.adaptations)"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20776,
-              "start_position" : 20721
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20776,
+              "start_position": 20721,
+              "start_line": 659,
+              "end_line": 659
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "adaptations"
+          "modifiers": [],
+          "name": "adaptations"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[Retry]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[Retry]"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "state.read(\\.retries)"
+          "getter_block": {
+            "body": {
+              "content": "state.read(\\.retries)"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20849,
-              "start_position" : 20807
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20849,
+              "start_position": 20807,
+              "start_line": 661,
+              "end_line": 661
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "retries"
+          "modifiers": [],
+          "name": "retries"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[RetryResult]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[RetryResult]"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "retries.map(\\.result)"
+          "getter_block": {
+            "body": {
+              "content": "retries.map(\\.result)"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 20948,
-              "start_position" : 20895
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 20948,
+              "start_position": 20895,
+              "start_line": 663,
+              "end_line": 663
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "retryResults"
+          "modifiers": [],
+          "name": "retryResults"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Int"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Int"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "state.read(\\.retries.count)"
+          "getter_block": {
+            "body": {
+              "content": "state.read(\\.retries.count)"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/RequestInterceptorTests.swift",
-            "location" : {
-              "end_position" : 21054,
-              "start_position" : 21001
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/RequestInterceptorTests.swift",
+            "location": {
+              "end_position": 21054,
+              "start_position": 21001,
+              "start_line": 665,
+              "end_line": 665
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "retryCalledCount"
+          "modifiers": [],
+          "name": "retryCalledCount"
         }
       ]
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 202,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 202,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/RequestInterceptorTests.swift"
   ]
 }

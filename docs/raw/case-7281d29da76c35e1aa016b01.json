@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-7281d29da76c35e1aa016b01",
-  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
-  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
-  "durationSeconds" : 52.782080054283142,
-  "entityNames" : [
+  "caseID": "case-7281d29da76c35e1aa016b01",
+  "commitHash": "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage": "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds": 52.78208005428314,
+  "entityNames": [
     "@Sendable (Result<URLRequest, any Error>) -> Void",
     "@escaping @Sendable (Result<URLRequest, any Error>) -> Void",
     "@escaping @Sendable (RetryResult) -> Void",
@@ -14,1762 +14,1516 @@
     "AuthenticationInterceptor",
     "AuthenticatorType"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "additional_trailing_closures": [],
+      "arguments": [
         {
-          "value" : "newValue"
+          "value": "newValue"
         }
       ],
-      "call" : "updateCredential",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-        "location" : {
-          "end_position" : 13378,
-          "start_position" : 13348
+      "call": "updateCredential",
+      "has_self_reference": false,
+      "internal_inline_calls": [],
+      "location_info": {
+        "file_path": "Source/Features/AuthenticationInterceptor.swift",
+        "location": {
+          "end_position": 13378,
+          "start_position": 13348,
+          "start_line": 239,
+          "end_line": 239
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "RequestInterceptor"
+          "name": "RequestInterceptor"
         },
         {
-          "name" : "Sendable"
+          "name": "Sendable"
         }
       ],
-      "enums" : [
+      "enums": [
         {
-          "attributes" : [
-
-          ],
-          "cases" : [
+          "attributes": [],
+          "cases": [
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12259,
-                  "start_position" : 12228
+              "attributes": [],
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12259,
+                  "start_position": 12228,
+                  "start_line": 199,
+                  "end_line": 200
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "adapt",
-              "parameters" : [
+              "modifiers": [],
+              "name": "adapt",
+              "parameters": [
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "Credential"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "Credential"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                    "location" : {
-                      "end_position" : 12258,
-                      "start_position" : 12248
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                    "location": {
+                      "end_position": 12258,
+                      "start_position": 12248,
+                      "start_line": 200,
+                      "end_line": 200
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "",
-                  "order" : 0
+                  "modifiers": [],
+                  "name": "",
+                  "order": 0
                 }
               ]
             },
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12304,
-                  "start_position" : 12259
+              "attributes": [],
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12304,
+                  "start_position": 12259,
+                  "start_line": 200,
+                  "end_line": 201
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "doNotAdapt",
-              "parameters" : [
+              "modifiers": [],
+              "name": "doNotAdapt",
+              "parameters": [
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "AuthenticationError"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "AuthenticationError"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                    "location" : {
-                      "end_position" : 12303,
-                      "start_position" : 12284
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                    "location": {
+                      "end_position": 12303,
+                      "start_position": 12284,
+                      "start_line": 201,
+                      "end_line": 201
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "",
-                  "order" : 0
+                  "modifiers": [],
+                  "name": "",
+                  "order": 0
                 }
               ]
             },
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12331,
-                  "start_position" : 12304
+              "attributes": [],
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12331,
+                  "start_position": 12304,
+                  "start_line": 201,
+                  "end_line": 202
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "adaptDeferred",
-              "parameters" : [
-
-              ]
+              "modifiers": [],
+              "name": "adaptDeferred",
+              "parameters": []
             }
           ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 12337,
-              "start_position" : 12196
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [],
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 12337,
+              "start_position": 12196,
+              "start_line": 197,
+              "end_line": 203
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "AdaptResult",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
-
-          ]
+          "name": "AdaptResult",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": []
         },
         {
-          "attributes" : [
-
-          ],
-          "cases" : [
+          "attributes": [],
+          "cases": [
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12388,
-                  "start_position" : 12370
+              "attributes": [],
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12388,
+                  "start_position": 12370,
+                  "start_line": 205,
+                  "end_line": 206
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "idle",
-              "parameters" : [
-
-              ]
+              "modifiers": [],
+              "name": "idle",
+              "parameters": []
             },
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12412,
-                  "start_position" : 12388
+              "attributes": [],
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12412,
+                  "start_position": 12388,
+                  "start_line": 206,
+                  "end_line": 207
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "refreshing",
-              "parameters" : [
-
-              ]
+              "modifiers": [],
+              "name": "refreshing",
+              "parameters": []
             },
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12443,
-                  "start_position" : 12412
+              "attributes": [],
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12443,
+                  "start_position": 12412,
+                  "start_line": 207,
+                  "end_line": 208
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "failed",
-              "parameters" : [
+              "modifiers": [],
+              "name": "failed",
+              "parameters": [
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "any Error"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "any Error"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                    "location" : {
-                      "end_position" : 12442,
-                      "start_position" : 12433
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                    "location": {
+                      "end_position": 12442,
+                      "start_position": 12433,
+                      "start_line": 208,
+                      "end_line": 208
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "",
-                  "order" : 0
+                  "modifiers": [],
+                  "name": "",
+                  "order": 0
                 }
               ]
             }
           ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 12449,
-              "start_position" : 12337
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [],
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 12449,
+              "start_position": 12337,
+              "start_line": 203,
+              "end_line": 209
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "RefreshState",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
-
-          ]
+          "name": "RefreshState",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": []
         }
       ],
-      "functions" : [
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let adaptResult: AdaptResult = mutableState.write { mutableState in\n            // Defer only when a proactive (requiresRefresh-driven) refresh is in progress. The triggering request\n            // always appends itself to adaptOperations before isRefreshing is set, so any concurrent adapt that\n            // observes isRefreshing == true also observes a non-empty queue.\n            //\n            // When adaptOperations is empty and isRefreshing is true, the refresh was triggered by the retry path. In\n            // that case, do not defer the adaptation and perform the request using the credential so the full adapter\n            // chain, including any non-idempotent adapters earlier in the chain, reruns from scratch on retry rather\n            // than replaying stale intermediate state.\n            if mutableState.isRefreshing, !mutableState.adaptOperations.isEmpty {\n                // Refresh from requiresRefresh is running, adaptation has been deferred.\n                let operation = AdaptOperation(urlRequest: urlRequest, session: session, completion: completion)\n                mutableState.adaptOperations.append(operation)\n                return .adaptDeferred\n            }\n\n            // Produce a missing credential error if the credential is missing.\n            guard let credential = mutableState.credential else {\n                let error = AuthenticationError.missingCredential\n                return .doNotAdapt(error)\n            }\n\n            // Queue the adapt operation and trigger a proactive refresh if the credential requires it and no refresh\n            // is already in progress.\n            if credential.requiresRefresh, !mutableState.isRefreshing {\n                let operation = AdaptOperation(urlRequest: urlRequest, session: session, completion: completion)\n                mutableState.adaptOperations.append(operation)\n                refresh(credential, for: session, insideLock: &mutableState)\n                return .adaptDeferred\n            }\n\n            // A new request reaching this point represents a fresh request lifecycle. Any prior refresh failure is\n            // stale with respect to this request. Clear it so a subsequent failure can trigger a new refresh.\n            if case .failed = mutableState.refreshState {\n                mutableState.refreshState = .idle\n            }\n\n            return .adapt(credential)\n        }\n\n        switch adaptResult {\n        case let .adapt(credential):\n            var authenticatedRequest = urlRequest\n            authenticator.apply(credential, to: &authenticatedRequest)\n            completion(.success(authenticatedRequest))\n\n        case let .doNotAdapt(adaptError):\n            completion(.failure(adaptError))\n\n        case .adaptDeferred:\n            // No-op: adapt operation captured during refresh.\n            break\n        }"
+          "attributes": [],
+          "body": {
+            "content": "let adaptResult: AdaptResult = mutableState.write { mutableState in\n            // Defer only when a proactive (requiresRefresh-driven) refresh is in progress. The triggering request\n            // always appends itself to adaptOperations before isRefreshing is set, so any concurrent adapt that\n            // observes isRefreshing == true also observes a non-empty queue.\n            //\n            // When adaptOperations is empty and isRefreshing is true, the refresh was triggered by the retry path. In\n            // that case, do not defer the adaptation and perform the request using the credential so the full adapter\n            // chain, including any non-idempotent adapters earlier in the chain, reruns from scratch on retry rather\n            // than replaying stale intermediate state.\n            if mutableState.isRefreshing, !mutableState.adaptOperations.isEmpty {\n                // Refresh from requiresRefresh is running, adaptation has been deferred.\n                let operation = AdaptOperation(urlRequest: urlRequest, session: session, completion: completion)\n                mutableState.adaptOperations.append(operation)\n                return .adaptDeferred\n            }\n\n            // Produce a missing credential error if the credential is missing.\n            guard let credential = mutableState.credential else {\n                let error = AuthenticationError.missingCredential\n                return .doNotAdapt(error)\n            }\n\n            // Queue the adapt operation and trigger a proactive refresh if the credential requires it and no refresh\n            // is already in progress.\n            if credential.requiresRefresh, !mutableState.isRefreshing {\n                let operation = AdaptOperation(urlRequest: urlRequest, session: session, completion: completion)\n                mutableState.adaptOperations.append(operation)\n                refresh(credential, for: session, insideLock: &mutableState)\n                return .adaptDeferred\n            }\n\n            // A new request reaching this point represents a fresh request lifecycle. Any prior refresh failure is\n            // stale with respect to this request. Clear it so a subsequent failure can trigger a new refresh.\n            if case .failed = mutableState.refreshState {\n                mutableState.refreshState = .idle\n            }\n\n            return .adapt(credential)\n        }\n\n        switch adaptResult {\n        case let .adapt(credential):\n            var authenticatedRequest = urlRequest\n            authenticator.apply(credential, to: &authenticatedRequest)\n            completion(.success(authenticatedRequest))\n\n        case let .doNotAdapt(adaptError):\n            completion(.failure(adaptError))\n\n        case .adaptDeferred:\n            // No-op: adapt operation captured during refresh.\n            break\n        }"
           },
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 17528,
-              "start_position" : 14492
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 17528,
+              "start_position": 14492,
+              "start_line": 263,
+              "end_line": 321
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "adapt",
-          "parameters" : [
+          "name": "adapt",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URLRequest"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URLRequest"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 14562,
-                  "start_position" : 14536
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 14562,
+                  "start_position": 14536,
+                  "start_line": 267,
+                  "end_line": 267
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "urlRequest",
-              "order" : 0
+              "modifiers": [],
+              "name": "urlRequest",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Session"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Session"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 14584,
-                  "start_position" : 14562
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 14584,
+                  "start_position": 14562,
+                  "start_line": 267,
+                  "end_line": 267
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "session",
-              "order" : 1
+              "modifiers": [],
+              "name": "session",
+              "order": 1
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "escaping" : {
-
-                    }
+                  "annotation": {
+                    "escaping": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 },
                 {
-                  "annotation" : {
-                    "sendable" : {
-
-                    }
+                  "annotation": {
+                    "sendable": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "@escaping @Sendable (Result<URLRequest, any Error>) -> Void"
+              "data_type": {
+                "is_optional": false,
+                "name": "@escaping @Sendable (Result<URLRequest, any Error>) -> Void"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 14655,
-                  "start_position" : 14584
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 14655,
+                  "start_position": 14584,
+                  "start_line": 267,
+                  "end_line": 267
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "completion",
-              "order" : 2
+              "modifiers": [],
+              "name": "completion",
+              "order": 2
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard let urlRequest = request.request, let response = request.response else {\n            completion(.doNotRetry)\n            return\n        }\n\n        // Do not attempt retry unless the `Authenticator` verifies failure was due to authentication error (i.e. 401 status code).\n        guard authenticator.didRequest(urlRequest, with: response, failDueToAuthenticationError: error) else {\n            completion(.doNotRetry)\n            return\n        }\n\n        // Do not attempt retry if there is no credential.\n        guard let (credential, credentialVersion): (Credential, Int) = mutableState.read({ mutableState in\n            if let credential = mutableState.credential {\n                (credential, mutableState.credentialVersion)\n            } else {\n                nil\n            }\n        }) else {\n            let error = AuthenticationError.missingCredential\n            completion(.doNotRetryWithError(error))\n            return\n        }\n\n        // Retry the request if the `Authenticator` verifies it was authenticated with a previous credential.\n        guard authenticator.isRequest(urlRequest, authenticatedWith: credential) else {\n            completion(.retry)\n            return\n        }\n\n        // Otherwise, enqueue the completion for the end of refresh, or immediately resolve if a prior attempt already\n        // determined the outcome for this credential version.\n        let retryResult: RetryResult? = mutableState.write { mutableState in\n            guard credentialVersion == mutableState.credentialVersion else {\n                // Credential was updated during the prechecks, so immediately retry the request with the new credential.\n                return .retry\n            }\n            switch mutableState.refreshState {\n            case let .failed(refreshError):\n                // A refresh was already attempted and failed for this credential version.\n                // Do not queue and do not trigger another refresh.\n                return .doNotRetryWithError(refreshError)\n            case .refreshing:\n                mutableState.requestsToRetry.append(completion)\n                return nil\n            case .idle:\n                mutableState.requestsToRetry.append(completion)\n                refresh(credential, for: session, insideLock: &mutableState)\n                return nil\n            }\n        }\n\n        if let result = retryResult { completion(result) }"
+          "attributes": [],
+          "body": {
+            "content": "guard let urlRequest = request.request, let response = request.response else {\n            completion(.doNotRetry)\n            return\n        }\n\n        // Do not attempt retry unless the `Authenticator` verifies failure was due to authentication error (i.e. 401 status code).\n        guard authenticator.didRequest(urlRequest, with: response, failDueToAuthenticationError: error) else {\n            completion(.doNotRetry)\n            return\n        }\n\n        // Do not attempt retry if there is no credential.\n        guard let (credential, credentialVersion): (Credential, Int) = mutableState.read({ mutableState in\n            if let credential = mutableState.credential {\n                (credential, mutableState.credentialVersion)\n            } else {\n                nil\n            }\n        }) else {\n            let error = AuthenticationError.missingCredential\n            completion(.doNotRetryWithError(error))\n            return\n        }\n\n        // Retry the request if the `Authenticator` verifies it was authenticated with a previous credential.\n        guard authenticator.isRequest(urlRequest, authenticatedWith: credential) else {\n            completion(.retry)\n            return\n        }\n\n        // Otherwise, enqueue the completion for the end of refresh, or immediately resolve if a prior attempt already\n        // determined the outcome for this credential version.\n        let retryResult: RetryResult? = mutableState.write { mutableState in\n            guard credentialVersion == mutableState.credentialVersion else {\n                // Credential was updated during the prechecks, so immediately retry the request with the new credential.\n                return .retry\n            }\n            switch mutableState.refreshState {\n            case let .failed(refreshError):\n                // A refresh was already attempted and failed for this credential version.\n                // Do not queue and do not trigger another refresh.\n                return .doNotRetryWithError(refreshError)\n            case .refreshing:\n                mutableState.requestsToRetry.append(completion)\n                return nil\n            case .idle:\n                mutableState.requestsToRetry.append(completion)\n                refresh(credential, for: session, insideLock: &mutableState)\n                return nil\n            }\n        }\n\n        if let result = retryResult { completion(result) }"
           },
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 20229,
-              "start_position" : 17528
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 20229,
+              "start_position": 17528,
+              "start_line": 321,
+              "end_line": 380
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "retry",
-          "parameters" : [
+          "name": "retry",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Request"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Request"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 17592,
-                  "start_position" : 17572
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 17592,
+                  "start_position": 17572,
+                  "start_line": 325,
+                  "end_line": 325
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "request",
-              "order" : 0
+              "modifiers": [],
+              "name": "request",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Session"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Session"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 17614,
-                  "start_position" : 17592
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 17614,
+                  "start_position": 17592,
+                  "start_line": 325,
+                  "end_line": 325
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "session",
-              "order" : 1
+              "modifiers": [],
+              "name": "session",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "any Error"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "any Error"
               },
-              "is_variadic" : false,
-              "label" : "dueTo",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 17638,
-                  "start_position" : 17614
+              "is_variadic": false,
+              "label": "dueTo",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 17638,
+                  "start_position": 17614,
+                  "start_line": 325,
+                  "end_line": 325
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "error",
-              "order" : 2
+              "modifiers": [],
+              "name": "error",
+              "order": 2
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "escaping" : {
-
-                    }
+                  "annotation": {
+                    "escaping": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 },
                 {
-                  "annotation" : {
-                    "sendable" : {
-
-                    }
+                  "annotation": {
+                    "sendable": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "@escaping @Sendable (RetryResult) -> Void"
+              "data_type": {
+                "is_optional": false,
+                "name": "@escaping @Sendable (RetryResult) -> Void"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 17691,
-                  "start_position" : 17638
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 17691,
+                  "start_position": 17638,
+                  "start_line": 325,
+                  "end_line": 325
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "completion",
-              "order" : 3
+              "modifiers": [],
+              "name": "completion",
+              "order": 3
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard !isRefreshExcessive(insideLock: &mutableState) else {\n            let error = AuthenticationError.excessiveRefresh\n            handleRefreshFailure(error, insideLock: &mutableState)\n            return\n        }\n\n        mutableState.refreshTimestamps.append(ProcessInfo.processInfo.systemUptime)\n        mutableState.refreshState = .refreshing\n\n        // Dispatch to queue to hop out of the lock in case authenticator.refresh is implemented synchronously.\n        queue.async {\n            self.authenticator.refresh(credential, for: session) { result in\n                self.mutableState.write { mutableState in\n                    switch result {\n                    case let .success(credential):\n                        self.handleRefreshSuccess(credential, insideLock: &mutableState)\n                    case let .failure(error):\n                        self.handleRefreshFailure(error, insideLock: &mutableState)\n                    }\n                }\n            }\n        }"
+          "attributes": [],
+          "body": {
+            "content": "guard !isRefreshExcessive(insideLock: &mutableState) else {\n            let error = AuthenticationError.excessiveRefresh\n            handleRefreshFailure(error, insideLock: &mutableState)\n            return\n        }\n\n        mutableState.refreshTimestamps.append(ProcessInfo.processInfo.systemUptime)\n        mutableState.refreshState = .refreshing\n\n        // Dispatch to queue to hop out of the lock in case authenticator.refresh is implemented synchronously.\n        queue.async {\n            self.authenticator.refresh(credential, for: session) { result in\n                self.mutableState.write { mutableState in\n                    switch result {\n                    case let .success(credential):\n                        self.handleRefreshSuccess(credential, insideLock: &mutableState)\n                    case let .failure(error):\n                        self.handleRefreshFailure(error, insideLock: &mutableState)\n                    }\n                }\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 21376,
-              "start_position" : 20229
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 21376,
+              "start_position": 20229,
+              "start_line": 380,
+              "end_line": 407
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "refresh",
-          "parameters" : [
+          "name": "refresh",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Credential"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Credential"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 20304,
-                  "start_position" : 20278
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 20304,
+                  "start_position": 20278,
+                  "start_line": 384,
+                  "end_line": 384
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "credential",
-              "order" : 0
+              "modifiers": [],
+              "name": "credential",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Session"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Session"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 20326,
-                  "start_position" : 20304
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 20326,
+                  "start_position": 20304,
+                  "start_line": 384,
+                  "end_line": 384
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "session",
-              "order" : 1
+              "modifiers": [],
+              "name": "session",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "inout MutableState"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "inout MutableState"
               },
-              "is_variadic" : false,
-              "label" : "insideLock",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 20369,
-                  "start_position" : 20326
+              "is_variadic": false,
+              "label": "insideLock",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 20369,
+                  "start_position": 20326,
+                  "start_line": 384,
+                  "end_line": 384
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "mutableState",
-              "order" : 2
+              "modifiers": [],
+              "name": "mutableState",
+              "order": 2
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard let refreshWindow = mutableState.refreshWindow else { return false }\n\n        let refreshWindowMin = ProcessInfo.processInfo.systemUptime - refreshWindow.interval\n\n        let refreshAttemptsWithinWindow = mutableState.refreshTimestamps.reduce(into: 0) { attempts, refreshTimestamp in\n            guard refreshWindowMin <= refreshTimestamp else { return }\n            attempts += 1\n        }\n\n        return refreshAttemptsWithinWindow >= refreshWindow.maximumAttempts"
+          "attributes": [],
+          "body": {
+            "content": "guard let refreshWindow = mutableState.refreshWindow else { return false }\n\n        let refreshWindowMin = ProcessInfo.processInfo.systemUptime - refreshWindow.interval\n\n        let refreshAttemptsWithinWindow = mutableState.refreshTimestamps.reduce(into: 0) { attempts, refreshTimestamp in\n            guard refreshWindowMin <= refreshTimestamp else { return }\n            attempts += 1\n        }\n\n        return refreshAttemptsWithinWindow >= refreshWindow.maximumAttempts"
           },
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 21957,
-              "start_position" : 21376
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 21957,
+              "start_position": 21376,
+              "start_line": 407,
+              "end_line": 420
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "isRefreshExcessive",
-          "parameters" : [
+          "name": "isRefreshExcessive",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "inout MutableState"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "inout MutableState"
               },
-              "is_variadic" : false,
-              "label" : "insideLock",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 21457,
-                  "start_position" : 21414
+              "is_variadic": false,
+              "label": "insideLock",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 21457,
+                  "start_position": 21414,
+                  "start_line": 409,
+                  "end_line": 409
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "mutableState",
-              "order" : 0
+              "modifiers": [],
+              "name": "mutableState",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Bool"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Bool"
             },
-            "description" : "-> Bool"
+            "description": "-> Bool"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "mutableState.updateCredential(credential)\n\n        let adaptOperations = mutableState.adaptOperations\n        let requestsToRetry = mutableState.requestsToRetry\n\n        mutableState.adaptOperations.removeAll()\n        mutableState.requestsToRetry.removeAll()\n\n        // Dispatch to queue to hop out of the mutable state lock\n        queue.async {\n            adaptOperations.forEach { self.adapt($0.urlRequest, for: $0.session, completion: $0.completion) }\n            requestsToRetry.forEach { $0(.retry) }\n        }"
+          "attributes": [],
+          "body": {
+            "content": "mutableState.updateCredential(credential)\n\n        let adaptOperations = mutableState.adaptOperations\n        let requestsToRetry = mutableState.requestsToRetry\n\n        mutableState.adaptOperations.removeAll()\n        mutableState.requestsToRetry.removeAll()\n\n        // Dispatch to queue to hop out of the mutable state lock\n        queue.async {\n            adaptOperations.forEach { self.adapt($0.urlRequest, for: $0.session, completion: $0.completion) }\n            requestsToRetry.forEach { $0(.retry) }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 22603,
-              "start_position" : 21957
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 22603,
+              "start_position": 21957,
+              "start_line": 420,
+              "end_line": 436
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "handleRefreshSuccess",
-          "parameters" : [
+          "name": "handleRefreshSuccess",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Credential"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Credential"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 22023,
-                  "start_position" : 21997
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 22023,
+                  "start_position": 21997,
+                  "start_line": 422,
+                  "end_line": 422
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "credential",
-              "order" : 0
+              "modifiers": [],
+              "name": "credential",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "inout MutableState"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "inout MutableState"
               },
-              "is_variadic" : false,
-              "label" : "insideLock",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 22066,
-                  "start_position" : 22023
+              "is_variadic": false,
+              "label": "insideLock",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 22066,
+                  "start_position": 22023,
+                  "start_line": 422,
+                  "end_line": 422
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "mutableState",
-              "order" : 1
+              "modifiers": [],
+              "name": "mutableState",
+              "order": 1
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let adaptOperations = mutableState.adaptOperations\n        let requestsToRetry = mutableState.requestsToRetry\n\n        mutableState.adaptOperations.removeAll()\n        mutableState.requestsToRetry.removeAll()\n\n        mutableState.refreshState = .failed(error)\n\n        // Dispatch to queue to hop out of the mutable state lock\n        queue.async {\n            adaptOperations.forEach { $0.completion(.failure(error)) }\n            requestsToRetry.forEach { $0(.doNotRetryWithError(error)) }\n        }"
+          "attributes": [],
+          "body": {
+            "content": "let adaptOperations = mutableState.adaptOperations\n        let requestsToRetry = mutableState.requestsToRetry\n\n        mutableState.adaptOperations.removeAll()\n        mutableState.requestsToRetry.removeAll()\n\n        mutableState.refreshState = .failed(error)\n\n        // Dispatch to queue to hop out of the mutable state lock\n        queue.async {\n            adaptOperations.forEach { $0.completion(.failure(error)) }\n            requestsToRetry.forEach { $0(.doNotRetryWithError(error)) }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 23226,
-              "start_position" : 22603
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 23226,
+              "start_position": 22603,
+              "start_line": 436,
+              "end_line": 452
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "handleRefreshFailure",
-          "parameters" : [
+          "name": "handleRefreshFailure",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "any Error"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "any Error"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 22663,
-                  "start_position" : 22643
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 22663,
+                  "start_position": 22643,
+                  "start_line": 438,
+                  "end_line": 438
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "error",
-              "order" : 0
+              "modifiers": [],
+              "name": "error",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "inout MutableState"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "inout MutableState"
               },
-              "is_variadic" : false,
-              "label" : "insideLock",
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 22706,
-                  "start_position" : 22663
+              "is_variadic": false,
+              "label": "insideLock",
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 22706,
+                  "start_position": 22663,
+                  "start_line": 438,
+                  "end_line": 438
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "mutableState",
-              "order" : 1
+              "modifiers": [],
+              "name": "mutableState",
+              "order": 1
             }
           ]
         }
       ],
-      "initializers" : [
+      "initializers": [
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 14492,
-              "start_position" : 13563
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 14492,
+              "start_position": 13563,
+              "start_line": 245,
+              "end_line": 263
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "init",
-          "parameters" : [
+          "name": "init",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "AuthenticatorType"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "AuthenticatorType"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 14228,
-                  "start_position" : 14195
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 14228,
+                  "start_position": 14195,
+                  "start_line": 258,
+                  "end_line": 258
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "authenticator",
-              "order" : 0
+              "modifiers": [],
+              "name": "authenticator",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "Credential?"
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "Credential?"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "nil"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "nil"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 14275,
-                  "start_position" : 14228
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 14275,
+                  "start_position": 14228,
+                  "start_line": 258,
+                  "end_line": 259
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "credential",
-              "order" : 1
+              "modifiers": [],
+              "name": "credential",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "RefreshWindow?"
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "RefreshWindow?"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "function_call" : {
-                    "_0" : {
-                      "additional_trailing_closures" : [
-
-                      ],
-                      "arguments" : [
-
-                      ],
-                      "call" : "RefreshWindow",
-                      "has_self_reference" : false,
-                      "internal_inline_calls" : [
-
-                      ],
-                      "location_info" : {
-                        "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                        "location" : {
-                          "end_position" : 14339,
-                          "start_position" : 14324
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "function_call": {
+                    "_0": {
+                      "additional_trailing_closures": [],
+                      "arguments": [],
+                      "call": "RefreshWindow",
+                      "has_self_reference": false,
+                      "internal_inline_calls": [],
+                      "location_info": {
+                        "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                        "location": {
+                          "end_position": 14339,
+                          "start_position": 14324,
+                          "start_line": 260,
+                          "end_line": 260
                         }
                       }
                     }
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 14339,
-                  "start_position" : 14275
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 14339,
+                  "start_position": 14275,
+                  "start_line": 259,
+                  "end_line": 260
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "refreshWindow",
-              "order" : 2
+              "modifiers": [],
+              "name": "refreshWindow",
+              "order": 2
             }
           ]
         }
       ],
-      "location_info" : {
-        "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-        "location" : {
-          "end_position" : 23228,
-          "start_position" : 9861
+      "location_info": {
+        "file_path": "Source/Features/AuthenticationInterceptor.swift",
+        "location": {
+          "end_position": 23228,
+          "start_position": 9861,
+          "start_line": 154,
+          "end_line": 453
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public",
         "final"
       ],
-      "name" : "AuthenticationInterceptor",
-      "protocols" : [
-
-      ],
-      "structs" : [
+      "name": "AuthenticationInterceptor",
+      "protocols": [],
+      "structs": [
         {
-          "attributes" : [
-
-          ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
+          "attributes": [],
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [
             {
-              "attributes" : [
-
-              ],
-              "functions" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12009,
-                  "start_position" : 11490
+              "attributes": [],
+              "functions": [],
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12009,
+                  "start_position": 11490,
+                  "start_line": 180,
+                  "end_line": 190
                 }
               },
-              "modifiers" : [
+              "modifiers": [
                 "public"
               ],
-              "name" : "init",
-              "parameters" : [
+              "name": "init",
+              "parameters": [
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "TimeInterval"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "TimeInterval"
                   },
-                  "initializer_clause" : {
-                    "has_self_reference" : false,
-                    "value" : {
-                      "other" : {
-                        "_0" : "30.0"
+                  "initializer_clause": {
+                    "has_self_reference": false,
+                    "value": {
+                      "other": {
+                        "_0": "30.0"
                       }
                     }
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                    "location" : {
-                      "end_position" : 11884,
-                      "start_position" : 11853
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                    "location": {
+                      "end_position": 11884,
+                      "start_position": 11853,
+                      "start_line": 187,
+                      "end_line": 187
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "interval",
-                  "order" : 0
+                  "modifiers": [],
+                  "name": "interval",
+                  "order": 0
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "Int"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "Int"
                   },
-                  "initializer_clause" : {
-                    "has_self_reference" : false,
-                    "value" : {
-                      "other" : {
-                        "_0" : "5"
+                  "initializer_clause": {
+                    "has_self_reference": false,
+                    "value": {
+                      "other": {
+                        "_0": "5"
                       }
                     }
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                    "location" : {
-                      "end_position" : 11908,
-                      "start_position" : 11884
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                    "location": {
+                      "end_position": 11908,
+                      "start_position": 11884,
+                      "start_line": 187,
+                      "end_line": 187
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "maximumAttempts",
-                  "order" : 1
+                  "modifiers": [],
+                  "name": "maximumAttempts",
+                  "order": 1
                 }
               ]
             }
           ],
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 12015,
-              "start_position" : 10387
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 12015,
+              "start_position": 10387,
+              "start_line": 164,
+              "end_line": 191
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "RefreshWindow",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
+          "name": "RefreshWindow",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": [
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "TimeInterval"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "TimeInterval"
               },
-              "is_constant" : true,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 11342,
-                  "start_position" : 11320
+              "is_constant": true,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 11342,
+                  "start_position": 11320,
+                  "start_line": 177,
+                  "end_line": 177
                 }
               },
-              "modifiers" : [
+              "modifiers": [
                 "public"
               ],
-              "name" : "interval"
+              "name": "interval"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Int"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Int"
               },
-              "is_constant" : true,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 11490,
-                  "start_position" : 11470
+              "is_constant": true,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 11490,
+                  "start_position": 11470,
+                  "start_line": 180,
+                  "end_line": 180
                 }
               },
-              "modifiers" : [
+              "modifiers": [
                 "public"
               ],
-              "name" : "maximumAttempts"
+              "name": "maximumAttempts"
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 12196,
-              "start_position" : 12015
+          "attributes": [],
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [],
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 12196,
+              "start_position": 12015,
+              "start_line": 191,
+              "end_line": 197
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "AdaptOperation",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
+          "name": "AdaptOperation",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": [
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URLRequest"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URLRequest"
               },
-              "is_constant" : true,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12087,
-                  "start_position" : 12065
+              "is_constant": true,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12087,
+                  "start_position": 12065,
+                  "start_line": 194,
+                  "end_line": 194
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "urlRequest"
+              "modifiers": [],
+              "name": "urlRequest"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Session"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Session"
               },
-              "is_constant" : true,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12116,
-                  "start_position" : 12100
+              "is_constant": true,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12116,
+                  "start_position": 12100,
+                  "start_line": 195,
+                  "end_line": 195
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "session"
+              "modifiers": [],
+              "name": "session"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "@Sendable (Result<URLRequest, any Error>) -> Void"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "@Sendable (Result<URLRequest, any Error>) -> Void"
               },
-              "is_constant" : true,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12190,
-                  "start_position" : 12129
+              "is_constant": true,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12190,
+                  "start_position": 12129,
+                  "start_line": 196,
+                  "end_line": 196
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "completion"
+              "modifiers": [],
+              "name": "completion"
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
+          "attributes": [],
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [
             {
-              "attributes" : [
-
-              ],
-              "body" : {
-                "content" : "self.credential = credential\n            credentialVersion += 1\n            refreshState = .idle"
+              "attributes": [],
+              "body": {
+                "content": "self.credential = credential\n            credentialVersion += 1\n            refreshState = .idle"
               },
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 13135,
-                  "start_position" : 12947
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 13135,
+                  "start_position": 12947,
+                  "start_line": 225,
+                  "end_line": 231
                 }
               },
-              "modifiers" : [
+              "modifiers": [
                 "mutating"
               ],
-              "name" : "updateCredential",
-              "parameters" : [
+              "name": "updateCredential",
+              "parameters": [
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : true,
-                    "name" : "Credential?"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": true,
+                    "name": "Credential?"
                   },
-                  "is_variadic" : false,
-                  "label" : "_",
-                  "location_info" : {
-                    "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                    "location" : {
-                      "end_position" : 13013,
-                      "start_position" : 12988
+                  "is_variadic": false,
+                  "label": "_",
+                  "location_info": {
+                    "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                    "location": {
+                      "end_position": 13013,
+                      "start_position": 12988,
+                      "start_line": 227,
+                      "end_line": 227
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "credential",
-                  "order" : 0
+                  "modifiers": [],
+                  "name": "credential",
+                  "order": 0
                 }
               ]
             }
           ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 13141,
-              "start_position" : 12449
+          "initializers": [],
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 13141,
+              "start_position": 12449,
+              "start_line": 209,
+              "end_line": 232
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "MutableState",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
+          "name": "MutableState",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": [
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "Credential?"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "Credential?"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12520,
-                  "start_position" : 12497
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12520,
+                  "start_position": 12497,
+                  "start_line": 212,
+                  "end_line": 212
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "credential"
+              "modifiers": [],
+              "name": "credential"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "0"
+              "accessors": [],
+              "attributes": [],
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "0"
                   }
                 }
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12554,
-                  "start_position" : 12533
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12554,
+                  "start_position": 12533,
+                  "start_line": 213,
+                  "end_line": 213
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "credentialVersion"
+              "modifiers": [],
+              "name": "credentialVersion"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "RefreshState"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "RefreshState"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "reference" : {
-                    "arguments" : [
-
-                    ],
-                    "name" : "idle"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "reference": {
+                    "arguments": [],
+                    "name": "idle"
                   }
                 }
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12602,
-                  "start_position" : 12568
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12602,
+                  "start_position": 12568,
+                  "start_line": 215,
+                  "end_line": 215
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "refreshState"
+              "modifiers": [],
+              "name": "refreshState"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "[TimeInterval]"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "[TimeInterval]"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "[]"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "[]"
                   }
                 }
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12653,
-                  "start_position" : 12615
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12653,
+                  "start_position": 12615,
+                  "start_line": 216,
+                  "end_line": 216
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "refreshTimestamps"
+              "modifiers": [],
+              "name": "refreshTimestamps"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : true,
-                "name" : "RefreshWindow?"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": true,
+                "name": "RefreshWindow?"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12695,
-                  "start_position" : 12666
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12695,
+                  "start_position": 12666,
+                  "start_line": 217,
+                  "end_line": 217
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "refreshWindow"
+              "modifiers": [],
+              "name": "refreshWindow"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "[AdaptOperation]"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "[AdaptOperation]"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "[]"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "[]"
                   }
                 }
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12747,
-                  "start_position" : 12709
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12747,
+                  "start_position": 12709,
+                  "start_line": 219,
+                  "end_line": 219
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "adaptOperations"
+              "modifiers": [],
+              "name": "adaptOperations"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "[@Sendable (RetryResult) -> Void]"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "[@Sendable (RetryResult) -> Void]"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "[]"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "[]"
                   }
                 }
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12815,
-                  "start_position" : 12760
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12815,
+                  "start_position": 12760,
+                  "start_line": 220,
+                  "end_line": 220
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "requestsToRetry"
+              "modifiers": [],
+              "name": "requestsToRetry"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "getter_block" : {
-                "body" : {
-                  "content" : "if case .refreshing = refreshState { return true }\n            return false"
+              "getter_block": {
+                "body": {
+                  "content": "if case .refreshing = refreshState { return true }\n            return false"
                 },
-                "modifier" : "get"
+                "modifier": "get"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                "location" : {
-                  "end_position" : 12947,
-                  "start_position" : 12829
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                "location": {
+                  "end_position": 12947,
+                  "start_position": 12829,
+                  "start_line": 222,
+                  "end_line": 225
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "isRefreshing"
+              "modifiers": [],
+              "name": "isRefreshing"
             }
           ]
         }
       ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
+      "subscripts": [],
+      "type_aliases": [
         {
-          "assigned_type" : {
-            "is_optional" : false,
-            "name" : "AuthenticatorType.Credential"
+          "assigned_type": {
+            "is_optional": false,
+            "name": "AuthenticatorType.Credential"
           },
-          "attributes" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 10387,
-              "start_position" : 10240
+          "attributes": [],
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 10387,
+              "start_position": 10240,
+              "start_line": 160,
+              "end_line": 164
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "Credential"
+          "name": "Credential"
         }
       ],
-      "variables" : [
+      "variables": [
         {
-          "accessors" : [
+          "accessors": [
             {
-              "body" : {
-                "content" : "mutableState.read(\\.credential)"
+              "body": {
+                "content": "mutableState.read(\\.credential)"
               },
-              "modifier" : "get"
+              "modifier": "get"
             },
             {
-              "body" : {
-                "content" : "mutableState.write { $0.updateCredential(newValue) }"
+              "body": {
+                "content": "mutableState.write { $0.updateCredential(newValue) }"
               },
-              "modifier" : "set"
+              "modifier": "set"
             }
           ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "Credential?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "Credential?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 13387,
-              "start_position" : 13239
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 13387,
+              "start_position": 13239,
+              "start_line": 237,
+              "end_line": 240
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "credential"
+          "name": "credential"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "AuthenticatorType"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "AuthenticatorType"
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 13429,
-              "start_position" : 13397
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 13429,
+              "start_position": 13397,
+              "start_line": 242,
+              "end_line": 242
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "authenticator"
+          "modifiers": [],
+          "name": "authenticator"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "accessors": [],
+          "attributes": [],
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "label" : "label",
-                      "value" : "\"org.alamofire.authentication.inspector\""
+                      "label": "label",
+                      "value": "\"org.alamofire.authentication.inspector\""
                     }
                   ],
-                  "call" : "DispatchQueue",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-                    "location" : {
-                      "end_position" : 13508,
-                      "start_position" : 13446
+                  "call": "DispatchQueue",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Source/Features/AuthenticationInterceptor.swift",
+                    "location": {
+                      "end_position": 13508,
+                      "start_position": 13446,
+                      "start_line": 243,
+                      "end_line": 243
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 13508,
-              "start_position" : 13438
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 13508,
+              "start_position": 13438,
+              "start_line": 243,
+              "end_line": 243
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "queue"
+          "modifiers": [],
+          "name": "queue"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Protected<MutableState>"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Protected<MutableState>"
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Source/Features/AuthenticationInterceptor.swift",
-            "location" : {
-              "end_position" : 13563,
-              "start_position" : 13526
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Source/Features/AuthenticationInterceptor.swift",
+            "location": {
+              "end_position": 13563,
+              "start_position": 13526,
+              "start_line": 245,
+              "end_line": 245
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "mutableState"
+          "name": "mutableState"
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 104,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 104,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Features/AuthenticationInterceptor.swift"
   ]
 }

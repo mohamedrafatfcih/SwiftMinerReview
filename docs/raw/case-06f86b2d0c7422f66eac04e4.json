@@ -1,467 +1,431 @@
 {
-  "caseID" : "case-06f86b2d0c7422f66eac04e4",
-  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
-  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
-  "durationSeconds" : 52.782080054283142,
-  "entityNames" : [
+  "caseID": "case-06f86b2d0c7422f66eac04e4",
+  "commitHash": "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage": "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds": 52.78208005428314,
+  "entityNames": [
     "DownloadResponsePublisher<TestResponse>"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": [
       "session"
     ],
-    "current_parent" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
+    "current_parent": {
+      "additional_trailing_closures": [],
+      "arguments": [
         {
-          "label" : "receiveCompletion",
-          "value" : "{ _ in completionReceived.fulfill() }"
+          "label": "receiveCompletion",
+          "value": "{ _ in completionReceived.fulfill() }"
         }
       ],
-      "call" : "sink",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
+      "call": "sink",
+      "has_self_reference": false,
+      "internal_inline_calls": [
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
+          "additional_trailing_closures": [],
+          "arguments": [
             {
-              "value" : ".default"
+              "value": ".default"
             }
           ],
-          "call" : "download",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/CombineTests.swift",
-            "location" : {
-              "end_position" : 57810,
-              "start_position" : 57771
+          "call": "download",
+          "has_self_reference": false,
+          "internal_inline_calls": [],
+          "location_info": {
+            "file_path": "Tests/CombineTests.swift",
+            "location": {
+              "end_position": 57810,
+              "start_position": 57771,
+              "start_line": 1481,
+              "end_line": 1482
             }
           }
         },
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
+          "additional_trailing_closures": [],
+          "arguments": [
             {
-              "label" : "type",
-              "value" : "TestResponse.self"
+              "label": "type",
+              "value": "TestResponse.self"
             }
           ],
-          "call" : "publishDecodable",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
+          "call": "publishDecodable",
+          "has_self_reference": false,
+          "internal_inline_calls": [
             {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "value" : ".default"
+                  "value": ".default"
                 }
               ],
-              "call" : "download",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/CombineTests.swift",
-                "location" : {
-                  "end_position" : 57810,
-                  "start_position" : 57771
+              "call": "download",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Tests/CombineTests.swift",
+                "location": {
+                  "end_position": 57810,
+                  "start_position": 57771,
+                  "start_line": 1481,
+                  "end_line": 1482
                 }
               }
             }
           ],
-          "location_info" : {
-            "file_path" : "Tests/CombineTests.swift",
-            "location" : {
-              "end_position" : 57869,
-              "start_position" : 57771
+          "location_info": {
+            "file_path": "Tests/CombineTests.swift",
+            "location": {
+              "end_position": 57869,
+              "start_position": 57771,
+              "start_line": 1481,
+              "end_line": 1483
             }
           }
         },
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
-
-          ],
-          "call" : "flatMap",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
+          "additional_trailing_closures": [],
+          "arguments": [],
+          "call": "flatMap",
+          "has_self_reference": false,
+          "internal_inline_calls": [
             {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "value" : ".default"
+                  "value": ".default"
                 }
               ],
-              "call" : "download",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/CombineTests.swift",
-                "location" : {
-                  "end_position" : 57810,
-                  "start_position" : 57771
+              "call": "download",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Tests/CombineTests.swift",
+                "location": {
+                  "end_position": 57810,
+                  "start_position": 57771,
+                  "start_line": 1481,
+                  "end_line": 1482
                 }
               }
             },
             {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "label" : "type",
-                  "value" : "TestResponse.self"
+                  "label": "type",
+                  "value": "TestResponse.self"
                 }
               ],
-              "call" : "publishDecodable",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
+              "call": "publishDecodable",
+              "has_self_reference": false,
+              "internal_inline_calls": [
                 {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : ".default"
+                      "value": ".default"
                     }
                   ],
-                  "call" : "download",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Tests/CombineTests.swift",
-                    "location" : {
-                      "end_position" : 57810,
-                      "start_position" : 57771
+                  "call": "download",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Tests/CombineTests.swift",
+                    "location": {
+                      "end_position": 57810,
+                      "start_position": 57771,
+                      "start_line": 1481,
+                      "end_line": 1482
                     }
                   }
                 }
               ],
-              "location_info" : {
-                "file_path" : "Tests/CombineTests.swift",
-                "location" : {
-                  "end_position" : 57869,
-                  "start_position" : 57771
+              "location_info": {
+                "file_path": "Tests/CombineTests.swift",
+                "location": {
+                  "end_position": 57869,
+                  "start_position": 57771,
+                  "start_line": 1481,
+                  "end_line": 1483
                 }
               }
             }
           ],
-          "location_info" : {
-            "file_path" : "Tests/CombineTests.swift",
-            "location" : {
-              "end_position" : 58213,
-              "start_position" : 57771
+          "location_info": {
+            "file_path": "Tests/CombineTests.swift",
+            "location": {
+              "end_position": 58213,
+              "start_position": 57771,
+              "start_line": 1481,
+              "end_line": 1489
             }
           },
-          "trailing_closure" : {
-            "attributes" : [
-
-            ],
-            "body" : {
-              "content" : "firstResponse = response\n                    let request = Endpoint(headers: [\"X-Custom\": customValue])\n                    return session.download(request)\n                        .publishDecodable(type: TestResponse.self)"
+          "trailing_closure": {
+            "attributes": [],
+            "body": {
+              "content": "firstResponse = response\n                    let request = Endpoint(headers: [\"X-Custom\": customValue])\n                    return session.download(request)\n                        .publishDecodable(type: TestResponse.self)"
             },
-            "captures" : [
-
-            ],
-            "location_info" : {
-              "file_path" : "Tests/CombineTests.swift",
-              "location" : {
-                "end_position" : 58213,
-                "start_position" : 57895
+            "captures": [],
+            "location_info": {
+              "file_path": "Tests/CombineTests.swift",
+              "location": {
+                "end_position": 58213,
+                "start_position": 57895,
+                "start_line": 1484,
+                "end_line": 1489
               }
             },
-            "parameters" : [
-
-            ],
-            "return_type" : {
-              "is_optional" : false,
-              "name" : "DownloadResponsePublisher<TestResponse>"
+            "parameters": [],
+            "return_type": {
+              "is_optional": false,
+              "name": "DownloadResponsePublisher<TestResponse>"
             }
           }
         }
       ],
-      "location_info" : {
-        "file_path" : "Tests/CombineTests.swift",
-        "location" : {
-          "end_position" : 58418,
-          "start_position" : 57771
+      "location_info": {
+        "file_path": "Tests/CombineTests.swift",
+        "location": {
+          "end_position": 58418,
+          "start_position": 57771,
+          "start_line": 1481,
+          "end_line": 1493
         }
       },
-      "trailing_closure" : {
-        "attributes" : [
-
-        ],
-        "body" : {
-          "content" : "secondResponse = response\n                    responseReceived.fulfill()"
+      "trailing_closure": {
+        "attributes": [],
+        "body": {
+          "content": "secondResponse = response\n                    responseReceived.fulfill()"
         },
-        "captures" : [
-
-        ],
-        "location_info" : {
-          "file_path" : "Tests/CombineTests.swift",
-          "location" : {
-            "end_position" : 58418,
-            "start_position" : 58294
+        "captures": [],
+        "location_info": {
+          "file_path": "Tests/CombineTests.swift",
+          "location": {
+            "end_position": 58418,
+            "start_position": 58294,
+            "start_line": 1490,
+            "end_line": 1493
           }
         },
-        "parameters" : [
-
-        ]
+        "parameters": []
       }
     },
-    "old_content" : [
+    "old_content": [
       "AF"
     ],
-    "old_parent" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
+    "old_parent": {
+      "additional_trailing_closures": [],
+      "arguments": [
         {
-          "label" : "receiveCompletion",
-          "value" : "{ _ in completionReceived.fulfill() }"
+          "label": "receiveCompletion",
+          "value": "{ _ in completionReceived.fulfill() }"
         }
       ],
-      "call" : "sink",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
+      "call": "sink",
+      "has_self_reference": false,
+      "internal_inline_calls": [
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
+          "additional_trailing_closures": [],
+          "arguments": [
             {
-              "value" : ".default"
+              "value": ".default"
             }
           ],
-          "call" : "download",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/CombineTests.swift",
-            "location" : {
-              "end_position" : 55691,
-              "start_position" : 55657
+          "call": "download",
+          "has_self_reference": false,
+          "internal_inline_calls": [],
+          "location_info": {
+            "file_path": "Tests/CombineTests.swift",
+            "location": {
+              "end_position": 55691,
+              "start_position": 55657,
+              "start_line": 1435,
+              "end_line": 1436
             }
           }
         },
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
+          "additional_trailing_closures": [],
+          "arguments": [
             {
-              "label" : "type",
-              "value" : "TestResponse.self"
+              "label": "type",
+              "value": "TestResponse.self"
             }
           ],
-          "call" : "publishDecodable",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
+          "call": "publishDecodable",
+          "has_self_reference": false,
+          "internal_inline_calls": [
             {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "value" : ".default"
+                  "value": ".default"
                 }
               ],
-              "call" : "download",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/CombineTests.swift",
-                "location" : {
-                  "end_position" : 55691,
-                  "start_position" : 55657
+              "call": "download",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Tests/CombineTests.swift",
+                "location": {
+                  "end_position": 55691,
+                  "start_position": 55657,
+                  "start_line": 1435,
+                  "end_line": 1436
                 }
               }
             }
           ],
-          "location_info" : {
-            "file_path" : "Tests/CombineTests.swift",
-            "location" : {
-              "end_position" : 55750,
-              "start_position" : 55657
+          "location_info": {
+            "file_path": "Tests/CombineTests.swift",
+            "location": {
+              "end_position": 55750,
+              "start_position": 55657,
+              "start_line": 1435,
+              "end_line": 1437
             }
           }
         },
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
-
-          ],
-          "call" : "flatMap",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
+          "additional_trailing_closures": [],
+          "arguments": [],
+          "call": "flatMap",
+          "has_self_reference": false,
+          "internal_inline_calls": [
             {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "value" : ".default"
+                  "value": ".default"
                 }
               ],
-              "call" : "download",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/CombineTests.swift",
-                "location" : {
-                  "end_position" : 55691,
-                  "start_position" : 55657
+              "call": "download",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Tests/CombineTests.swift",
+                "location": {
+                  "end_position": 55691,
+                  "start_position": 55657,
+                  "start_line": 1435,
+                  "end_line": 1436
                 }
               }
             },
             {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "label" : "type",
-                  "value" : "TestResponse.self"
+                  "label": "type",
+                  "value": "TestResponse.self"
                 }
               ],
-              "call" : "publishDecodable",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
+              "call": "publishDecodable",
+              "has_self_reference": false,
+              "internal_inline_calls": [
                 {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : ".default"
+                      "value": ".default"
                     }
                   ],
-                  "call" : "download",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Tests/CombineTests.swift",
-                    "location" : {
-                      "end_position" : 55691,
-                      "start_position" : 55657
+                  "call": "download",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Tests/CombineTests.swift",
+                    "location": {
+                      "end_position": 55691,
+                      "start_position": 55657,
+                      "start_line": 1435,
+                      "end_line": 1436
                     }
                   }
                 }
               ],
-              "location_info" : {
-                "file_path" : "Tests/CombineTests.swift",
-                "location" : {
-                  "end_position" : 55750,
-                  "start_position" : 55657
+              "location_info": {
+                "file_path": "Tests/CombineTests.swift",
+                "location": {
+                  "end_position": 55750,
+                  "start_position": 55657,
+                  "start_line": 1435,
+                  "end_line": 1437
                 }
               }
             }
           ],
-          "location_info" : {
-            "file_path" : "Tests/CombineTests.swift",
-            "location" : {
-              "end_position" : 56089,
-              "start_position" : 55657
+          "location_info": {
+            "file_path": "Tests/CombineTests.swift",
+            "location": {
+              "end_position": 56089,
+              "start_position": 55657,
+              "start_line": 1435,
+              "end_line": 1443
             }
           },
-          "trailing_closure" : {
-            "attributes" : [
-
-            ],
-            "body" : {
-              "content" : "firstResponse = response\n                    let request = Endpoint(headers: [\"X-Custom\": customValue])\n                    return AF.download(request)\n                        .publishDecodable(type: TestResponse.self)"
+          "trailing_closure": {
+            "attributes": [],
+            "body": {
+              "content": "firstResponse = response\n                    let request = Endpoint(headers: [\"X-Custom\": customValue])\n                    return AF.download(request)\n                        .publishDecodable(type: TestResponse.self)"
             },
-            "captures" : [
-
-            ],
-            "location_info" : {
-              "file_path" : "Tests/CombineTests.swift",
-              "location" : {
-                "end_position" : 56089,
-                "start_position" : 55776
+            "captures": [],
+            "location_info": {
+              "file_path": "Tests/CombineTests.swift",
+              "location": {
+                "end_position": 56089,
+                "start_position": 55776,
+                "start_line": 1438,
+                "end_line": 1443
               }
             },
-            "parameters" : [
-
-            ],
-            "return_type" : {
-              "is_optional" : false,
-              "name" : "DownloadResponsePublisher<TestResponse>"
+            "parameters": [],
+            "return_type": {
+              "is_optional": false,
+              "name": "DownloadResponsePublisher<TestResponse>"
             }
           }
         }
       ],
-      "location_info" : {
-        "file_path" : "Tests/CombineTests.swift",
-        "location" : {
-          "end_position" : 56294,
-          "start_position" : 55657
+      "location_info": {
+        "file_path": "Tests/CombineTests.swift",
+        "location": {
+          "end_position": 56294,
+          "start_position": 55657,
+          "start_line": 1435,
+          "end_line": 1447
         }
       },
-      "trailing_closure" : {
-        "attributes" : [
-
-        ],
-        "body" : {
-          "content" : "secondResponse = response\n                    responseReceived.fulfill()"
+      "trailing_closure": {
+        "attributes": [],
+        "body": {
+          "content": "secondResponse = response\n                    responseReceived.fulfill()"
         },
-        "captures" : [
-
-        ],
-        "location_info" : {
-          "file_path" : "Tests/CombineTests.swift",
-          "location" : {
-            "end_position" : 56294,
-            "start_position" : 56170
+        "captures": [],
+        "location_info": {
+          "file_path": "Tests/CombineTests.swift",
+          "location": {
+            "end_position": 56294,
+            "start_position": 56170,
+            "start_line": 1444,
+            "end_line": 1447
           }
         },
-        "parameters" : [
-
-        ]
+        "parameters": []
       }
     },
-    "type" : "replace member access refactoring"
+    "type": "replace member access refactoring"
   },
-  "refactoringIndex" : 237,
-  "refactoringType" : "replace member access refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 237,
+  "refactoringType": "replace member access refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/CombineTests.swift"
   ]
 }

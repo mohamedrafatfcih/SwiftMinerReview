@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-a4169e0433a988bcf2d69e49",
-  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
-  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
-  "durationSeconds" : 52.782080054283142,
-  "entityNames" : [
+  "caseID": "case-a4169e0433a988bcf2d69e49",
+  "commitHash": "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage": "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds": 52.78208005428314,
+  "entityNames": [
     "(any EventMonitor)?",
     "(any SessionStateProvider)?",
     "FileManager",
@@ -14,364 +14,320 @@
     "Sendable",
     "SessionDelegate"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "function_call" : {
-            "_0" : {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "function_call": {
+            "_0": {
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "value" : "nil"
+                  "value": "nil"
                 }
               ],
-              "call" : "Protected<(() -> Void)?>",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Core/SessionDelegate.swift",
-                "location" : {
-                  "end_position" : 1600,
-                  "start_position" : 1571
+              "call": "Protected<(() -> Void)?>",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Source/Core/SessionDelegate.swift",
+                "location": {
+                  "end_position": 1600,
+                  "start_position": 1571,
+                  "start_line": 33,
+                  "end_line": 33
                 }
               }
             }
           }
         }
       },
-      "is_constant" : false,
-      "location_info" : {
-        "file_path" : "Source/Core/SessionDelegate.swift",
-        "location" : {
-          "end_position" : 1600,
-          "start_position" : 1542
+      "is_constant": false,
+      "location_info": {
+        "file_path": "Source/Core/SessionDelegate.swift",
+        "location": {
+          "end_position": 1600,
+          "start_position": 1542,
+          "start_line": 33,
+          "end_line": 33
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "sessionInvalidationCleanup"
+      "modifiers": [],
+      "name": "sessionInvalidationCleanup"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "NSObject"
+          "name": "NSObject"
         },
         {
-          "name" : "Sendable"
+          "name": "Sendable"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard let provider = stateProvider else {\n            assertionFailure(\"StateProvider is nil for task \\(task.taskIdentifier).\")\n            return nil\n        }\n\n        return provider.request(for: task) as? R"
+          "attributes": [],
+          "body": {
+            "content": "guard let provider = stateProvider else {\n            assertionFailure(\"StateProvider is nil for task \\(task.taskIdentifier).\")\n            return nil\n        }\n\n        return provider.request(for: task) as? R"
           },
-          "generic_clause" : "<R: Request>",
-          "location_info" : {
-            "file_path" : "Source/Core/SessionDelegate.swift",
-            "location" : {
-              "end_position" : 2545,
-              "start_position" : 1942
+          "generic_clause": "<R: Request>",
+          "location_info": {
+            "file_path": "Source/Core/SessionDelegate.swift",
+            "location": {
+              "end_position": 2545,
+              "start_position": 1942,
+              "start_line": 41,
+              "end_line": 55
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "request",
-          "parameters" : [
+          "modifiers": [],
+          "name": "request",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URLSessionTask"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URLSessionTask"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Source/Core/SessionDelegate.swift",
-                "location" : {
-                  "end_position" : 2296,
-                  "start_position" : 2270
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Source/Core/SessionDelegate.swift",
+                "location": {
+                  "end_position": 2296,
+                  "start_position": 2270,
+                  "start_line": 48,
+                  "end_line": 48
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "task",
-              "order" : 0
+              "modifiers": [],
+              "name": "task",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "R.Type"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "R.Type"
               },
-              "is_variadic" : false,
-              "label" : "as",
-              "location_info" : {
-                "file_path" : "Source/Core/SessionDelegate.swift",
-                "location" : {
-                  "end_position" : 2311,
-                  "start_position" : 2296
+              "is_variadic": false,
+              "label": "as",
+              "location_info": {
+                "file_path": "Source/Core/SessionDelegate.swift",
+                "location": {
+                  "end_position": 2311,
+                  "start_position": 2296,
+                  "start_line": 48,
+                  "end_line": 48
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "type",
-              "order" : 1
+              "modifiers": [],
+              "name": "type",
+              "order": 1
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : true,
-              "name" : "R?"
+          "return_clause": {
+            "data_type": {
+              "is_optional": true,
+              "name": "R?"
             },
-            "description" : "-> R?"
+            "description": "-> R?"
           }
         }
       ],
-      "initializers" : [
+      "initializers": [
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Source/Core/SessionDelegate.swift",
-            "location" : {
-              "end_position" : 1942,
-              "start_position" : 1600
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "Source/Core/SessionDelegate.swift",
+            "location": {
+              "end_position": 1942,
+              "start_position": 1600,
+              "start_line": 33,
+              "end_line": 41
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "init",
-          "parameters" : [
+          "name": "init",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "FileManager"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "FileManager"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "reference" : {
-                    "arguments" : [
-
-                    ],
-                    "name" : "default"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "reference": {
+                    "arguments": [],
+                    "name": "default"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Source/Core/SessionDelegate.swift",
-                "location" : {
-                  "end_position" : 1894,
-                  "start_position" : 1859
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Source/Core/SessionDelegate.swift",
+                "location": {
+                  "end_position": 1894,
+                  "start_position": 1859,
+                  "start_line": 39,
+                  "end_line": 39
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "fileManager",
-              "order" : 0
+              "modifiers": [],
+              "name": "fileManager",
+              "order": 0
             }
           ]
         }
       ],
-      "location_info" : {
-        "file_path" : "Source/Core/SessionDelegate.swift",
-        "location" : {
-          "end_position" : 2547,
-          "start_position" : 1225
+      "location_info": {
+        "file_path": "Source/Core/SessionDelegate.swift",
+        "location": {
+          "end_position": 2547,
+          "start_position": 1225,
+          "start_line": 25,
+          "end_line": 56
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "open"
       ],
-      "name" : "SessionDelegate",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
+      "name": "SessionDelegate",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "FileManager"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "FileManager"
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Source/Core/SessionDelegate.swift",
-            "location" : {
-              "end_position" : 1434,
-              "start_position" : 1410
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Source/Core/SessionDelegate.swift",
+            "location": {
+              "end_position": 1434,
+              "start_position": 1410,
+              "start_line": 29,
+              "end_line": 29
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "fileManager"
+          "name": "fileManager"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "(any SessionStateProvider)?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "(any SessionStateProvider)?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Source/Core/SessionDelegate.swift",
-            "location" : {
-              "end_position" : 1491,
-              "start_position" : 1449
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Source/Core/SessionDelegate.swift",
+            "location": {
+              "end_position": 1491,
+              "start_position": 1449,
+              "start_line": 31,
+              "end_line": 31
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "weak"
           ],
-          "name" : "stateProvider"
+          "name": "stateProvider"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "(any EventMonitor)?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "(any EventMonitor)?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Source/Core/SessionDelegate.swift",
-            "location" : {
-              "end_position" : 1533,
-              "start_position" : 1500
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Source/Core/SessionDelegate.swift",
+            "location": {
+              "end_position": 1533,
+              "start_position": 1500,
+              "start_line": 32,
+              "end_line": 32
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "eventMonitor"
+          "modifiers": [],
+          "name": "eventMonitor"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "accessors": [],
+          "attributes": [],
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : "nil"
+                      "value": "nil"
                     }
                   ],
-                  "call" : "Protected<(() -> Void)?>",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Source/Core/SessionDelegate.swift",
-                    "location" : {
-                      "end_position" : 1600,
-                      "start_position" : 1571
+                  "call": "Protected<(() -> Void)?>",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Source/Core/SessionDelegate.swift",
+                    "location": {
+                      "end_position": 1600,
+                      "start_position": 1571,
+                      "start_line": 33,
+                      "end_line": 33
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Source/Core/SessionDelegate.swift",
-            "location" : {
-              "end_position" : 1600,
-              "start_position" : 1542
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Source/Core/SessionDelegate.swift",
+            "location": {
+              "end_position": 1600,
+              "start_position": 1542,
+              "start_line": 33,
+              "end_line": 33
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "sessionInvalidationCleanup"
+          "modifiers": [],
+          "name": "sessionInvalidationCleanup"
         }
       ]
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 77,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 77,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Core/SessionDelegate.swift"
   ]
 }

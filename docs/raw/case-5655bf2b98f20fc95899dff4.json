@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-5655bf2b98f20fc95899dff4",
-  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
-  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
-  "durationSeconds" : 14.10075306892395,
-  "entityNames" : [
+  "caseID": "case-5655bf2b98f20fc95899dff4",
+  "commitHash": "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage": "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds": 14.10075306892395,
+  "entityNames": [
     "TestCLIStatsCommand",
     "testStatsAllContainers",
     "testStatsHighCPUPercentage",
@@ -13,287 +13,243 @@
     "testStatsNonExistentContainer",
     "testStatsTableFormat"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image) { name in\n                let result = try f.run([\"stats\", \"--format\", \"json\", \"--no-stream\", name]).check()\n                let stats = try JSONDecoder().decode([ContainerStats].self, from: result.outputData)\n                #expect(stats.count == 1, \"expected stats for one container\")\n                #expect(stats[0].id == name, \"container ID should match\")\n                let memoryUsageBytes = try #require(stats[0].memoryUsageBytes)\n                let numProcesses = try #require(stats[0].numProcesses)\n                #expect(memoryUsageBytes > 0, \"memory usage should be non-zero\")\n                #expect(numProcesses >= 1, \"should have at least one process\")\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image) { name in\n                let result = try f.run([\"stats\", \"--format\", \"json\", \"--no-stream\", name]).check()\n                let stats = try JSONDecoder().decode([ContainerStats].self, from: result.outputData)\n                #expect(stats.count == 1, \"expected stats for one container\")\n                #expect(stats[0].id == name, \"container ID should match\")\n                let memoryUsageBytes = try #require(stats[0].memoryUsageBytes)\n                let numProcesses = try #require(stats[0].numProcesses)\n                #expect(memoryUsageBytes > 0, \"memory usage should be non-zero\")\n                #expect(numProcesses >= 1, \"should have at least one process\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIStats.swift",
-            "location" : {
-              "end_position" : 1822,
-              "start_position" : 881
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIStats.swift",
+            "location": {
+              "end_position": 1822,
+              "start_position": 881,
+              "start_line": 22,
+              "end_line": 37
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testStatsNoStreamJSONFormat",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testStatsNoStreamJSONFormat",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image, containerArgs: [\"sleep\", \"3600\"]) { name in\n                let result = try f.run([\"stats\", \"--no-stream\", name]).check()\n                let lines = result.output.components(separatedBy: .newlines)\n                #expect(lines.count >= 2, \"should have at least header and one data row\")\n                let dataLine = try #require(lines.first { $0.contains(name) }, \"should find container data row\")\n                let columns = dataLine.split(separator: \" \").filter { !$0.isEmpty }\n                #expect(columns.count >= 2, \"should have at least 2 columns\")\n                let cpuString = String(columns[1])\n                #expect(cpuString.hasSuffix(\"%\"), \"CPU column should end with %\")\n                let cpuValue = try #require(Double(cpuString.dropLast()), \"should parse CPU percentage\")\n                #expect(cpuValue < 5.0, \"idle container CPU should be < 5%, got \\(cpuValue)%\")\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image, containerArgs: [\"sleep\", \"3600\"]) { name in\n                let result = try f.run([\"stats\", \"--no-stream\", name]).check()\n                let lines = result.output.components(separatedBy: .newlines)\n                #expect(lines.count >= 2, \"should have at least header and one data row\")\n                let dataLine = try #require(lines.first { $0.contains(name) }, \"should find container data row\")\n                let columns = dataLine.split(separator: \" \").filter { !$0.isEmpty }\n                #expect(columns.count >= 2, \"should have at least 2 columns\")\n                let cpuString = String(columns[1])\n                #expect(cpuString.hasSuffix(\"%\"), \"CPU column should end with %\")\n                let cpuValue = try #require(Double(cpuString.dropLast()), \"should parse CPU percentage\")\n                #expect(cpuValue < 5.0, \"idle container CPU should be < 5%, got \\(cpuValue)%\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIStats.swift",
-            "location" : {
-              "end_position" : 2989,
-              "start_position" : 1822
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIStats.swift",
+            "location": {
+              "end_position": 2989,
+              "start_position": 1822,
+              "start_line": 37,
+              "end_line": 55
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testStatsIdleCPUPercentage",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testStatsIdleCPUPercentage",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image, containerArgs: [\"sh\", \"-c\", \"while true; do :; done\"]) { name in\n                let result = try f.run([\"stats\", \"--no-stream\", name]).check()\n                let lines = result.output.components(separatedBy: .newlines)\n                #expect(lines.count >= 2, \"should have at least header and one data row\")\n                let dataLine = try #require(lines.first { $0.contains(name) }, \"should find container data row\")\n                let columns = dataLine.split(separator: \" \").filter { !$0.isEmpty }\n                #expect(columns.count >= 2, \"should have at least 2 columns\")\n                let cpuString = String(columns[1])\n                #expect(cpuString.hasSuffix(\"%\"), \"CPU column should end with %\")\n                let cpuValue = try #require(Double(cpuString.dropLast()), \"should parse CPU percentage\")\n                #expect(cpuValue > 50.0, \"busy container CPU should be > 50%, got \\(cpuValue)%\")\n                #expect(cpuValue < 150.0, \"single busy loop should not exceed 150%, got \\(cpuValue)%\")\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image, containerArgs: [\"sh\", \"-c\", \"while true; do :; done\"]) { name in\n                let result = try f.run([\"stats\", \"--no-stream\", name]).check()\n                let lines = result.output.components(separatedBy: .newlines)\n                #expect(lines.count >= 2, \"should have at least header and one data row\")\n                let dataLine = try #require(lines.first { $0.contains(name) }, \"should find container data row\")\n                let columns = dataLine.split(separator: \" \").filter { !$0.isEmpty }\n                #expect(columns.count >= 2, \"should have at least 2 columns\")\n                let cpuString = String(columns[1])\n                #expect(cpuString.hasSuffix(\"%\"), \"CPU column should end with %\")\n                let cpuValue = try #require(Double(cpuString.dropLast()), \"should parse CPU percentage\")\n                #expect(cpuValue > 50.0, \"busy container CPU should be > 50%, got \\(cpuValue)%\")\n                #expect(cpuValue < 150.0, \"single busy loop should not exceed 150%, got \\(cpuValue)%\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIStats.swift",
-            "location" : {
-              "end_position" : 4282,
-              "start_position" : 2989
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIStats.swift",
+            "location": {
+              "end_position": 4282,
+              "start_position": 2989,
+              "start_line": 55,
+              "end_line": 74
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testStatsHighCPUPercentage",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testStatsHighCPUPercentage",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image) { name in\n                let result = try f.run([\"stats\", \"--no-stream\", name]).check()\n                #expect(result.output.contains(\"Container ID\"), \"output should contain table header\")\n                #expect(result.output.contains(\"Cpu %\"), \"output should contain CPU column\")\n                #expect(result.output.contains(\"Memory Usage\"), \"output should contain Memory column\")\n                #expect(result.output.contains(name), \"output should contain container name\")\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image) { name in\n                let result = try f.run([\"stats\", \"--no-stream\", name]).check()\n                #expect(result.output.contains(\"Container ID\"), \"output should contain table header\")\n                #expect(result.output.contains(\"Cpu %\"), \"output should contain CPU column\")\n                #expect(result.output.contains(\"Memory Usage\"), \"output should contain Memory column\")\n                #expect(result.output.contains(name), \"output should contain container name\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIStats.swift",
-            "location" : {
-              "end_position" : 5026,
-              "start_position" : 4282
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIStats.swift",
+            "location": {
+              "end_position": 5026,
+              "start_position": 4282,
+              "start_line": 74,
+              "end_line": 87
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testStatsTableFormat",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testStatsTableFormat",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            // Run two containers simultaneously so both appear in the global stats snapshot.\n            try await f.withContainer(image: image, tag: \"c1\") { name1 in\n                try await f.withContainer(image: image, tag: \"c2\") { name2 in\n                    let result = try f.run([\"stats\", \"--format\", \"json\", \"--no-stream\"]).check()\n                    let stats = try JSONDecoder().decode([ContainerStats].self, from: result.outputData)\n                    try #require(stats.count >= 2, \"should have stats for at least 2 containers\")\n                    let ids = stats.map { $0.id }\n                    #expect(ids.contains(name1), \"should include first container\")\n                    #expect(ids.contains(name2), \"should include second container\")\n                }\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            // Run two containers simultaneously so both appear in the global stats snapshot.\n            try await f.withContainer(image: image, tag: \"c1\") { name1 in\n                try await f.withContainer(image: image, tag: \"c2\") { name2 in\n                    let result = try f.run([\"stats\", \"--format\", \"json\", \"--no-stream\"]).check()\n                    let stats = try JSONDecoder().decode([ContainerStats].self, from: result.outputData)\n                    try #require(stats.count >= 2, \"should have stats for at least 2 containers\")\n                    let ids = stats.map { $0.id }\n                    #expect(ids.contains(name1), \"should include first container\")\n                    #expect(ids.contains(name2), \"should include second container\")\n                }\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIStats.swift",
-            "location" : {
-              "end_position" : 6020,
-              "start_position" : 5026
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIStats.swift",
+            "location": {
+              "end_position": 6020,
+              "start_position": 5026,
+              "start_line": 87,
+              "end_line": 104
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testStatsAllContainers",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testStatsAllContainers",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"stats\", \"--no-stream\", \"nonexistent-container-xyz\"])\n            #expect(result.status != 0, \"stats should fail for non-existent container\")\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let result = try f.run([\"stats\", \"--no-stream\", \"nonexistent-container-xyz\"])\n            #expect(result.status != 0, \"stats should fail for non-existent container\")\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIStats.swift",
-            "location" : {
-              "end_position" : 6324,
-              "start_position" : 6020
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIStats.swift",
+            "location": {
+              "end_position": 6324,
+              "start_position": 6020,
+              "start_line": 104,
+              "end_line": 111
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testStatsNonExistentContainer",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testStatsNonExistentContainer",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Containers/TestCLIStats.swift",
-        "location" : {
-          "end_position" : 6326,
-          "start_position" : 844
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Containers/TestCLIStats.swift",
+        "location": {
+          "end_position": 6326,
+          "start_position": 844,
+          "start_line": 19,
+          "end_line": 112
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIStatsCommand",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIStatsCommand",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Add struct refactoring"
+    "type": "Add struct refactoring"
   },
-  "refactoringIndex" : 46,
-  "refactoringType" : "Add struct refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 46,
+  "refactoringType": "Add struct refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Containers/TestCLIStats.swift"
   ]
 }

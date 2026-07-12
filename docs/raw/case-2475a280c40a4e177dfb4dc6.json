@@ -1,167 +1,153 @@
 {
-  "caseID" : "case-2475a280c40a4e177dfb4dc6",
-  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
-  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
-  "durationSeconds" : 52.782080054283142,
-  "entityNames" : [
-
-  ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : [
+  "caseID": "case-2475a280c40a4e177dfb4dc6",
+  "commitHash": "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage": "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds": 52.78208005428314,
+  "entityNames": [],
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": [
       "session"
     ],
-    "current_parent" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
+    "current_parent": {
+      "additional_trailing_closures": [],
+      "arguments": [
         {
-          "label" : "of",
-          "value" : "TestResponse.self"
+          "label": "of",
+          "value": "TestResponse.self"
         }
       ],
-      "call" : "responseDecodable",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
+      "call": "responseDecodable",
+      "has_self_reference": false,
+      "internal_inline_calls": [
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
+          "additional_trailing_closures": [],
+          "arguments": [
             {
-              "value" : ".get"
+              "value": ".get"
             },
             {
-              "label" : "parameters",
-              "value" : "[\"foo\": \"bar\"]"
+              "label": "parameters",
+              "value": "[\"foo\": \"bar\"]"
             }
           ],
-          "call" : "download",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/DownloadTests.swift",
-            "location" : {
-              "end_position" : 31026,
-              "start_position" : 30950
+          "call": "download",
+          "has_self_reference": false,
+          "internal_inline_calls": [],
+          "location_info": {
+            "file_path": "Tests/DownloadTests.swift",
+            "location": {
+              "end_position": 31026,
+              "start_position": 30950,
+              "start_line": 843,
+              "end_line": 846
             }
           }
         }
       ],
-      "location_info" : {
-        "file_path" : "Tests/DownloadTests.swift",
-        "location" : {
-          "end_position" : 31235,
-          "start_position" : 30950
+      "location_info": {
+        "file_path": "Tests/DownloadTests.swift",
+        "location": {
+          "end_position": 31235,
+          "start_position": 30950,
+          "start_line": 843,
+          "end_line": 852
         }
       },
-      "trailing_closure" : {
-        "attributes" : [
-
-        ],
-        "body" : {
-          "content" : "response = resp.tryMap { response in\n                response.args[\"foo\"] ?? \"invalid\"\n            }\n\n            expectation.fulfill()"
+      "trailing_closure": {
+        "attributes": [],
+        "body": {
+          "content": "response = resp.tryMap { response in\n                response.args[\"foo\"] ?? \"invalid\"\n            }\n\n            expectation.fulfill()"
         },
-        "captures" : [
-
-        ],
-        "location_info" : {
-          "file_path" : "Tests/DownloadTests.swift",
-          "location" : {
-            "end_position" : 31235,
-            "start_position" : 31068
+        "captures": [],
+        "location_info": {
+          "file_path": "Tests/DownloadTests.swift",
+          "location": {
+            "end_position": 31235,
+            "start_position": 31068,
+            "start_line": 846,
+            "end_line": 852
           }
         },
-        "parameters" : [
-
-        ]
+        "parameters": []
       }
     },
-    "old_content" : [
+    "old_content": [
       "AF"
     ],
-    "old_parent" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
+    "old_parent": {
+      "additional_trailing_closures": [],
+      "arguments": [
         {
-          "label" : "of",
-          "value" : "TestResponse.self"
+          "label": "of",
+          "value": "TestResponse.self"
         }
       ],
-      "call" : "responseDecodable",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
+      "call": "responseDecodable",
+      "has_self_reference": false,
+      "internal_inline_calls": [
         {
-          "additional_trailing_closures" : [
-
-          ],
-          "arguments" : [
+          "additional_trailing_closures": [],
+          "arguments": [
             {
-              "value" : ".get"
+              "value": ".get"
             },
             {
-              "label" : "parameters",
-              "value" : "[\"foo\": \"bar\"]"
+              "label": "parameters",
+              "value": "[\"foo\": \"bar\"]"
             }
           ],
-          "call" : "download",
-          "has_self_reference" : false,
-          "internal_inline_calls" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/DownloadTests.swift",
-            "location" : {
-              "end_position" : 29874,
-              "start_position" : 29803
+          "call": "download",
+          "has_self_reference": false,
+          "internal_inline_calls": [],
+          "location_info": {
+            "file_path": "Tests/DownloadTests.swift",
+            "location": {
+              "end_position": 29874,
+              "start_position": 29803,
+              "start_line": 822,
+              "end_line": 825
             }
           }
         }
       ],
-      "location_info" : {
-        "file_path" : "Tests/DownloadTests.swift",
-        "location" : {
-          "end_position" : 30083,
-          "start_position" : 29803
+      "location_info": {
+        "file_path": "Tests/DownloadTests.swift",
+        "location": {
+          "end_position": 30083,
+          "start_position": 29803,
+          "start_line": 822,
+          "end_line": 831
         }
       },
-      "trailing_closure" : {
-        "attributes" : [
-
-        ],
-        "body" : {
-          "content" : "response = resp.tryMap { response in\n                response.args[\"foo\"] ?? \"invalid\"\n            }\n\n            expectation.fulfill()"
+      "trailing_closure": {
+        "attributes": [],
+        "body": {
+          "content": "response = resp.tryMap { response in\n                response.args[\"foo\"] ?? \"invalid\"\n            }\n\n            expectation.fulfill()"
         },
-        "captures" : [
-
-        ],
-        "location_info" : {
-          "file_path" : "Tests/DownloadTests.swift",
-          "location" : {
-            "end_position" : 30083,
-            "start_position" : 29916
+        "captures": [],
+        "location_info": {
+          "file_path": "Tests/DownloadTests.swift",
+          "location": {
+            "end_position": 30083,
+            "start_position": 29916,
+            "start_line": 825,
+            "end_line": 831
           }
         },
-        "parameters" : [
-
-        ]
+        "parameters": []
       }
     },
-    "type" : "replace member access refactoring"
+    "type": "replace member access refactoring"
   },
-  "refactoringIndex" : 386,
-  "refactoringType" : "replace member access refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 386,
+  "refactoringType": "replace member access refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/DownloadTests.swift"
   ]
 }

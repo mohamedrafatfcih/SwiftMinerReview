@@ -1,79 +1,77 @@
 {
-  "caseID" : "case-c72ae6a6ebd500f65759ab89",
-  "commitHash" : "822b47b8776e01659f931e4f4206a76349043d98",
-  "commitMessage" : "Fix --format yaml and toml output (#1653)\n\n- Closes #1528.\n- Several commands (`builder status`, `image list`,\n  `stats`, `system df`, `system status`) advertised\n  `--format yaml` and `--format toml` but only handled\n  `json`, and every other format fell through to the\n  table. With this PR, we now route them through one\n  shared renderer with an exhaustive switch over the\n  format enum, so a missing format would now be a\n  compile error, and not just fail silently.\n- Since TOML has no top level array, TOML output\n  now wraps list payloads under an `items` key,\n  because otherwise it was returning nothing for lists.\n- `stats` now prints one static result for machine\n  readable formats instead of opening its live table\n  view.\n- `builder status` now returns an empty list for\n  json/yaml/toml when no builder is running, instead \n  of the unparseable \"builder is not running\" text.\n  The table view keeps the message.\n- with `--quiet` and no builder it now exits 0 with\n  no output, earlier it exited non-zero.",
-  "commitURL" : "https://github.com/apple/container/commit/822b47b8776e01659f931e4f4206a76349043d98",
-  "durationSeconds" : 13.978502988815308,
-  "entityNames" : [
+  "caseID": "case-c72ae6a6ebd500f65759ab89",
+  "commitHash": "822b47b8776e01659f931e4f4206a76349043d98",
+  "commitMessage": "Fix --format yaml and toml output (#1653)\n\n- Closes #1528.\n- Several commands (`builder status`, `image list`,\n  `stats`, `system df`, `system status`) advertised\n  `--format yaml` and `--format toml` but only handled\n  `json`, and every other format fell through to the\n  table. With this PR, we now route them through one\n  shared renderer with an exhaustive switch over the\n  format enum, so a missing format would now be a\n  compile error, and not just fail silently.\n- Since TOML has no top level array, TOML output\n  now wraps list payloads under an `items` key,\n  because otherwise it was returning nothing for lists.\n- `stats` now prints one static result for machine\n  readable formats instead of opening its live table\n  view.\n- `builder status` now returns an empty list for\n  json/yaml/toml when no builder is running, instead \n  of the unparseable \"builder is not running\" text.\n  The table view keeps the message.\n- with `--quiet` and no builder it now exits 0 with\n  no output, earlier it exited non-zero.",
+  "commitURL": "https://github.com/apple/container/commit/822b47b8776e01659f931e4f4206a76349043d98",
+  "durationSeconds": 13.978502988815308,
+  "entityNames": [
     "[String]",
     "containerIds",
     "runStreaming"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "while true {\n                do {\n                    let containersToShow: [ContainerSnapshot]\n                    if containerIds.isEmpty {\n                        containersToShow = try await client.list(filters: ContainerListFilters(status: .running))\n                    } else {\n                        containersToShow = try await client.list(filters: ContainerListFilters(ids: containerIds))\n                    }\n\n                    let statsData = try await collectStats(client: client, for: containersToShow)\n\n                    // Clear screen and reprint\n                    clearScreen()\n                    printStatsTable(statsData)\n\n                    if statsData.isEmpty {\n                        try await Task.sleep(for: .seconds(2))\n                    }\n                } catch {\n                    clearScreen()\n                    print(\"error collecting stats: \\(error)\")\n                    try await Task.sleep(for: .seconds(2))\n                }\n            }",
-      "index" : 4
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "while true {\n                do {\n                    let containersToShow: [ContainerSnapshot]\n                    if containerIds.isEmpty {\n                        containersToShow = try await client.list(filters: ContainerListFilters(status: .running))\n                    } else {\n                        containersToShow = try await client.list(filters: ContainerListFilters(ids: containerIds))\n                    }\n\n                    let statsData = try await collectStats(client: client, for: containersToShow)\n\n                    // Clear screen and reprint\n                    clearScreen()\n                    printStatsTable(statsData)\n\n                    if statsData.isEmpty {\n                        try await Task.sleep(for: .seconds(2))\n                    }\n                } catch {\n                    clearScreen()\n                    print(\"error collecting stats: \\(error)\")\n                    try await Task.sleep(for: .seconds(2))\n                }\n            }",
+      "index": 4
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let client = ContainerClient()\n\n            // If containers were specified, validate they all exist upfront\n            if !containerIds.isEmpty {\n                let specifiedContainers = try await client.list(filters: ContainerListFilters(ids: containerIds))\n                for containerId in containerIds {\n                    guard specifiedContainers.contains(where: { $0.id == containerId }) else {\n                        throw ContainerizationError(\n                            .notFound,\n                            message: \"no such container: \\(containerId)\"\n                        )\n                    }\n                }\n            }\n\n            clearScreen()\n            // Show header right away.\n            printStatsTable([])\n\n            while true {\n                do {\n                    let containersToShow: [ContainerSnapshot]\n                    if containerIds.isEmpty {\n                        containersToShow = try await client.list(filters: ContainerListFilters(status: .running))\n                    } else {\n                        containersToShow = try await client.list(filters: ContainerListFilters(ids: containerIds))\n                    }\n\n                    let statsData = try await collectStats(client: client, for: containersToShow)\n\n                    // Clear screen and reprint\n                    clearScreen()\n                    printStatsTable(statsData)\n\n                    if statsData.isEmpty {\n                        try await Task.sleep(for: .seconds(2))\n                    }\n                } catch {\n                    clearScreen()\n                    print(\"error collecting stats: \\(error)\")\n                    try await Task.sleep(for: .seconds(2))\n                }\n            }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let client = ContainerClient()\n\n            // If containers were specified, validate they all exist upfront\n            if !containerIds.isEmpty {\n                let specifiedContainers = try await client.list(filters: ContainerListFilters(ids: containerIds))\n                for containerId in containerIds {\n                    guard specifiedContainers.contains(where: { $0.id == containerId }) else {\n                        throw ContainerizationError(\n                            .notFound,\n                            message: \"no such container: \\(containerId)\"\n                        )\n                    }\n                }\n            }\n\n            clearScreen()\n            // Show header right away.\n            printStatsTable([])\n\n            while true {\n                do {\n                    let containersToShow: [ContainerSnapshot]\n                    if containerIds.isEmpty {\n                        containersToShow = try await client.list(filters: ContainerListFilters(status: .running))\n                    } else {\n                        containersToShow = try await client.list(filters: ContainerListFilters(ids: containerIds))\n                    }\n\n                    let statsData = try await collectStats(client: client, for: containersToShow)\n\n                    // Clear screen and reprint\n                    clearScreen()\n                    printStatsTable(statsData)\n\n                    if statsData.isEmpty {\n                        try await Task.sleep(for: .seconds(2))\n                    }\n                } catch {\n                    clearScreen()\n                    print(\"error collecting stats: \\(error)\")\n                    try await Task.sleep(for: .seconds(2))\n                }\n            }"
       },
-      "location_info" : {
-        "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
-        "location" : {
-          "end_position" : 6412,
-          "start_position" : 4553
+      "location_info": {
+        "file_path": "Sources/ContainerCommands/Container/ContainerStats.swift",
+        "location": {
+          "end_position": 6412,
+          "start_position": 4553,
+          "start_line": 112,
+          "end_line": 158
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private",
         "static"
       ],
-      "name" : "runStreaming",
-      "parameters" : [
+      "name": "runStreaming",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String]"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Container/ContainerStats.swift",
-            "location" : {
-              "end_position" : 4618,
-              "start_position" : 4596
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Container/ContainerStats.swift",
+            "location": {
+              "end_position": 4618,
+              "start_position": 4596,
+              "start_line": 114,
+              "end_line": 114
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "containerIds",
-          "order" : 0
+          "modifiers": [],
+          "name": "containerIds",
+          "order": 0
         }
       ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 19,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 19,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/ContainerCommands/Container/ContainerStats.swift"
   ]
 }

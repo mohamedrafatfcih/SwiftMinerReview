@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-6d844e91b73aa23ea7416109",
-  "commitHash" : "f8317b847eddcaa0d8d09cea697a24e523cd796e",
-  "commitMessage" : "Merge pull request #6142 from iina/modular-window-2\n\nUI redesign (Part 2)",
-  "commitURL" : "https://github.com/iina/iina/commit/f8317b847eddcaa0d8d09cea697a24e523cd796e",
-  "durationSeconds" : 49.734704971313477,
-  "entityNames" : [
+  "caseID": "case-6d844e91b73aa23ea7416109",
+  "commitHash": "f8317b847eddcaa0d8d09cea697a24e523cd796e",
+  "commitMessage": "Merge pull request #6142 from iina/modular-window-2\n\nUI redesign (Part 2)",
+  "commitURL": "https://github.com/iina/iina/commit/f8317b847eddcaa0d8d09cea697a24e523cd796e",
+  "durationSeconds": 49.73470497131348,
+  "entityNames": [
     "Int",
     "NSTableColumn?",
     "NSTableView",
@@ -13,113 +13,105 @@
     "tableColumn",
     "tableView"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard let identifier = tableColumn?.identifier else { return nil }\n    let info = player.info\n    let v = tableView.makeView(withIdentifier: identifier, owner: self) as! NSTableCellView\n\n    // playlist\n    if tableView == playlistTableView {\n      let item: MPVPlaylistItem? = info.$playlist.withLock { playlist in\n        guard row < playlist.count else { return nil }\n        return playlist[row]\n      }\n      guard let item else { return nil }\n\n      if identifier == .isChosen {\n        let pointer = view.userInterfaceLayoutDirection == .rightToLeft ?\n            Constants.String.blackLeftPointingTriangle :  Constants.String.blackRightPointingTriangle\n        v.textField?.stringValue = item.isPlaying ? pointer : \"\"\n      } else if identifier == .trackName {\n        let cellView = v as! PlaylistTrackCellView\n        // file name\n        let filename = item.filenameForDisplay\n        let displayStr: String = NSString(string: filename).deletingPathExtension\n\n        func getCachedMetadata() -> (artist: String, title: String)? {\n          guard Preference.bool(for: .playlistShowMetadata) else { return nil }\n          if Preference.bool(for: .playlistShowMetadataInMusicMode) && !player.isInMiniPlayer {\n            return nil\n          }\n          guard let metadata = info.getCachedMetadata(item.filename) else { return nil }\n          guard let artist = metadata.artist, let title = metadata.title else { return nil }\n          return (artist, title)\n        }\n\n        if let prefix = player.info.currentVideosInfo.first(where: { $0.path == item.filename })?.prefix,\n          !prefix.isEmpty,\n          prefix.count <= displayStr.count,  // check whether prefix length > filename length\n          prefix.count >= PrefixMinLength,\n          filename.count > FilenameMinLength {\n          cellView.setPrefix(prefix)\n          cellView.setTitle(String(filename[filename.index(filename.startIndex, offsetBy: prefix.count)...]))\n        } else {\n          cellView.setPrefix(nil)\n          cellView.setTitle(filename)\n        }\n        // playback progress and duration\n        cellView.durationLabel.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)\n        cellView.durationLabel.stringValue = \"\"\n        player.playlistQueue.async {\n          if let (artist, title) = getCachedMetadata() {\n            DispatchQueue.main.async {\n              cellView.setTitle(title)\n              cellView.setAdditionalInfo(artist)\n            }\n          }\n          if let cached = self.player.info.getCachedVideoDurationAndProgress(item.filename),\n            let duration = cached.duration {\n            // if it's cached\n            if duration > 0 {\n              // if FFmpeg got the duration successfully\n              DispatchQueue.main.async {\n                cellView.durationLabel.stringValue = VideoTime(duration).stringRepresentation\n                if let progress = cached.progress {\n                  cellView.playbackProgressView.percentage = progress / duration\n                  cellView.playbackProgressView.needsDisplay = true\n                }\n              }\n              self.refreshTotalLength()\n            }\n          } else {\n            // get related data and schedule a reload\n            if Preference.bool(for: .prefetchPlaylistVideoDuration) {\n              self.player.refreshCachedVideoInfo(forVideoPath: item.filename)\n              // Only schedule a reload if data was obtained and cached to avoid looping\n              if let cached = self.player.info.getCachedVideoDurationAndProgress(item.filename),\n                  let duration = cached.duration, duration > 0 {\n                // if FFmpeg got the duration successfully\n                self.refreshTotalLength()\n                DispatchQueue.main.async {\n                  self.playlistTableView.reloadData(forRowIndexes: IndexSet(integer: row), columnIndexes: IndexSet(integersIn: 0...1))\n                }\n              }\n            }\n          }\n        }\n        // sub button\n        if !info.isMatchingSubtitles,\n          let matchedSubs = player.info.getMatchedSubs(item.filename), !matchedSubs.isEmpty {\n          cellView.setDisplaySubButton(true)\n        } else {\n          cellView.setDisplaySubButton(false)\n        }\n        // not sure why this line exists, but let's keep it for now\n        cellView.subBtn.image?.isTemplate = true\n      }\n      return v\n    }\n    // chapter\n    else if tableView == chapterTableView {\n      let chapters = info.chapters\n      guard row < chapters.count else {\n        return nil\n      }\n      let chapter = chapters[row]\n      // next chapter time\n      let nextChapterTime = chapters[at: row+1]?.time ?? .infinite\n      // construct view\n\n      if identifier == .isChosen {\n        // left column\n        let pointer = view.userInterfaceLayoutDirection == .rightToLeft ?\n            Constants.String.blackLeftPointingTriangle :  Constants.String.blackRightPointingTriangle\n        v.textField?.stringValue = (info.chapter == row) ? pointer : \"\"\n        return v\n      } else if identifier == .trackName {\n        // right column\n        let cellView = v as! ChapterTableCellView\n        cellView.setTitle(chapter.title.isEmpty ? \"Chapter \\(row)\" : chapter.title)\n        cellView.durationTextField.stringValue = \"\\(chapter.time.stringRepresentation) → \\(nextChapterTime.stringRepresentation)\"\n        return cellView\n      } else {\n        return nil\n      }\n    }\n    else {\n      return nil\n    }"
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "attributes": [],
+      "body": {
+        "content": "guard let identifier = tableColumn?.identifier else { return nil }\n    let info = player.info\n    let v = tableView.makeView(withIdentifier: identifier, owner: self) as! NSTableCellView\n\n    // playlist\n    if tableView == playlistTableView {\n      let item: MPVPlaylistItem? = info.$playlist.withLock { playlist in\n        guard row < playlist.count else { return nil }\n        return playlist[row]\n      }\n      guard let item else { return nil }\n\n      if identifier == .isChosen {\n        let pointer = view.userInterfaceLayoutDirection == .rightToLeft ?\n            Constants.String.blackLeftPointingTriangle :  Constants.String.blackRightPointingTriangle\n        v.textField?.stringValue = item.isPlaying ? pointer : \"\"\n      } else if identifier == .trackName {\n        let cellView = v as! PlaylistTrackCellView\n        // file name\n        let filename = item.filenameForDisplay\n        let displayStr: String = NSString(string: filename).deletingPathExtension\n\n        func getCachedMetadata() -> (artist: String, title: String)? {\n          guard Preference.bool(for: .playlistShowMetadata) else { return nil }\n          if Preference.bool(for: .playlistShowMetadataInMusicMode) && !player.isInMiniPlayer {\n            return nil\n          }\n          guard let metadata = info.getCachedMetadata(item.filename) else { return nil }\n          guard let artist = metadata.artist, let title = metadata.title else { return nil }\n          return (artist, title)\n        }\n\n        if let prefix = player.info.currentVideosInfo.first(where: { $0.path == item.filename })?.prefix,\n          !prefix.isEmpty,\n          prefix.count <= displayStr.count,  // check whether prefix length > filename length\n          prefix.count >= PrefixMinLength,\n          filename.count > FilenameMinLength {\n          cellView.setPrefix(prefix)\n          cellView.setTitle(String(filename[filename.index(filename.startIndex, offsetBy: prefix.count)...]))\n        } else {\n          cellView.setPrefix(nil)\n          cellView.setTitle(filename)\n        }\n        // playback progress and duration\n        cellView.durationLabel.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)\n        cellView.durationLabel.stringValue = \"\"\n        player.playlistQueue.async {\n          if let (artist, title) = getCachedMetadata() {\n            DispatchQueue.main.async {\n              cellView.setTitle(title)\n              cellView.setAdditionalInfo(artist)\n            }\n          }\n          if let cached = self.player.info.getCachedVideoDurationAndProgress(item.filename),\n            let duration = cached.duration {\n            // if it's cached\n            if duration > 0 {\n              // if FFmpeg got the duration successfully\n              DispatchQueue.main.async {\n                cellView.durationLabel.stringValue = VideoTime(duration).stringRepresentation\n                if let progress = cached.progress {\n                  cellView.playbackProgressView.percentage = progress / duration\n                  cellView.playbackProgressView.needsDisplay = true\n                }\n              }\n              self.refreshTotalLength()\n            }\n          } else {\n            // get related data and schedule a reload\n            if Preference.bool(for: .prefetchPlaylistVideoDuration) {\n              self.player.refreshCachedVideoInfo(forVideoPath: item.filename)\n              // Only schedule a reload if data was obtained and cached to avoid looping\n              if let cached = self.player.info.getCachedVideoDurationAndProgress(item.filename),\n                  let duration = cached.duration, duration > 0 {\n                // if FFmpeg got the duration successfully\n                self.refreshTotalLength()\n                DispatchQueue.main.async {\n                  self.playlistTableView.reloadData(forRowIndexes: IndexSet(integer: row), columnIndexes: IndexSet(integersIn: 0...1))\n                }\n              }\n            }\n          }\n        }\n        // sub button\n        if !info.isMatchingSubtitles,\n          let matchedSubs = player.info.getMatchedSubs(item.filename), !matchedSubs.isEmpty {\n          cellView.setDisplaySubButton(true)\n        } else {\n          cellView.setDisplaySubButton(false)\n        }\n        // not sure why this line exists, but let's keep it for now\n        cellView.subBtn.image?.isTemplate = true\n      }\n      return v\n    }\n    // chapter\n    else if tableView == chapterTableView {\n      let chapters = info.chapters\n      guard row < chapters.count else {\n        return nil\n      }\n      let chapter = chapters[row]\n      // next chapter time\n      let nextChapterTime = chapters[at: row+1]?.time ?? .infinite\n      // construct view\n\n      if identifier == .isChosen {\n        // left column\n        let pointer = view.userInterfaceLayoutDirection == .rightToLeft ?\n            Constants.String.blackLeftPointingTriangle :  Constants.String.blackRightPointingTriangle\n        v.textField?.stringValue = (info.chapter == row) ? pointer : \"\"\n        return v\n      } else if identifier == .trackName {\n        // right column\n        let cellView = v as! ChapterTableCellView\n        cellView.setTitle(chapter.title.isEmpty ? \"Chapter \\(row)\" : chapter.title)\n        cellView.durationTextField.stringValue = \"\\(chapter.time.stringRepresentation) → \\(nextChapterTime.stringRepresentation)\"\n        return cellView\n      } else {\n        return nil\n      }\n    }\n    else {\n      return nil\n    }"
       },
-      "location_info" : {
-        "file_path" : "iina/PlaylistViewController.swift",
-        "location" : {
-          "end_position" : 23897,
-          "start_position" : 18287
+      "location_info": {
+        "file_path": "iina/PlaylistViewController.swift",
+        "location": {
+          "end_position": 23897,
+          "start_position": 18287,
+          "start_line": 521,
+          "end_line": 649
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "tableView",
-      "parameters" : [
+      "modifiers": [],
+      "name": "tableView",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "NSTableView"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "NSTableView"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "iina/PlaylistViewController.swift",
-            "location" : {
-              "end_position" : 18332,
-              "start_position" : 18306
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "iina/PlaylistViewController.swift",
+            "location": {
+              "end_position": 18332,
+              "start_position": 18306,
+              "start_line": 523,
+              "end_line": 523
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "tableView",
-          "order" : 0
+          "modifiers": [],
+          "name": "tableView",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "NSTableColumn?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "NSTableColumn?"
           },
-          "is_variadic" : false,
-          "label" : "viewFor",
-          "location_info" : {
-            "file_path" : "iina/PlaylistViewController.swift",
-            "location" : {
-              "end_position" : 18369,
-              "start_position" : 18332
+          "is_variadic": false,
+          "label": "viewFor",
+          "location_info": {
+            "file_path": "iina/PlaylistViewController.swift",
+            "location": {
+              "end_position": 18369,
+              "start_position": 18332,
+              "start_line": 523,
+              "end_line": 523
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "tableColumn",
-          "order" : 1
+          "modifiers": [],
+          "name": "tableColumn",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Int"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Int"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "iina/PlaylistViewController.swift",
-            "location" : {
-              "end_position" : 18377,
-              "start_position" : 18369
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "iina/PlaylistViewController.swift",
+            "location": {
+              "end_position": 18377,
+              "start_position": 18369,
+              "start_line": 523,
+              "end_line": 523
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "row",
-          "order" : 2
+          "modifiers": [],
+          "name": "row",
+          "order": 2
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : true,
-          "name" : "NSView?"
+      "return_clause": {
+        "data_type": {
+          "is_optional": true,
+          "name": "NSView?"
         },
-        "description" : "-> NSView?"
+        "description": "-> NSView?"
       }
     },
-    "type" : "Remove function refactoring"
+    "type": "Remove function refactoring"
   },
-  "refactoringIndex" : 184,
-  "refactoringType" : "Remove function refactoring",
-  "repoID" : "iina-iina",
-  "repoName" : "iina/iina",
-  "repoURL" : "https://github.com/iina/iina.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 184,
+  "refactoringType": "Remove function refactoring",
+  "repoID": "iina-iina",
+  "repoName": "iina/iina",
+  "repoURL": "https://github.com/iina/iina.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "iina/PlaylistViewController.swift"
   ]
 }

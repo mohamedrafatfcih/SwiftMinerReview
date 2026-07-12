@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-e90577b014f994d841e44b5c",
-  "commitHash" : "046884df376f6bb53ba9c87ae9791c1b95a76e89",
-  "commitMessage" : "Use ManagedResource for volumes in CLI commands (#1607)\n\n## Type of Change\n- [x] New feature  \n\n## Motivation and Context\nRelated to https://github.com/apple/container/issues/1404.\n\nThis PR adds the initial work to have volume resources conform to\nManagedResource, in alignment with other resources such as networks (see\n[here](https://github.com/apple/container/pull/1421)). Further work is\nnecessary to move the use of `VolumeResource` down to the APIServer (in\nthe VolumesService) and in the volume client. Volumes do not currently\nhave any plugin or runtime state, so that information is not included in\nthe `VolumeResource`, but could be added later if needed.\n\n## Testing\n- [x] Tested locally\n\nSigned-off-by: Kathryn Baldauf <k_baldauf@apple.com>",
-  "commitURL" : "https://github.com/apple/container/commit/046884df376f6bb53ba9c87ae9791c1b95a76e89",
-  "durationSeconds" : 4.1668360233306885,
-  "entityNames" : [
+  "caseID": "case-e90577b014f994d841e44b5c",
+  "commitHash": "046884df376f6bb53ba9c87ae9791c1b95a76e89",
+  "commitMessage": "Use ManagedResource for volumes in CLI commands (#1607)\n\n## Type of Change\n- [x] New feature  \n\n## Motivation and Context\nRelated to https://github.com/apple/container/issues/1404.\n\nThis PR adds the initial work to have volume resources conform to\nManagedResource, in alignment with other resources such as networks (see\n[here](https://github.com/apple/container/pull/1421)). Further work is\nnecessary to move the use of `VolumeResource` down to the APIServer (in\nthe VolumesService) and in the volume client. Volumes do not currently\nhave any plugin or runtime state, so that information is not included in\nthe `VolumeResource`, but could be added later if needed.\n\n## Testing\n- [x] Tested locally\n\nSigned-off-by: Kathryn Baldauf <k_baldauf@apple.com>",
+  "commitURL": "https://github.com/apple/container/commit/046884df376f6bb53ba9c87ae9791c1b95a76e89",
+  "durationSeconds": 4.1668360233306885,
+  "entityNames": [
     "String",
     "Volume",
     "VolumeConfiguration",
@@ -14,259 +14,243 @@
     "driverOpts",
     "labels"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard VolumeStorage.isValidVolumeName(name) else {\n            throw VolumeError.invalidVolumeName(\"invalid volume name '\\(name)': must match \\(VolumeStorage.volumeNamePattern)\")\n        }\n\n        // Check if volume already exists by trying to list and finding it\n        let existingVolumes = try await store.list()\n        if existingVolumes.contains(where: { $0.name == name }) {\n            throw VolumeError.volumeAlreadyExists(name)\n        }\n\n        try createVolumeDirectory(for: name)\n\n        // Parse size from driver options (default 512GB)\n        let sizeInBytes: UInt64\n        if let sizeString = driverOpts[\"size\"] {\n            sizeInBytes = try parseSize(sizeString)\n        } else {\n            sizeInBytes = VolumeStorage.defaultVolumeSizeBytes\n        }\n\n        let journalConfig = try driverOpts[\"journal\"].map { try Self.parseJournalConfig($0) }\n\n        try createVolumeImage(for: name, sizeInBytes: sizeInBytes, journal: journalConfig)\n\n        let volume = VolumeConfiguration(\n            name: name,\n            driver: driver,\n            format: \"ext4\",\n            source: blockPath(for: name),\n            labels: labels,\n            options: driverOpts,\n            sizeInBytes: sizeInBytes\n        )\n\n        try await store.create(volume)\n\n        log.info(\n            \"created volume\",\n            metadata: [\n                \"name\": \"\\(name)\",\n                \"driver\": \"\\(driver)\",\n                \"isAnonymous\": \"\\(volume.isAnonymous)\",\n            ])\n        return volume"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [],
+      "body": {
+        "content": "guard VolumeStorage.isValidVolumeName(name) else {\n            throw VolumeError.invalidVolumeName(\"invalid volume name '\\(name)': must match \\(VolumeStorage.volumeNamePattern)\")\n        }\n\n        // Check if volume already exists by trying to list and finding it\n        let existingVolumes = try await store.list()\n        if existingVolumes.contains(where: { $0.name == name }) {\n            throw VolumeError.volumeAlreadyExists(name)\n        }\n\n        try createVolumeDirectory(for: name)\n\n        // Parse size from driver options (default 512GB)\n        let sizeInBytes: UInt64\n        if let sizeString = driverOpts[\"size\"] {\n            sizeInBytes = try parseSize(sizeString)\n        } else {\n            sizeInBytes = VolumeStorage.defaultVolumeSizeBytes\n        }\n\n        let journalConfig = try driverOpts[\"journal\"].map { try Self.parseJournalConfig($0) }\n\n        try createVolumeImage(for: name, sizeInBytes: sizeInBytes, journal: journalConfig)\n\n        let volume = VolumeConfiguration(\n            name: name,\n            driver: driver,\n            format: \"ext4\",\n            source: blockPath(for: name),\n            labels: labels,\n            options: driverOpts,\n            sizeInBytes: sizeInBytes\n        )\n\n        try await store.create(volume)\n\n        log.info(\n            \"created volume\",\n            metadata: [\n                \"name\": \"\\(name)\",\n                \"driver\": \"\\(driver)\",\n                \"isAnonymous\": \"\\(volume.isAnonymous)\",\n            ])\n        return volume"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-        "location" : {
-          "end_position" : 12335,
-          "start_position" : 10615
+      "location_info": {
+        "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+        "location": {
+          "end_position": 12335,
+          "start_position": 10615,
+          "start_line": 321,
+          "end_line": 373
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "_create",
-      "parameters" : [
+      "name": "_create",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10664,
-              "start_position" : 10642
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10664,
+              "start_position": 10642,
+              "start_line": 323,
+              "end_line": 324
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "name",
-          "order" : 0
+          "modifiers": [],
+          "name": "name",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10688,
-              "start_position" : 10664
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10688,
+              "start_position": 10664,
+              "start_line": 324,
+              "end_line": 325
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "driver",
-          "order" : 1
+          "modifiers": [],
+          "name": "driver",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String: String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String: String]"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10726,
-              "start_position" : 10688
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10726,
+              "start_position": 10688,
+              "start_line": 325,
+              "end_line": 326
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "driverOpts",
-          "order" : 2
+          "modifiers": [],
+          "name": "driverOpts",
+          "order": 2
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String: String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String: String]"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10759,
-              "start_position" : 10726
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10759,
+              "start_position": 10726,
+              "start_line": 326,
+              "end_line": 327
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "labels",
-          "order" : 3
+          "modifiers": [],
+          "name": "labels",
+          "order": 3
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "VolumeConfiguration"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "VolumeConfiguration"
         },
-        "description" : "-> VolumeConfiguration"
+        "description": "-> VolumeConfiguration"
       },
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "old_content" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard VolumeStorage.isValidVolumeName(name) else {\n            throw VolumeError.invalidVolumeName(\"invalid volume name '\\(name)': must match \\(VolumeStorage.volumeNamePattern)\")\n        }\n\n        // Check if volume already exists by trying to list and finding it\n        let existingVolumes = try await store.list()\n        if existingVolumes.contains(where: { $0.name == name }) {\n            throw VolumeError.volumeAlreadyExists(name)\n        }\n\n        try createVolumeDirectory(for: name)\n\n        // Parse size from driver options (default 512GB)\n        let sizeInBytes: UInt64\n        if let sizeString = driverOpts[\"size\"] {\n            sizeInBytes = try parseSize(sizeString)\n        } else {\n            sizeInBytes = VolumeStorage.defaultVolumeSizeBytes\n        }\n\n        let journalConfig = try driverOpts[\"journal\"].map { try Self.parseJournalConfig($0) }\n\n        try createVolumeImage(for: name, sizeInBytes: sizeInBytes, journal: journalConfig)\n\n        let volume = Volume(\n            name: name,\n            driver: driver,\n            format: \"ext4\",\n            source: blockPath(for: name),\n            labels: labels,\n            options: driverOpts,\n            sizeInBytes: sizeInBytes\n        )\n\n        try await store.create(volume)\n\n        log.info(\n            \"created volume\",\n            metadata: [\n                \"name\": \"\\(name)\",\n                \"driver\": \"\\(driver)\",\n                \"isAnonymous\": \"\\(volume.isAnonymous)\",\n            ])\n        return volume"
+    "old_content": {
+      "attributes": [],
+      "body": {
+        "content": "guard VolumeStorage.isValidVolumeName(name) else {\n            throw VolumeError.invalidVolumeName(\"invalid volume name '\\(name)': must match \\(VolumeStorage.volumeNamePattern)\")\n        }\n\n        // Check if volume already exists by trying to list and finding it\n        let existingVolumes = try await store.list()\n        if existingVolumes.contains(where: { $0.name == name }) {\n            throw VolumeError.volumeAlreadyExists(name)\n        }\n\n        try createVolumeDirectory(for: name)\n\n        // Parse size from driver options (default 512GB)\n        let sizeInBytes: UInt64\n        if let sizeString = driverOpts[\"size\"] {\n            sizeInBytes = try parseSize(sizeString)\n        } else {\n            sizeInBytes = VolumeStorage.defaultVolumeSizeBytes\n        }\n\n        let journalConfig = try driverOpts[\"journal\"].map { try Self.parseJournalConfig($0) }\n\n        try createVolumeImage(for: name, sizeInBytes: sizeInBytes, journal: journalConfig)\n\n        let volume = Volume(\n            name: name,\n            driver: driver,\n            format: \"ext4\",\n            source: blockPath(for: name),\n            labels: labels,\n            options: driverOpts,\n            sizeInBytes: sizeInBytes\n        )\n\n        try await store.create(volume)\n\n        log.info(\n            \"created volume\",\n            metadata: [\n                \"name\": \"\\(name)\",\n                \"driver\": \"\\(driver)\",\n                \"isAnonymous\": \"\\(volume.isAnonymous)\",\n            ])\n        return volume"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-        "location" : {
-          "end_position" : 12244,
-          "start_position" : 10550
+      "location_info": {
+        "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+        "location": {
+          "end_position": 12244,
+          "start_position": 10550,
+          "start_line": 321,
+          "end_line": 373
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "_create",
-      "parameters" : [
+      "name": "_create",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10599,
-              "start_position" : 10577
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10599,
+              "start_position": 10577,
+              "start_line": 323,
+              "end_line": 324
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "name",
-          "order" : 0
+          "modifiers": [],
+          "name": "name",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10623,
-              "start_position" : 10599
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10623,
+              "start_position": 10599,
+              "start_line": 324,
+              "end_line": 325
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "driver",
-          "order" : 1
+          "modifiers": [],
+          "name": "driver",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String: String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String: String]"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10661,
-              "start_position" : 10623
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10661,
+              "start_position": 10623,
+              "start_line": 325,
+              "end_line": 326
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "driverOpts",
-          "order" : 2
+          "modifiers": [],
+          "name": "driverOpts",
+          "order": 2
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String: String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String: String]"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
-            "location" : {
-              "end_position" : 10694,
-              "start_position" : 10661
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift",
+            "location": {
+              "end_position": 10694,
+              "start_position": 10661,
+              "start_line": 326,
+              "end_line": 327
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "labels",
-          "order" : 3
+          "modifiers": [],
+          "name": "labels",
+          "order": 3
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "Volume"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "Volume"
         },
-        "description" : "-> Volume"
+        "description": "-> Volume"
       },
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Change Return Type Refactoring"
+    "type": "Change Return Type Refactoring"
   },
-  "refactoringIndex" : 37,
-  "refactoringType" : "Change Return Type Refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 37,
+  "refactoringType": "Change Return Type Refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/ContainerAPIService/Server/Volumes/VolumesService.swift"
   ]
 }

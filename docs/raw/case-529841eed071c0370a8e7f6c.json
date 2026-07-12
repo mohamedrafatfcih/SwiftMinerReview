@@ -1,95 +1,99 @@
 {
-  "caseID" : "case-529841eed071c0370a8e7f6c",
-  "commitHash" : "c4a22389ac34e25150434fa502921f8ee0988b72",
-  "commitMessage" : "add container machine nested virt (#1742)\n\nThis also includes custom kernels for container machine. Its required\nwith nested virt as CONFIG_KVM needs to be enabled.\n\n---------\n\nSigned-off-by: michael_crosby <michael_crosby@apple.com>",
-  "commitURL" : "https://github.com/apple/container/commit/c4a22389ac34e25150434fa502921f8ee0988b72",
-  "durationSeconds" : 5.6167140007019043,
-  "entityNames" : [
+  "caseID": "case-529841eed071c0370a8e7f6c",
+  "commitHash": "c4a22389ac34e25150434fa502921f8ee0988b72",
+  "commitMessage": "add container machine nested virt (#1742)\n\nThis also includes custom kernels for container machine. Its required\nwith nested virt as CONFIG_KVM needs to be enabled.\n\n---------\n\nSigned-off-by: michael_crosby <michael_crosby@apple.com>",
+  "commitURL": "https://github.com/apple/container/commit/c4a22389ac34e25150434fa502921f8ee0988b72",
+  "durationSeconds": 5.616714000701904,
+  "entityNames": [
     "run"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "body" : {
-        "content" : "try MachineCapabilities.requireNestedVirtualizationSupported()"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "body": {
+        "content": "try MachineCapabilities.requireNestedVirtualizationSupported()"
       },
-      "conditions" : [
+      "conditions": [
         {
-          "condition_value" : {
-            "comparison" : {
-              "_0" : {
-                "description" : "kwargs[\"virtualization\"] == \"true\"",
-                "left_operand" : "kwargs[\"virtualization\"]",
-                "location_info" : {
-                  "file_path" : "Sources/ContainerCommands/Machine/MachineSet.swift",
-                  "location" : {
-                    "end_position" : 2691,
-                    "start_position" : 2656
+          "condition_value": {
+            "comparison": {
+              "_0": {
+                "description": "kwargs[\"virtualization\"] == \"true\"",
+                "left_operand": "kwargs[\"virtualization\"]",
+                "location_info": {
+                  "file_path": "Sources/ContainerCommands/Machine/MachineSet.swift",
+                  "location": {
+                    "end_position": 2691,
+                    "start_position": 2656,
+                    "start_line": 70,
+                    "end_line": 70
                   }
                 },
-                "operator_value" : "==",
-                "right_operand" : {
-                  "other" : {
-                    "_0" : "true"
+                "operator_value": "==",
+                "right_operand": {
+                  "other": {
+                    "_0": "true"
                   }
                 }
               }
             }
           },
-          "location_info" : {
-            "file_path" : "Sources/ContainerCommands/Machine/MachineSet.swift",
-            "location" : {
-              "end_position" : 2691,
-              "start_position" : 2656
+          "location_info": {
+            "file_path": "Sources/ContainerCommands/Machine/MachineSet.swift",
+            "location": {
+              "end_position": 2691,
+              "start_position": 2656,
+              "start_line": 70,
+              "end_line": 70
             }
           }
         }
       ],
-      "description" : "if",
-      "location_info" : {
-        "file_path" : "Sources/ContainerCommands/Machine/MachineSet.swift",
-        "location" : {
-          "end_position" : 2785,
-          "start_position" : 2639
+      "description": "if",
+      "location_info": {
+        "file_path": "Sources/ContainerCommands/Machine/MachineSet.swift",
+        "location": {
+          "end_position": 2785,
+          "start_position": 2639,
+          "start_line": 68,
+          "end_line": 72
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard !rawArgs.isEmpty else {\n                throw ContainerizationError(.invalidArgument, message: \"expected at least one configuration value (e.g., machine set cpus=4)\")\n            }\n\n            let client = MachineClient()\n            let resolvedName = try await resolveMachineId(name, client: client)\n            let snapshot = try await client.inspect(id: resolvedName)\n\n            let kwargs = Dictionary(\n                try rawArgs.map { arg in\n                    let parts = arg.split(separator: \"=\", maxSplits: 1)\n                    guard parts.count == 2 else {\n                        throw ContainerizationError(.invalidArgument, message: \"invalid argument format '\\(arg)'. Expected 'key=value'\")\n                    }\n\n                    return (String(parts[0]), String(parts[1]))\n                },\n                uniquingKeysWith: { _, last in last }\n            )\n\n            if kwargs[\"virtualization\"] == \"true\" {\n                try MachineCapabilities.requireNestedVirtualizationSupported()\n            }\n            var validatedKwargs = kwargs\n            if let raw = kwargs[\"kernel\"], !raw.isEmpty {\n                validatedKwargs[\"kernel\"] = try MachineConfig.validateKernelPath(raw).string\n            }\n\n            let newConfig = try snapshot.bootConfig.with(validatedKwargs)\n\n            try await client.setConfig(id: resolvedName, bootConfig: newConfig)\n\n            if snapshot.status == .running {\n                FileHandle.standardError.write(\n                    Data(\"Note: Changes will take effect after stopping and restarting '\\(resolvedName)'.\\n\".utf8))\n            }\n\n            print(resolvedName)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard !rawArgs.isEmpty else {\n                throw ContainerizationError(.invalidArgument, message: \"expected at least one configuration value (e.g., machine set cpus=4)\")\n            }\n\n            let client = MachineClient()\n            let resolvedName = try await resolveMachineId(name, client: client)\n            let snapshot = try await client.inspect(id: resolvedName)\n\n            let kwargs = Dictionary(\n                try rawArgs.map { arg in\n                    let parts = arg.split(separator: \"=\", maxSplits: 1)\n                    guard parts.count == 2 else {\n                        throw ContainerizationError(.invalidArgument, message: \"invalid argument format '\\(arg)'. Expected 'key=value'\")\n                    }\n\n                    return (String(parts[0]), String(parts[1]))\n                },\n                uniquingKeysWith: { _, last in last }\n            )\n\n            if kwargs[\"virtualization\"] == \"true\" {\n                try MachineCapabilities.requireNestedVirtualizationSupported()\n            }\n            var validatedKwargs = kwargs\n            if let raw = kwargs[\"kernel\"], !raw.isEmpty {\n                validatedKwargs[\"kernel\"] = try MachineConfig.validateKernelPath(raw).string\n            }\n\n            let newConfig = try snapshot.bootConfig.with(validatedKwargs)\n\n            try await client.setConfig(id: resolvedName, bootConfig: newConfig)\n\n            if snapshot.status == .running {\n                FileHandle.standardError.write(\n                    Data(\"Note: Changes will take effect after stopping and restarting '\\(resolvedName)'.\\n\".utf8))\n            }\n\n            print(resolvedName)"
       },
-      "location_info" : {
-        "file_path" : "Sources/ContainerCommands/Machine/MachineSet.swift",
-        "location" : {
-          "end_position" : 3414,
-          "start_position" : 1694
+      "location_info": {
+        "file_path": "Sources/ContainerCommands/Machine/MachineSet.swift",
+        "location": {
+          "end_position": 3414,
+          "start_position": 1694,
+          "start_line": 47,
+          "end_line": 88
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "run",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "name": "run",
+      "parameters": [],
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 10,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 10,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/ContainerCommands/Machine/MachineSet.swift"
   ]
 }

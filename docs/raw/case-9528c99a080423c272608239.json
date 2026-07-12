@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-9528c99a080423c272608239",
-  "commitHash" : "b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
-  "commitMessage" : "Prevent Duplicate Serializer Completion Calls (#3999)\n\n### Issue Link :link:\nFixes #3978\n\n### Goals :soccer:\nThis PR fixes the possible duplicate completion handler calls that cause\n#3978.\n\nDue to multiple paths into `processNextResponseSerializer()` there was a\nlogical race where the same response serializer could be completed\nmultiple times when cancelled, leading to a concurrency runtime crash\ndue to resuming a continuation more than once.\n\n### Implementation Details :construction:\nAdditional state was added to track whether a `Request` had currently\nenqueued a serializer which is checked upon entering\n`processNextResponseSerializer()`, allowing it to return early if a\nserializer is in flight. This ensures that no matter how many times\n`processNextResponseSerializer()` is called, only one attempt will\nenqueue a particular serializer and, potentially, its completion.\n\n### Testing Details :mag:\nAdditional test added which could locally reproduce the issue.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
-  "durationSeconds" : 31.487722039222717,
-  "entityNames" : [
+  "caseID": "case-9528c99a080423c272608239",
+  "commitHash": "b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
+  "commitMessage": "Prevent Duplicate Serializer Completion Calls (#3999)\n\n### Issue Link :link:\nFixes #3978\n\n### Goals :soccer:\nThis PR fixes the possible duplicate completion handler calls that cause\n#3978.\n\nDue to multiple paths into `processNextResponseSerializer()` there was a\nlogical race where the same response serializer could be completed\nmultiple times when cancelled, leading to a concurrency runtime crash\ndue to resuming a continuation more than once.\n\n### Implementation Details :construction:\nAdditional state was added to track whether a `Request` had currently\nenqueued a serializer which is checked upon entering\n`processNextResponseSerializer()`, allowing it to return early if a\nserializer is in flight. This ensures that no matter how many times\n`processNextResponseSerializer()` is called, only one attempt will\nenqueue a particular serializer and, potentially, its completion.\n\n### Testing Details :mag:\nAdditional test added which could locally reproduce the issue.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/b2d6f41fd37f4cd25e4996f89fc46bb6d2b2857e",
+  "durationSeconds": 31.487722039222717,
+  "entityNames": [
     "@escaping (Result<URLRequest, any Error>) -> Void",
     "RequestAdapterState",
     "URLRequest",
@@ -14,183 +14,161 @@
     "state",
     "urlRequest"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "function_call" : {
-            "_0" : {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
-
-              ],
-              "call" : "write",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/SessionTests.swift",
-                "location" : {
-                  "end_position" : 6206,
-                  "start_position" : 5128
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "accessors": [],
+      "attributes": [],
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "function_call": {
+            "_0": {
+              "additional_trailing_closures": [],
+              "arguments": [],
+              "call": "write",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Tests/SessionTests.swift",
+                "location": {
+                  "end_position": 6206,
+                  "start_position": 5128,
+                  "start_line": 131,
+                  "end_line": 157
                 }
               },
-              "trailing_closure" : {
-                "attributes" : [
-
-                ],
-                "body" : {
-                  "content" : "mutableState.adaptCalledCount += 1\n\n                let result: Result<URLRequest, any Error> = Result {\n                    if mutableState.throwsErrorOnFirstAdapt {\n                        mutableState.throwsErrorOnFirstAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/1\")\n                    }\n\n                    if mutableState.throwsErrorOnSecondAdapt && mutableState.adaptedCount == 1 {\n                        mutableState.throwsErrorOnSecondAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/2\")\n                    }\n\n                    var urlRequest = urlRequest\n\n                    mutableState.adaptedCount += 1\n\n                    if mutableState.shouldApplyAuthorizationHeader && mutableState.adaptedCount > 1 {\n                        urlRequest.headers.update(.authorization(username: \"user\", password: \"password\"))\n                    }\n\n                    return urlRequest\n                }\n\n                return result"
+              "trailing_closure": {
+                "attributes": [],
+                "body": {
+                  "content": "mutableState.adaptCalledCount += 1\n\n                let result: Result<URLRequest, any Error> = Result {\n                    if mutableState.throwsErrorOnFirstAdapt {\n                        mutableState.throwsErrorOnFirstAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/1\")\n                    }\n\n                    if mutableState.throwsErrorOnSecondAdapt && mutableState.adaptedCount == 1 {\n                        mutableState.throwsErrorOnSecondAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/2\")\n                    }\n\n                    var urlRequest = urlRequest\n\n                    mutableState.adaptedCount += 1\n\n                    if mutableState.shouldApplyAuthorizationHeader && mutableState.adaptedCount > 1 {\n                        urlRequest.headers.update(.authorization(username: \"user\", password: \"password\"))\n                    }\n\n                    return urlRequest\n                }\n\n                return result"
                 },
-                "captures" : [
-
-                ],
-                "location_info" : {
-                  "file_path" : "Tests/SessionTests.swift",
-                  "location" : {
-                    "end_position" : 6206,
-                    "start_position" : 5147
+                "captures": [],
+                "location_info": {
+                  "file_path": "Tests/SessionTests.swift",
+                  "location": {
+                    "end_position": 6206,
+                    "start_position": 5147,
+                    "start_line": 131,
+                    "end_line": 157
                   }
                 },
-                "parameters" : [
-
-                ]
+                "parameters": []
               }
             }
           }
         }
       },
-      "is_constant" : true,
-      "location_info" : {
-        "file_path" : "Tests/SessionTests.swift",
-        "location" : {
-          "end_position" : 6206,
-          "start_position" : 5119
+      "is_constant": true,
+      "location_info": {
+        "file_path": "Tests/SessionTests.swift",
+        "location": {
+          "end_position": 6206,
+          "start_position": 5119,
+          "start_line": 131,
+          "end_line": 157
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "result"
+      "modifiers": [],
+      "name": "result"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let result = mutableState.write { mutableState in\n                mutableState.adaptCalledCount += 1\n\n                let result: Result<URLRequest, any Error> = Result {\n                    if mutableState.throwsErrorOnFirstAdapt {\n                        mutableState.throwsErrorOnFirstAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/1\")\n                    }\n\n                    if mutableState.throwsErrorOnSecondAdapt && mutableState.adaptedCount == 1 {\n                        mutableState.throwsErrorOnSecondAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/2\")\n                    }\n\n                    var urlRequest = urlRequest\n\n                    mutableState.adaptedCount += 1\n\n                    if mutableState.shouldApplyAuthorizationHeader && mutableState.adaptedCount > 1 {\n                        urlRequest.headers.update(.authorization(username: \"user\", password: \"password\"))\n                    }\n\n                    return urlRequest\n                }\n\n                return result\n            }\n\n            completion(result)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let result = mutableState.write { mutableState in\n                mutableState.adaptCalledCount += 1\n\n                let result: Result<URLRequest, any Error> = Result {\n                    if mutableState.throwsErrorOnFirstAdapt {\n                        mutableState.throwsErrorOnFirstAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/1\")\n                    }\n\n                    if mutableState.throwsErrorOnSecondAdapt && mutableState.adaptedCount == 1 {\n                        mutableState.throwsErrorOnSecondAdapt = false\n                        throw AFError.invalidURL(url: \"/adapt/error/2\")\n                    }\n\n                    var urlRequest = urlRequest\n\n                    mutableState.adaptedCount += 1\n\n                    if mutableState.shouldApplyAuthorizationHeader && mutableState.adaptedCount > 1 {\n                        urlRequest.headers.update(.authorization(username: \"user\", password: \"password\"))\n                    }\n\n                    return urlRequest\n                }\n\n                return result\n            }\n\n            completion(result)"
       },
-      "location_info" : {
-        "file_path" : "Tests/SessionTests.swift",
-        "location" : {
-          "end_position" : 6248,
-          "start_position" : 4919
+      "location_info": {
+        "file_path": "Tests/SessionTests.swift",
+        "location": {
+          "end_position": 6248,
+          "start_position": 4919,
+          "start_line": 126,
+          "end_line": 160
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "adapt",
-      "parameters" : [
+      "modifiers": [],
+      "name": "adapt",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "URLRequest"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "URLRequest"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Tests/SessionTests.swift",
-            "location" : {
-              "end_position" : 4965,
-              "start_position" : 4940
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Tests/SessionTests.swift",
+            "location": {
+              "end_position": 4965,
+              "start_position": 4940,
+              "start_line": 128,
+              "end_line": 128
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "urlRequest",
-          "order" : 0
+          "modifiers": [],
+          "name": "urlRequest",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "RequestAdapterState"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "RequestAdapterState"
           },
-          "is_variadic" : false,
-          "label" : "using",
-          "location_info" : {
-            "file_path" : "Tests/SessionTests.swift",
-            "location" : {
-              "end_position" : 5018,
-              "start_position" : 4965
+          "is_variadic": false,
+          "label": "using",
+          "location_info": {
+            "file_path": "Tests/SessionTests.swift",
+            "location": {
+              "end_position": 5018,
+              "start_position": 4965,
+              "start_line": 128,
+              "end_line": 129
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "state",
-          "order" : 1
+          "modifiers": [],
+          "name": "state",
+          "order": 1
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "escaping" : {
-
-                }
+              "annotation": {
+                "escaping": {}
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "@escaping (Result<URLRequest, any Error>) -> Void"
+          "data_type": {
+            "is_optional": false,
+            "name": "@escaping (Result<URLRequest, any Error>) -> Void"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Tests/SessionTests.swift",
-            "location" : {
-              "end_position" : 5099,
-              "start_position" : 5018
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Tests/SessionTests.swift",
+            "location": {
+              "end_position": 5099,
+              "start_position": 5018,
+              "start_line": 129,
+              "end_line": 130
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "completion",
-          "order" : 2
+          "modifiers": [],
+          "name": "completion",
+          "order": 2
         }
       ]
     },
-    "type" : "Remove variable refactoring"
+    "type": "Remove variable refactoring"
   },
-  "refactoringIndex" : 86,
-  "refactoringType" : "Remove variable refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 86,
+  "refactoringType": "Remove variable refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/SessionTests.swift"
   ]
 }

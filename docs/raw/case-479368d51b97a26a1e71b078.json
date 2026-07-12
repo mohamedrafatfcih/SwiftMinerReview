@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-479368d51b97a26a1e71b078",
-  "commitHash" : "f0ed305909a82f56e2abddafdbeddca6d46e0ca8",
-  "commitMessage" : "feat: added an option to set a main color for the Disk module (will be used in the pie chart widget) (#3285)\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/f0ed305909a82f56e2abddafdbeddca6d46e0ca8",
-  "durationSeconds" : 3.3920290470123291,
-  "entityNames" : [
+  "caseID": "case-479368d51b97a26a1e71b078",
+  "commitHash": "f0ed305909a82f56e2abddafdbeddca6d46e0ca8",
+  "commitMessage": "feat: added an option to set a main color for the Disk module (will be used in the pie chart widget) (#3285)\n",
+  "commitURL": "https://github.com/exelban/stats/commit/f0ed305909a82f56e2abddafdbeddca6d46e0ca8",
+  "durationSeconds": 3.392029047012329,
+  "entityNames": [
     "ActivityReader?",
     "Bool",
     "CapacityReader?",
@@ -14,661 +14,605 @@
     "NSColor",
     "Notifications"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "NSColor"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "NSColor"
       },
-      "getter_block" : {
-        "body" : {
-          "content" : "SColor.fromString(Store.shared.string(key: \"\\(self.name)_mainColor\", defaultValue: SColor.secondBlue.key)).additional as! NSColor"
+      "getter_block": {
+        "body": {
+          "content": "SColor.fromString(Store.shared.string(key: \"\\(self.name)_mainColor\", defaultValue: SColor.secondBlue.key)).additional as! NSColor"
         },
-        "modifier" : "get"
+        "modifier": "get"
       },
-      "is_constant" : false,
-      "location_info" : {
-        "file_path" : "Modules/Disk/main.swift",
-        "location" : {
-          "end_position" : 6521,
-          "start_position" : 6357
+      "is_constant": false,
+      "location_info": {
+        "file_path": "Modules/Disk/main.swift",
+        "location": {
+          "end_position": 6521,
+          "start_position": 6357,
+          "start_line": 229,
+          "end_line": 231
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "mainColor"
+      "name": "mainColor"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "Module"
+          "name": "Module"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard self.enabled else { return }\n        \n        DispatchQueue.main.async(execute: {\n            self.popupView.capacityCallback(value)\n            self.previewView.capacityCallback(value)\n        })\n        self.settingsView.setList(value)\n        \n        guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {\n            return\n        }\n        \n        self.portalView.utilizationCallback(d)\n        self.notificationsView.utilizationCallback(d.percentage)\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as Mini: widget.setValue(d.percentage)\n            case let widget as BarChart: widget.setValue([[ColorValue(d.percentage)]])\n            case let widget as MemoryWidget:\n                widget.setValue((DiskSize(d.free).getReadableMemory(), DiskSize(d.size - d.free).getReadableMemory()), usedPercentage: d.percentage)\n            case let widget as PieChart:\n                widget.setValue([\n                    ColorValue(d.percentage, color: self.mainColor)\n                ])\n            case let widget as TextWidget:\n                var text = \"\\(self.textValue)\"\n                let pairs = TextWidget.parseText(text)\n                pairs.forEach { pair in\n                    var replacement: String? = nil\n                    \n                    switch pair.key {\n                    case \"$capacity\":\n                        switch pair.value {\n                        case \"total\": replacement = DiskSize(d.size).getReadableMemory()\n                        case \"used\": replacement = DiskSize(d.size - d.free).getReadableMemory()\n                        case \"free\": replacement = DiskSize(d.free).getReadableMemory()\n                        default: return\n                        }\n                    case \"$percentage\":\n                        var percentage: Int\n                        if d.size == 0 {\n                            percentage = 0\n                        } else {\n                            switch pair.value {\n                            case \"used\": percentage = Int((Double(d.size - d.free) / Double(d.size)) * 100)\n                            case \"free\": percentage = Int((Double(d.free) / Double(d.size)) * 100)\n                            default: return\n                            }\n                        }\n                        replacement = \"\\(percentage < 0 ? 0 : percentage)%\"\n                    default: return\n                    }\n                    \n                    if let replacement {\n                        let key = pair.value.isEmpty ? pair.key : \"\\(pair.key).\\(pair.value)\"\n                        text = text.replacingOccurrences(of: key, with: replacement)\n                    }\n                }\n                widget.setValue(text)\n            default: break\n            }\n        }\n        \n        if self.systemWidgetsUpdatesState {\n            if isWidgetActive(self.userDefaults, [Disk_entry.kind, \"UnitedWidget\"]), let blobData = try? JSONEncoder().encode(d) {\n                self.userDefaults?.set(blobData, forKey: \"Disk@CapacityReader\")\n            }\n            WidgetCenter.shared.reloadTimelines(ofKind: Disk_entry.kind)\n            WidgetCenter.shared.reloadTimelines(ofKind: \"UnitedWidget\")\n        }"
+          "attributes": [],
+          "body": {
+            "content": "guard self.enabled else { return }\n        \n        DispatchQueue.main.async(execute: {\n            self.popupView.capacityCallback(value)\n            self.previewView.capacityCallback(value)\n        })\n        self.settingsView.setList(value)\n        \n        guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {\n            return\n        }\n        \n        self.portalView.utilizationCallback(d)\n        self.notificationsView.utilizationCallback(d.percentage)\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as Mini: widget.setValue(d.percentage)\n            case let widget as BarChart: widget.setValue([[ColorValue(d.percentage)]])\n            case let widget as MemoryWidget:\n                widget.setValue((DiskSize(d.free).getReadableMemory(), DiskSize(d.size - d.free).getReadableMemory()), usedPercentage: d.percentage)\n            case let widget as PieChart:\n                widget.setValue([\n                    ColorValue(d.percentage, color: self.mainColor)\n                ])\n            case let widget as TextWidget:\n                var text = \"\\(self.textValue)\"\n                let pairs = TextWidget.parseText(text)\n                pairs.forEach { pair in\n                    var replacement: String? = nil\n                    \n                    switch pair.key {\n                    case \"$capacity\":\n                        switch pair.value {\n                        case \"total\": replacement = DiskSize(d.size).getReadableMemory()\n                        case \"used\": replacement = DiskSize(d.size - d.free).getReadableMemory()\n                        case \"free\": replacement = DiskSize(d.free).getReadableMemory()\n                        default: return\n                        }\n                    case \"$percentage\":\n                        var percentage: Int\n                        if d.size == 0 {\n                            percentage = 0\n                        } else {\n                            switch pair.value {\n                            case \"used\": percentage = Int((Double(d.size - d.free) / Double(d.size)) * 100)\n                            case \"free\": percentage = Int((Double(d.free) / Double(d.size)) * 100)\n                            default: return\n                            }\n                        }\n                        replacement = \"\\(percentage < 0 ? 0 : percentage)%\"\n                    default: return\n                    }\n                    \n                    if let replacement {\n                        let key = pair.value.isEmpty ? pair.key : \"\\(pair.key).\\(pair.value)\"\n                        text = text.replacingOccurrences(of: key, with: replacement)\n                    }\n                }\n                widget.setValue(text)\n            default: break\n            }\n        }\n        \n        if self.systemWidgetsUpdatesState {\n            if isWidgetActive(self.userDefaults, [Disk_entry.kind, \"UnitedWidget\"]), let blobData = try? JSONEncoder().encode(d) {\n                self.userDefaults?.set(blobData, forKey: \"Disk@CapacityReader\")\n            }\n            WidgetCenter.shared.reloadTimelines(ofKind: Disk_entry.kind)\n            WidgetCenter.shared.reloadTimelines(ofKind: \"UnitedWidget\")\n        }"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 11723,
-              "start_position" : 8293
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 11723,
+              "start_position": 8293,
+              "start_line": 280,
+              "end_line": 354
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "capacityCallback",
-          "parameters" : [
+          "name": "capacityCallback",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Disks"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Disks"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Modules/Disk/main.swift",
-                "location" : {
-                  "end_position" : 8347,
-                  "start_position" : 8333
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Modules/Disk/main.swift",
+                "location": {
+                  "end_position": 8347,
+                  "start_position": 8333,
+                  "start_line": 282,
+                  "end_line": 282
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "value",
-              "order" : 0
+              "modifiers": [],
+              "name": "value",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard self.enabled else { return }\n        \n        DispatchQueue.main.async(execute: {\n            self.popupView.activityCallback(value)\n            self.previewView.activityCallback(value)\n        })\n        \n        guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {\n            return\n        }\n        \n        self.portalView.activityCallback(d)\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as SpeedWidget: \n                widget.setValue(input: d.activity.read, output: d.activity.write)\n            case let widget as NetworkChart:\n                widget.setValue(upload: Double(d.activity.write), download: Double(d.activity.read))\n                if self.capacityReader?.interval != 1 {\n                    self.settingsView.setUpdateInterval(value: 1)\n                }\n            default: break\n            }\n        }"
+          "attributes": [],
+          "body": {
+            "content": "guard self.enabled else { return }\n        \n        DispatchQueue.main.async(execute: {\n            self.popupView.activityCallback(value)\n            self.previewView.activityCallback(value)\n        })\n        \n        guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {\n            return\n        }\n        \n        self.portalView.activityCallback(d)\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as SpeedWidget: \n                widget.setValue(input: d.activity.read, output: d.activity.write)\n            case let widget as NetworkChart:\n                widget.setValue(upload: Double(d.activity.write), download: Double(d.activity.read))\n                if self.capacityReader?.interval != 1 {\n                    self.settingsView.setUpdateInterval(value: 1)\n                }\n            default: break\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 12788,
-              "start_position" : 11723
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 12788,
+              "start_position": 11723,
+              "start_line": 354,
+              "end_line": 382
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "activityCallback",
-          "parameters" : [
+          "name": "activityCallback",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Disks"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Disks"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Modules/Disk/main.swift",
-                "location" : {
-                  "end_position" : 11777,
-                  "start_position" : 11763
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Modules/Disk/main.swift",
+                "location": {
+                  "end_position": 11777,
+                  "start_position": 11763,
+                  "start_line": 356,
+                  "end_line": 356
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "value",
-              "order" : 0
+              "modifiers": [],
+              "name": "value",
+              "order": 0
             }
           ]
         }
       ],
-      "initializers" : [
+      "initializers": [
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 8293,
-              "start_position" : 6521
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 8293,
+              "start_position": 6521,
+              "start_line": 231,
+              "end_line": 280
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "init",
-          "parameters" : [
-
-          ]
+          "name": "init",
+          "parameters": []
         }
       ],
-      "location_info" : {
-        "file_path" : "Modules/Disk/main.swift",
-        "location" : {
-          "end_position" : 12790,
-          "start_position" : 5530
+      "location_info": {
+        "file_path": "Modules/Disk/main.swift",
+        "location": {
+          "end_position": 12790,
+          "start_position": 5530,
+          "start_line": 206,
+          "end_line": 383
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "Disk",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
+      "name": "Disk",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Popup"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Popup"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : ".disk"
+                      "value": ".disk"
                     }
                   ],
-                  "call" : "Popup",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Modules/Disk/main.swift",
-                    "location" : {
-                      "end_position" : 5607,
-                      "start_position" : 5595
+                  "call": "Popup",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Modules/Disk/main.swift",
+                    "location": {
+                      "end_position": 5607,
+                      "start_position": 5595,
+                      "start_line": 209,
+                      "end_line": 209
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5607,
-              "start_position" : 5576
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5607,
+              "start_position": 5576,
+              "start_line": 209,
+              "end_line": 209
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "popupView"
+          "name": "popupView"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Settings"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Settings"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : ".disk"
+                      "value": ".disk"
                     }
                   ],
-                  "call" : "Settings",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Modules/Disk/main.swift",
-                    "location" : {
-                      "end_position" : 5664,
-                      "start_position" : 5649
+                  "call": "Settings",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Modules/Disk/main.swift",
+                    "location": {
+                      "end_position": 5664,
+                      "start_position": 5649,
+                      "start_line": 210,
+                      "end_line": 210
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5664,
-              "start_position" : 5624
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5664,
+              "start_position": 5624,
+              "start_line": 210,
+              "end_line": 210
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "settingsView"
+          "name": "settingsView"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Portal"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Portal"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : ".disk"
+                      "value": ".disk"
                     }
                   ],
-                  "call" : "Portal",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Modules/Disk/main.swift",
-                    "location" : {
-                      "end_position" : 5715,
-                      "start_position" : 5702
+                  "call": "Portal",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Modules/Disk/main.swift",
+                    "location": {
+                      "end_position": 5715,
+                      "start_position": 5702,
+                      "start_line": 211,
+                      "end_line": 211
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5715,
-              "start_position" : 5681
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5715,
+              "start_position": 5681,
+              "start_line": 211,
+              "end_line": 211
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "portalView"
+          "name": "portalView"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Notifications"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Notifications"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : ".disk"
+                      "value": ".disk"
                     }
                   ],
-                  "call" : "Notifications",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Modules/Disk/main.swift",
-                    "location" : {
-                      "end_position" : 5787,
-                      "start_position" : 5767
+                  "call": "Notifications",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Modules/Disk/main.swift",
+                    "location": {
+                      "end_position": 5787,
+                      "start_position": 5767,
+                      "start_line": 212,
+                      "end_line": 212
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5787,
-              "start_position" : 5732
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5787,
+              "start_position": 5732,
+              "start_line": 212,
+              "end_line": 212
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "notificationsView"
+          "name": "notificationsView"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Preview"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Preview"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [
                     {
-                      "value" : ".disk"
+                      "value": ".disk"
                     }
                   ],
-                  "call" : "Preview",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Modules/Disk/main.swift",
-                    "location" : {
-                      "end_position" : 5841,
-                      "start_position" : 5827
+                  "call": "Preview",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Modules/Disk/main.swift",
+                    "location": {
+                      "end_position": 5841,
+                      "start_position": 5827,
+                      "start_line": 213,
+                      "end_line": 213
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5841,
-              "start_position" : 5804
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5841,
+              "start_position": 5804,
+              "start_line": 213,
+              "end_line": 213
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "previewView"
+          "name": "previewView"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "CapacityReader?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "CapacityReader?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5894,
-              "start_position" : 5863
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5894,
+              "start_position": 5863,
+              "start_line": 215,
+              "end_line": 215
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "capacityReader"
+          "name": "capacityReader"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "ActivityReader?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "ActivityReader?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5942,
-              "start_position" : 5911
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5942,
+              "start_position": 5911,
+              "start_line": 216,
+              "end_line": 216
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "activityReader"
+          "name": "activityReader"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "ProcessReader?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "ProcessReader?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 5988,
-              "start_position" : 5959
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 5988,
+              "start_position": 5959,
+              "start_line": 217,
+              "end_line": 217
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "processReader"
+          "name": "processReader"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : ""
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": ""
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 6035,
-              "start_position" : 6010
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 6035,
+              "start_position": 6010,
+              "start_line": 219,
+              "end_line": 219
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "selectedDisk"
+          "name": "selectedDisk"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "Store.shared.string(key: \"\\(self.name)_textWidgetValue\", defaultValue: \"$capacity.free/$capacity.total\")"
+          "getter_block": {
+            "body": {
+              "content": "Store.shared.string(key: \"\\(self.name)_textWidgetValue\", defaultValue: \"$capacity.free/$capacity.total\")"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 6195,
-              "start_position" : 6057
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 6195,
+              "start_position": 6057,
+              "start_line": 221,
+              "end_line": 223
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "textValue"
+          "name": "textValue"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "self.userDefaults?.bool(forKey: \"systemWidgetsUpdates_state\") ?? false"
+          "getter_block": {
+            "body": {
+              "content": "self.userDefaults?.bool(forKey: \"systemWidgetsUpdates_state\") ?? false"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 6335,
-              "start_position" : 6217
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 6335,
+              "start_position": 6217,
+              "start_line": 225,
+              "end_line": 227
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "systemWidgetsUpdatesState"
+          "name": "systemWidgetsUpdatesState"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "NSColor"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "NSColor"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "SColor.fromString(Store.shared.string(key: \"\\(self.name)_mainColor\", defaultValue: SColor.secondBlue.key)).additional as! NSColor"
+          "getter_block": {
+            "body": {
+              "content": "SColor.fromString(Store.shared.string(key: \"\\(self.name)_mainColor\", defaultValue: SColor.secondBlue.key)).additional as! NSColor"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 6521,
-              "start_position" : 6357
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 6521,
+              "start_position": 6357,
+              "start_line": 229,
+              "end_line": 231
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "mainColor"
+          "name": "mainColor"
         }
       ]
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 0,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 0,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Modules/Disk/main.swift"
   ]
 }

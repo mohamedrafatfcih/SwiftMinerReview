@@ -1,190 +1,160 @@
 {
-  "caseID" : "case-71fc201bf12b9cc9a3a8aa65",
-  "commitHash" : "d29e6edd5e8af60819774b80c0dbe296c59f6a52",
-  "commitMessage" : "Migrates network integration tests. (#1858)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/d29e6edd5e8af60819774b80c0dbe296c59f6a52",
-  "durationSeconds" : 4.0807429552078247,
-  "entityNames" : [
+  "caseID": "case-71fc201bf12b9cc9a3a8aa65",
+  "commitHash": "d29e6edd5e8af60819774b80c0dbe296c59f6a52",
+  "commitMessage": "Migrates network integration tests. (#1858)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/d29e6edd5e8af60819774b80c0dbe296c59f6a52",
+  "durationSeconds": 4.080742955207825,
+  "entityNames": [
     "TestCLIBuilderLocalOutputSerial",
     "testBuildLocalOutputEdgeCases",
     "testBuildLocalOutputFailure",
     "testBuildLocalOutputHappyPath"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
+          "arguments": [
             {
-              "value" : ".serialized"
+              "value": ".serialized"
             }
           ]
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                // Comprehensive multi-stage build with context and build args.\n                let dir = try f.createTempDir()\n                let dockerfile =\n                    \"\"\"\n                    ARG MESSAGE=default\n                    FROM scratch AS builder\n                    ADD build.txt /build.txt\n                    ADD testfile.txt /hello.txt\n                    FROM scratch\n                    COPY --from=builder /build.txt /final.txt\n                    COPY --from=builder /hello.txt /app/hello.txt\n                    ADD message.txt /message.txt\n                    \"\"\"\n                let context: [ContainerFixture.FileSystemEntry] = [\n                    .file(\"build.txt\", content: .data(\"Building stage\\n\".data(using: .utf8)!)),\n                    .file(\"testfile.txt\", content: .data(\"Hello from local build\\n\".data(using: .utf8)!)),\n                    .file(\"message.txt\", content: .data(\"Hello from build args\\n\".data(using: .utf8)!)),\n                ]\n                try f.createContext(dir: dir, dockerfile: dockerfile, context: context)\n                let outputDir = dir.appending(\"comprehensive-local-output\")\n                let imageName = \"local-comprehensive-test:\\(UUID().uuidString)\"\n                let response = try f.buildWithPathsAndLocalOutput(\n                    tag: imageName, contextDir: dir, outputDir: outputDir,\n                    buildArgs: [\"MESSAGE=Hello from build args\"])\n                #expect(response.contains(outputDir.string), \"output should reference the export path\")\n                #expect(FileManager.default.fileExists(atPath: outputDir.string))\n                let contents = try FileManager.default.contentsOfDirectory(atPath: outputDir.string)\n                #expect(!contents.isEmpty, \"output directory should contain files\")\n\n                // Basic local output.\n                let basicDir = try f.createTempDir()\n                try f.createContext(\n                    dir: basicDir,\n                    dockerfile: \"FROM scratch\\nADD testfile.txt /hello.txt\",\n                    context: [.file(\"testfile.txt\", content: .data(\"Hello from basic build\\n\".data(using: .utf8)!))])\n                let basicOutputDir = basicDir.appending(\"basic-local-output\")\n                let basicResponse = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-basic-test:\\(UUID().uuidString)\", contextDir: basicDir, outputDir: basicOutputDir)\n                #expect(basicResponse.contains(basicOutputDir.string))\n                #expect(FileManager.default.fileExists(atPath: basicOutputDir.string))\n\n                // Build with context (COPY instruction).\n                let ctxDir = try f.createTempDir()\n                try f.createContext(\n                    dir: ctxDir,\n                    dockerfile: \"FROM scratch\\nCOPY testfile.txt /app/testfile.txt\",\n                    context: [.file(\"testfile.txt\", content: .data(\"Test content\\n\".data(using: .utf8)!))])\n                let ctxOutputDir = ctxDir.appending(\"context-local-output\")\n                let ctxResponse = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-context-test:\\(UUID().uuidString)\", contextDir: ctxDir, outputDir: ctxOutputDir)\n                #expect(ctxResponse.contains(ctxOutputDir.string))\n                #expect(FileManager.default.fileExists(atPath: ctxOutputDir.string))\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                // Comprehensive multi-stage build with context and build args.\n                let dir = try f.createTempDir()\n                let dockerfile =\n                    \"\"\"\n                    ARG MESSAGE=default\n                    FROM scratch AS builder\n                    ADD build.txt /build.txt\n                    ADD testfile.txt /hello.txt\n                    FROM scratch\n                    COPY --from=builder /build.txt /final.txt\n                    COPY --from=builder /hello.txt /app/hello.txt\n                    ADD message.txt /message.txt\n                    \"\"\"\n                let context: [ContainerFixture.FileSystemEntry] = [\n                    .file(\"build.txt\", content: .data(\"Building stage\\n\".data(using: .utf8)!)),\n                    .file(\"testfile.txt\", content: .data(\"Hello from local build\\n\".data(using: .utf8)!)),\n                    .file(\"message.txt\", content: .data(\"Hello from build args\\n\".data(using: .utf8)!)),\n                ]\n                try f.createContext(dir: dir, dockerfile: dockerfile, context: context)\n                let outputDir = dir.appending(\"comprehensive-local-output\")\n                let imageName = \"local-comprehensive-test:\\(UUID().uuidString)\"\n                let response = try f.buildWithPathsAndLocalOutput(\n                    tag: imageName, contextDir: dir, outputDir: outputDir,\n                    buildArgs: [\"MESSAGE=Hello from build args\"])\n                #expect(response.contains(outputDir.string), \"output should reference the export path\")\n                #expect(FileManager.default.fileExists(atPath: outputDir.string))\n                let contents = try FileManager.default.contentsOfDirectory(atPath: outputDir.string)\n                #expect(!contents.isEmpty, \"output directory should contain files\")\n\n                // Basic local output.\n                let basicDir = try f.createTempDir()\n                try f.createContext(\n                    dir: basicDir,\n                    dockerfile: \"FROM scratch\\nADD testfile.txt /hello.txt\",\n                    context: [.file(\"testfile.txt\", content: .data(\"Hello from basic build\\n\".data(using: .utf8)!))])\n                let basicOutputDir = basicDir.appending(\"basic-local-output\")\n                let basicResponse = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-basic-test:\\(UUID().uuidString)\", contextDir: basicDir, outputDir: basicOutputDir)\n                #expect(basicResponse.contains(basicOutputDir.string))\n                #expect(FileManager.default.fileExists(atPath: basicOutputDir.string))\n\n                // Build with context (COPY instruction).\n                let ctxDir = try f.createTempDir()\n                try f.createContext(\n                    dir: ctxDir,\n                    dockerfile: \"FROM scratch\\nCOPY testfile.txt /app/testfile.txt\",\n                    context: [.file(\"testfile.txt\", content: .data(\"Test content\\n\".data(using: .utf8)!))])\n                let ctxOutputDir = ctxDir.appending(\"context-local-output\")\n                let ctxResponse = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-context-test:\\(UUID().uuidString)\", contextDir: ctxDir, outputDir: ctxOutputDir)\n                #expect(ctxResponse.contains(ctxOutputDir.string))\n                #expect(FileManager.default.fileExists(atPath: ctxOutputDir.string))\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
-            "location" : {
-              "end_position" : 4443,
-              "start_position" : 881
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
+            "location": {
+              "end_position": 4443,
+              "start_position": 881,
+              "start_line": 21,
+              "end_line": 79
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testBuildLocalOutputHappyPath",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testBuildLocalOutputHappyPath",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                // Different paths for Dockerfile context and build context.\n                let dockerfileDir = try f.createTempDir()\n                try f.createContext(\n                    dir: dockerfileDir,\n                    dockerfile: \"FROM scratch\\nCOPY . /app\",\n                    context: [.file(\"dockerfile-context.txt\", content: .data(\"Dockerfile context\\n\".data(using: .utf8)!))])\n\n                let buildContextDir = try f.createTempDir()\n                try f.createContext(\n                    dir: buildContextDir, dockerfile: \"\",\n                    context: [.file(\"build-context.txt\", content: .data(\"Build context\\n\".data(using: .utf8)!))])\n\n                let outputDir = dockerfileDir.appending(\"diffpaths-local-output\")\n                let response = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-diffpaths-test:\\(UUID().uuidString)\",\n                    contextDir: buildContextDir,\n                    dockerfilePath: dockerfileDir.appending(\"Dockerfile\"),\n                    outputDir: outputDir)\n                #expect(response.contains(outputDir.string))\n                #expect(FileManager.default.fileExists(atPath: outputDir.string))\n\n                // Build into an existing output directory (should merge/overwrite).\n                let existingDir = try f.createTempDir()\n                try f.createContext(\n                    dir: existingDir,\n                    dockerfile: \"FROM scratch\\nADD newfile.txt /newfile.txt\",\n                    context: [.file(\"newfile.txt\", content: .data(\"New content\\n\".data(using: .utf8)!))])\n                let existingOutputDir = existingDir.appending(\"existing-output\")\n                try FileManager.default.createDirectory(\n                    atPath: existingOutputDir.string, withIntermediateDirectories: true, attributes: nil)\n                try \"Existing content\\n\".data(using: .utf8)!\n                    .write(to: URL(filePath: existingOutputDir.appending(\"existing.txt\").string), options: .atomic)\n                let existingResponse = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-existing-test:\\(UUID().uuidString)\",\n                    contextDir: existingDir, outputDir: existingOutputDir)\n                #expect(existingResponse.contains(existingOutputDir.string))\n                let contents = try FileManager.default.contentsOfDirectory(atPath: existingOutputDir.string)\n                #expect(!contents.isEmpty)\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                // Different paths for Dockerfile context and build context.\n                let dockerfileDir = try f.createTempDir()\n                try f.createContext(\n                    dir: dockerfileDir,\n                    dockerfile: \"FROM scratch\\nCOPY . /app\",\n                    context: [.file(\"dockerfile-context.txt\", content: .data(\"Dockerfile context\\n\".data(using: .utf8)!))])\n\n                let buildContextDir = try f.createTempDir()\n                try f.createContext(\n                    dir: buildContextDir, dockerfile: \"\",\n                    context: [.file(\"build-context.txt\", content: .data(\"Build context\\n\".data(using: .utf8)!))])\n\n                let outputDir = dockerfileDir.appending(\"diffpaths-local-output\")\n                let response = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-diffpaths-test:\\(UUID().uuidString)\",\n                    contextDir: buildContextDir,\n                    dockerfilePath: dockerfileDir.appending(\"Dockerfile\"),\n                    outputDir: outputDir)\n                #expect(response.contains(outputDir.string))\n                #expect(FileManager.default.fileExists(atPath: outputDir.string))\n\n                // Build into an existing output directory (should merge/overwrite).\n                let existingDir = try f.createTempDir()\n                try f.createContext(\n                    dir: existingDir,\n                    dockerfile: \"FROM scratch\\nADD newfile.txt /newfile.txt\",\n                    context: [.file(\"newfile.txt\", content: .data(\"New content\\n\".data(using: .utf8)!))])\n                let existingOutputDir = existingDir.appending(\"existing-output\")\n                try FileManager.default.createDirectory(\n                    atPath: existingOutputDir.string, withIntermediateDirectories: true, attributes: nil)\n                try \"Existing content\\n\".data(using: .utf8)!\n                    .write(to: URL(filePath: existingOutputDir.appending(\"existing.txt\").string), options: .atomic)\n                let existingResponse = try f.buildWithPathsAndLocalOutput(\n                    tag: \"local-existing-test:\\(UUID().uuidString)\",\n                    contextDir: existingDir, outputDir: existingOutputDir)\n                #expect(existingResponse.contains(existingOutputDir.string))\n                let contents = try FileManager.default.contentsOfDirectory(atPath: existingOutputDir.string)\n                #expect(!contents.isEmpty)\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
-            "location" : {
-              "end_position" : 7092,
-              "start_position" : 4443
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
+            "location": {
+              "end_position": 7092,
+              "start_position": 4443,
+              "start_line": 79,
+              "end_line": 124
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testBuildLocalOutputEdgeCases",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testBuildLocalOutputEdgeCases",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                let dir = try f.createTempDir()\n                try f.createContext(\n                    dir: dir,\n                    dockerfile: \"FROM scratch\\nADD test.txt /test.txt\",\n                    context: [.file(\"test.txt\", content: .data(\"test\\n\".data(using: .utf8)!))])\n\n                // An uncreateable path should cause the build to fail.\n                let result = try f.run([\n                    \"build\",\n                    \"-f\", dir.appending(\"Dockerfile\").string,\n                    \"-t\", \"local-invalid-test:\\(UUID().uuidString)\",\n                    \"--output\", \"type=local,dest=/nonexistent/invalid/path\",\n                    dir.appending(\"context\").string,\n                ])\n                #expect(result.status != 0, \"build with invalid output path should fail\")\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            try await f.withBuilder { f in\n                let dir = try f.createTempDir()\n                try f.createContext(\n                    dir: dir,\n                    dockerfile: \"FROM scratch\\nADD test.txt /test.txt\",\n                    context: [.file(\"test.txt\", content: .data(\"test\\n\".data(using: .utf8)!))])\n\n                // An uncreateable path should cause the build to fail.\n                let result = try f.run([\n                    \"build\",\n                    \"-f\", dir.appending(\"Dockerfile\").string,\n                    \"-t\", \"local-invalid-test:\\(UUID().uuidString)\",\n                    \"--output\", \"type=local,dest=/nonexistent/invalid/path\",\n                    dir.appending(\"context\").string,\n                ])\n                #expect(result.status != 0, \"build with invalid output path should fail\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
-            "location" : {
-              "end_position" : 8069,
-              "start_position" : 7092
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
+            "location": {
+              "end_position": 8069,
+              "start_position": 7092,
+              "start_line": 124,
+              "end_line": 146
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testBuildLocalOutputFailure",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testBuildLocalOutputFailure",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
-        "location" : {
-          "end_position" : 8071,
-          "start_position" : 819
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift",
+        "location": {
+          "end_position": 8071,
+          "start_position": 819,
+          "start_line": 18,
+          "end_line": 147
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIBuilderLocalOutputSerial",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIBuilderLocalOutputSerial",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Remove struct refactoring"
+    "type": "Remove struct refactoring"
   },
-  "refactoringIndex" : 24,
-  "refactoringType" : "Remove struct refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 24,
+  "refactoringType": "Remove struct refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Build/TestCLIBuilderLocalOutput.swift"
   ]
 }

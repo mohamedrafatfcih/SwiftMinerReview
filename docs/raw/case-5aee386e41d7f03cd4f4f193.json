@@ -1,104 +1,104 @@
 {
-  "caseID" : "case-5aee386e41d7f03cd4f4f193",
-  "commitHash" : "0bba832b40c091e239150e5abf5ffe38eaa1ae2e",
-  "commitMessage" : "Add option to move resized window to the display under cursor.\n",
-  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/0bba832b40c091e239150e5abf5ffe38eaa1ae2e",
-  "durationSeconds" : 3.3833349943161011,
-  "entityNames" : [
+  "caseID": "case-5aee386e41d7f03cd4f4f193",
+  "commitHash": "0bba832b40c091e239150e5abf5ffe38eaa1ae2e",
+  "commitMessage": "Add option to move resized window to the display under cursor.\n",
+  "commitURL": "https://github.com/rxhanson/Rectangle/commit/0bba832b40c091e239150e5abf5ffe38eaa1ae2e",
+  "durationSeconds": 3.383334994316101,
+  "entityNames": [
     "ExecutionParameters",
     "execute",
     "parameters"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "body" : {
-        "content" : "screens = screenDetection.detectScreensAtCursor()"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "body": {
+        "content": "screens = screenDetection.detectScreensAtCursor()"
       },
-      "conditions" : [
+      "conditions": [
         {
-          "condition_value" : {
-            "boolean_expr" : {
-              "_0" : "Defaults.useCursorScreenDetection.enabled"
+          "condition_value": {
+            "boolean_expr": {
+              "_0": "Defaults.useCursorScreenDetection.enabled"
             }
           },
-          "location_info" : {
-            "file_path" : "Rectangle/WindowManager.swift",
-            "location" : {
-              "end_position" : 2301,
-              "start_position" : 2259
+          "location_info": {
+            "file_path": "Rectangle/WindowManager.swift",
+            "location": {
+              "end_position": 2301,
+              "start_position": 2259,
+              "start_line": 68,
+              "end_line": 68
             }
           }
         }
       ],
-      "description" : "if",
-      "else_stmt" : {
-        "body" : {
-          "content" : "screens = screenDetection.detectScreens(using: frontmostWindowElement)"
+      "description": "if",
+      "else_stmt": {
+        "body": {
+          "content": "screens = screenDetection.detectScreens(using: frontmostWindowElement)"
         },
-        "description" : "else"
+        "description": "else"
       },
-      "location_info" : {
-        "file_path" : "Rectangle/WindowManager.swift",
-        "location" : {
-          "end_position" : 2490,
-          "start_position" : 2164
+      "location_info": {
+        "file_path": "Rectangle/WindowManager.swift",
+        "location": {
+          "end_position": 2490,
+          "start_position": 2164,
+          "start_line": 66,
+          "end_line": 72
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard let frontmostWindowElement = parameters.windowElement ?? AccessibilityElement.getFrontWindowElement(),\n              let windowId = parameters.windowId ?? frontmostWindowElement.getWindowId()\n        else {\n            NSSound.beep()\n            return\n        }\n        \n        let action = parameters.action\n        \n        if action == .restore {\n            if let restoreRect = AppDelegate.windowHistory.restoreRects[windowId] {\n                frontmostWindowElement.setFrame(restoreRect)\n            }\n            AppDelegate.windowHistory.lastRectangleActions.removeValue(forKey: windowId)\n            return\n        }\n        \n        var screens: UsableScreens?\n        if let screen = parameters.screen {\n            screens = UsableScreens(currentScreen: screen, numScreens: 1)\n        } else {\n            // Use cursor position or window position based on user preference\n            if Defaults.useCursorScreenDetection.enabled {\n                screens = screenDetection.detectScreensAtCursor()\n            } else {\n                screens = screenDetection.detectScreens(using: frontmostWindowElement)\n            }\n        }\n        \n        guard let usableScreens = screens else {\n            NSSound.beep()\n            Logger.log(\"Unable to obtain usable screens\")\n            return\n        }\n        \n        let currentWindowRect: CGRect = frontmostWindowElement.frame\n        \n        var lastRectangleAction = AppDelegate.windowHistory.lastRectangleActions[windowId]\n        \n        let windowMovedExternally = currentWindowRect != lastRectangleAction?.rect\n        \n        if windowMovedExternally {\n            lastRectangleAction = nil\n            AppDelegate.windowHistory.lastRectangleActions.removeValue(forKey: windowId)\n        }\n        \n        if parameters.updateRestoreRect {\n            if AppDelegate.windowHistory.restoreRects[windowId] == nil\n                || windowMovedExternally {\n                AppDelegate.windowHistory.restoreRects[windowId] = currentWindowRect\n            }\n        }\n        \n        let ignoreTodo = TodoManager.isTodoWindow(windowId)\n        \n        if frontmostWindowElement.isSheet == true\n            || currentWindowRect.isNull\n            || usableScreens.frameOfCurrentScreen.isNull\n            || usableScreens.currentScreen.adjustedVisibleFrame(ignoreTodo).isNull {\n            NSSound.beep()\n            Logger.log(\"Window is not snappable or usable screen is not valid\")\n            return\n        }\n        \n        let currentNormalizedRect = currentWindowRect.screenFlipped\n        let currentWindow = Window(id: windowId, rect: currentNormalizedRect)\n        \n        let windowCalculation = WindowCalculationFactory.calculationsByAction[action]\n        \n        let calculationParams = WindowCalculationParameters(window: currentWindow, usableScreens: usableScreens, action: action, lastAction: lastRectangleAction, ignoreTodo: ignoreTodo)\n        guard var calcResult = windowCalculation?.calculate(calculationParams) else {\n            NSSound.beep()\n            Logger.log(\"Nil calculation result\")\n            return\n        }\n        \n        let gapsApplicable = calcResult.resultingAction.gapsApplicable\n        \n        if Defaults.gapSize.value > 0, gapsApplicable != .none {\n            let gapSharedEdges = calcResult.resultingSubAction?.gapSharedEdge ?? calcResult.resultingAction.gapSharedEdge\n            \n            calcResult.rect = GapCalculation.applyGaps(calcResult.rect, dimension: gapsApplicable, sharedEdges: gapSharedEdges, gapSize: Defaults.gapSize.value)\n        }\n\n        if currentNormalizedRect.equalTo(calcResult.rect) {\n            Logger.log(\"Current frame is equal to new frame\")\n            \n            recordAction(windowId: windowId, resultingRect: currentWindowRect, action: calcResult.resultingAction, subAction: calcResult.resultingSubAction)\n            \n            return\n        }\n        \n        let visibleFrameOfDestinationScreen = calcResult.resultingScreenFrame ?? calcResult.screen.adjustedVisibleFrame(ignoreTodo)\n        let isFixedSize = (!frontmostWindowElement.isResizable() && action.resizes) || frontmostWindowElement.isSystemDialog == true\n        let resultParameters = ResultParameters(windowId: windowId,\n                                                action: action,\n                                                windowElement: frontmostWindowElement,\n                                                calcResult: calcResult,\n                                                usableScreens: usableScreens,\n                                                visibleFrameOfScreen: visibleFrameOfDestinationScreen,\n                                                source: parameters.source,\n                                                isFixedSize: isFixedSize)\n        \n        var resultingRect = apply(result: resultParameters)\n        \n        let isMovedAcrossDisplays = usableScreens.currentScreen != calcResult.screen\n        if isMovedAcrossDisplays {\n            if calcResult.rect.height != resultingRect.height {\n                Logger.log(\"Window size wasn't applied perfectly across displays. Trying again.\")\n                resultingRect = apply(result: resultParameters)\n                \n                if calcResult.rect.height != resultingRect.height {\n                    Logger.log(\"Final attempt to adjust across displays.\")\n                    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(25)) { [weak self] in\n                        guard let self else { return }\n                        let finalRect = self.apply(result: resultParameters)\n                        self.windowMovedAcrossDisplays(windowElement: frontmostWindowElement, resultingRect: finalRect)\n                        self.postProcess(result: resultParameters, resultingRect: finalRect)\n                    }\n                    return\n                }\n            }\n            windowMovedAcrossDisplays(windowElement: frontmostWindowElement, resultingRect: resultingRect)\n        }\n        \n        postProcess(result: resultParameters, resultingRect: resultingRect)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard let frontmostWindowElement = parameters.windowElement ?? AccessibilityElement.getFrontWindowElement(),\n              let windowId = parameters.windowId ?? frontmostWindowElement.getWindowId()\n        else {\n            NSSound.beep()\n            return\n        }\n        \n        let action = parameters.action\n        \n        if action == .restore {\n            if let restoreRect = AppDelegate.windowHistory.restoreRects[windowId] {\n                frontmostWindowElement.setFrame(restoreRect)\n            }\n            AppDelegate.windowHistory.lastRectangleActions.removeValue(forKey: windowId)\n            return\n        }\n        \n        var screens: UsableScreens?\n        if let screen = parameters.screen {\n            screens = UsableScreens(currentScreen: screen, numScreens: 1)\n        } else {\n            // Use cursor position or window position based on user preference\n            if Defaults.useCursorScreenDetection.enabled {\n                screens = screenDetection.detectScreensAtCursor()\n            } else {\n                screens = screenDetection.detectScreens(using: frontmostWindowElement)\n            }\n        }\n        \n        guard let usableScreens = screens else {\n            NSSound.beep()\n            Logger.log(\"Unable to obtain usable screens\")\n            return\n        }\n        \n        let currentWindowRect: CGRect = frontmostWindowElement.frame\n        \n        var lastRectangleAction = AppDelegate.windowHistory.lastRectangleActions[windowId]\n        \n        let windowMovedExternally = currentWindowRect != lastRectangleAction?.rect\n        \n        if windowMovedExternally {\n            lastRectangleAction = nil\n            AppDelegate.windowHistory.lastRectangleActions.removeValue(forKey: windowId)\n        }\n        \n        if parameters.updateRestoreRect {\n            if AppDelegate.windowHistory.restoreRects[windowId] == nil\n                || windowMovedExternally {\n                AppDelegate.windowHistory.restoreRects[windowId] = currentWindowRect\n            }\n        }\n        \n        let ignoreTodo = TodoManager.isTodoWindow(windowId)\n        \n        if frontmostWindowElement.isSheet == true\n            || currentWindowRect.isNull\n            || usableScreens.frameOfCurrentScreen.isNull\n            || usableScreens.currentScreen.adjustedVisibleFrame(ignoreTodo).isNull {\n            NSSound.beep()\n            Logger.log(\"Window is not snappable or usable screen is not valid\")\n            return\n        }\n        \n        let currentNormalizedRect = currentWindowRect.screenFlipped\n        let currentWindow = Window(id: windowId, rect: currentNormalizedRect)\n        \n        let windowCalculation = WindowCalculationFactory.calculationsByAction[action]\n        \n        let calculationParams = WindowCalculationParameters(window: currentWindow, usableScreens: usableScreens, action: action, lastAction: lastRectangleAction, ignoreTodo: ignoreTodo)\n        guard var calcResult = windowCalculation?.calculate(calculationParams) else {\n            NSSound.beep()\n            Logger.log(\"Nil calculation result\")\n            return\n        }\n        \n        let gapsApplicable = calcResult.resultingAction.gapsApplicable\n        \n        if Defaults.gapSize.value > 0, gapsApplicable != .none {\n            let gapSharedEdges = calcResult.resultingSubAction?.gapSharedEdge ?? calcResult.resultingAction.gapSharedEdge\n            \n            calcResult.rect = GapCalculation.applyGaps(calcResult.rect, dimension: gapsApplicable, sharedEdges: gapSharedEdges, gapSize: Defaults.gapSize.value)\n        }\n\n        if currentNormalizedRect.equalTo(calcResult.rect) {\n            Logger.log(\"Current frame is equal to new frame\")\n            \n            recordAction(windowId: windowId, resultingRect: currentWindowRect, action: calcResult.resultingAction, subAction: calcResult.resultingSubAction)\n            \n            return\n        }\n        \n        let visibleFrameOfDestinationScreen = calcResult.resultingScreenFrame ?? calcResult.screen.adjustedVisibleFrame(ignoreTodo)\n        let isFixedSize = (!frontmostWindowElement.isResizable() && action.resizes) || frontmostWindowElement.isSystemDialog == true\n        let resultParameters = ResultParameters(windowId: windowId,\n                                                action: action,\n                                                windowElement: frontmostWindowElement,\n                                                calcResult: calcResult,\n                                                usableScreens: usableScreens,\n                                                visibleFrameOfScreen: visibleFrameOfDestinationScreen,\n                                                source: parameters.source,\n                                                isFixedSize: isFixedSize)\n        \n        var resultingRect = apply(result: resultParameters)\n        \n        let isMovedAcrossDisplays = usableScreens.currentScreen != calcResult.screen\n        if isMovedAcrossDisplays {\n            if calcResult.rect.height != resultingRect.height {\n                Logger.log(\"Window size wasn't applied perfectly across displays. Trying again.\")\n                resultingRect = apply(result: resultParameters)\n                \n                if calcResult.rect.height != resultingRect.height {\n                    Logger.log(\"Final attempt to adjust across displays.\")\n                    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(25)) { [weak self] in\n                        guard let self else { return }\n                        let finalRect = self.apply(result: resultParameters)\n                        self.windowMovedAcrossDisplays(windowElement: frontmostWindowElement, resultingRect: finalRect)\n                        self.postProcess(result: resultParameters, resultingRect: finalRect)\n                    }\n                    return\n                }\n            }\n            windowMovedAcrossDisplays(windowElement: frontmostWindowElement, resultingRect: resultingRect)\n        }\n        \n        postProcess(result: resultParameters, resultingRect: resultingRect)"
       },
-      "location_info" : {
-        "file_path" : "Rectangle/WindowManager.swift",
-        "location" : {
-          "end_position" : 7492,
-          "start_position" : 1282
+      "location_info": {
+        "file_path": "Rectangle/WindowManager.swift",
+        "location": {
+          "end_position": 7492,
+          "start_position": 1282,
+          "start_line": 43,
+          "end_line": 172
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "execute",
-      "parameters" : [
+      "modifiers": [],
+      "name": "execute",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "ExecutionParameters"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "ExecutionParameters"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Rectangle/WindowManager.swift",
-            "location" : {
-              "end_position" : 1338,
-              "start_position" : 1305
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Rectangle/WindowManager.swift",
+            "location": {
+              "end_position": 1338,
+              "start_position": 1305,
+              "start_line": 45,
+              "end_line": 45
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "parameters",
-          "order" : 0
+          "modifiers": [],
+          "name": "parameters",
+          "order": 0
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 5,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "rxhanson-rectangle",
-  "repoName" : "rxhanson/Rectangle",
-  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 5,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "rxhanson-rectangle",
+  "repoName": "rxhanson/Rectangle",
+  "repoURL": "https://github.com/rxhanson/Rectangle.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Rectangle/WindowManager.swift"
   ]
 }

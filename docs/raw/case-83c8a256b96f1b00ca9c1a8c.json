@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-83c8a256b96f1b00ca9c1a8c",
-  "commitHash" : "888582b4c82dbd95832c0d8428ebbe8ef209a3e0",
-  "commitMessage" : "Propagate permissions for all host-to-container socket mounts. (#1751)\n\n- Closes #1750.\n- Applies permission code used for the `--ssh` mount to all\nhost-to-container socket mounts.\n- Adds a user option to the `doExec` test support function.\n- Updates the `testRunCommandUnixSocketMount` to install `nc` in the\ntest container, and check the socket permission, and check the mounted\nsocket using `nc` as the guest user.",
-  "commitURL" : "https://github.com/apple/container/commit/888582b4c82dbd95832c0d8428ebbe8ef209a3e0",
-  "durationSeconds" : 8.2498610019683838,
-  "entityNames" : [
+  "caseID": "case-83c8a256b96f1b00ca9c1a8c",
+  "commitHash": "888582b4c82dbd95832c0d8428ebbe8ef209a3e0",
+  "commitMessage": "Propagate permissions for all host-to-container socket mounts. (#1751)\n\n- Closes #1750.\n- Applies permission code used for the `--ssh` mount to all\nhost-to-container socket mounts.\n- Adds a user option to the `doExec` test support function.\n- Updates the `testRunCommandUnixSocketMount` to install `nc` in the\ntest container, and check the socket permission, and check the mounted\nsocket using `nc` as the guest user.",
+  "commitURL": "https://github.com/apple/container/commit/888582b4c82dbd95832c0d8428ebbe8ef209a3e0",
+  "durationSeconds": 8.249861001968384,
+  "entityNames": [
     "ContainerConfiguration",
     "Logger?",
     "[String: String]",
@@ -14,152 +14,144 @@
     "dynamicEnv",
     "inout LinuxContainer.Configuration"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "depth" : 0,
-      "description" : "for mount in config.mounts {\n            if try mount.isSocket() {\n                let attrs = try? FileManager.default.attributesOfItem(atPath: mount.source)\n                let permissions = (attrs?[.posixPermissions] as? NSNumber)\n                    .map { FilePermissions(rawValue: mode_t($0.intValue)) }\n                let socket = UnixSocketConfiguration(\n                    source: URL(filePath: mount.source),\n                    destination: URL(filePath: mount.destination),\n                    permissions: permissions,\n                    direction: .into,\n                )\n                czConfig.sockets.append(socket)\n            } else {\n                czConfig.mounts.append(mount.asMount)\n            }\n        }",
-      "index" : 7
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "depth": 0,
+      "description": "for mount in config.mounts {\n            if try mount.isSocket() {\n                let attrs = try? FileManager.default.attributesOfItem(atPath: mount.source)\n                let permissions = (attrs?[.posixPermissions] as? NSNumber)\n                    .map { FilePermissions(rawValue: mode_t($0.intValue)) }\n                let socket = UnixSocketConfiguration(\n                    source: URL(filePath: mount.source),\n                    destination: URL(filePath: mount.destination),\n                    permissions: permissions,\n                    direction: .into,\n                )\n                czConfig.sockets.append(socket)\n            } else {\n                czConfig.mounts.append(mount.asMount)\n            }\n        }",
+      "index": 7
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "czConfig.cpus = config.resources.cpus\n        czConfig.cpuOverhead = config.resources.cpuOverhead\n        czConfig.memoryInBytes = config.resources.memoryInBytes\n        czConfig.sysctl = config.sysctls.reduce(into: [String: String]()) {\n            $0[$1.key] = $1.value\n        }\n        // If the host doesn't support this, we'll throw on container creation.\n        czConfig.virtualization = config.virtualization\n        czConfig.useInit = config.useInit\n\n        if let shmSize = config.shmSize {\n            for i in czConfig.mounts.indices {\n                if czConfig.mounts[i].destination == \"/dev/shm\" {\n                    czConfig.mounts[i].options.removeAll { $0.hasPrefix(\"size=\") }\n                    czConfig.mounts[i].options.append(\"size=\\(shmSize)\")\n                }\n            }\n        }\n\n        for mount in config.mounts {\n            if try mount.isSocket() {\n                let attrs = try? FileManager.default.attributesOfItem(atPath: mount.source)\n                let permissions = (attrs?[.posixPermissions] as? NSNumber)\n                    .map { FilePermissions(rawValue: mode_t($0.intValue)) }\n                let socket = UnixSocketConfiguration(\n                    source: URL(filePath: mount.source),\n                    destination: URL(filePath: mount.destination),\n                    permissions: permissions,\n                    direction: .into,\n                )\n                czConfig.sockets.append(socket)\n            } else {\n                czConfig.mounts.append(mount.asMount)\n            }\n        }\n\n        for publishedSocket in config.publishedSockets {\n            // UnixSocketConfiguration (Containerization) takes URL; convert from FilePath at the boundary.\n            let socketConfig = UnixSocketConfiguration(\n                source: URL(filePath: publishedSocket.containerPath.string),\n                destination: URL(filePath: publishedSocket.hostPath.string),\n                permissions: publishedSocket.permissions,\n                direction: .outOf\n            )\n            czConfig.sockets.append(socketConfig)\n        }\n\n        if let socketUrl = Self.sshAuthSocketHostUrl(config: config, dynamicEnv: dynamicEnv, log: log) {\n            let socketPath = socketUrl.path(percentEncoded: false)\n            let attrs = try? FileManager.default.attributesOfItem(atPath: socketPath)\n            let permissions = (attrs?[.posixPermissions] as? NSNumber)\n                .map { FilePermissions(rawValue: mode_t($0.intValue)) }\n            let socketConfig = UnixSocketConfiguration(\n                source: socketUrl,\n                destination: URL(fileURLWithPath: Self.sshAuthSocketGuestPath),\n                permissions: permissions,\n                direction: .into,\n            )\n            czConfig.sockets.append(socketConfig)\n        }\n\n        let hostnameSource = config.networks.first?.options.hostname ?? config.id\n        czConfig.hostname =\n            hostnameSource.split(separator: \".\", maxSplits: 1, omittingEmptySubsequences: true)\n            .first\n            .map { String($0) } ?? config.id\n\n        if let dns = config.dns {\n            czConfig.dns = DNS(\n                nameservers: dns.nameservers, domain: dns.domain,\n                searchDomains: dns.searchDomains, options: dns.options)\n        }\n\n        try Self.configureInitialProcess(czConfig: &czConfig, config: config)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "czConfig.cpus = config.resources.cpus\n        czConfig.cpuOverhead = config.resources.cpuOverhead\n        czConfig.memoryInBytes = config.resources.memoryInBytes\n        czConfig.sysctl = config.sysctls.reduce(into: [String: String]()) {\n            $0[$1.key] = $1.value\n        }\n        // If the host doesn't support this, we'll throw on container creation.\n        czConfig.virtualization = config.virtualization\n        czConfig.useInit = config.useInit\n\n        if let shmSize = config.shmSize {\n            for i in czConfig.mounts.indices {\n                if czConfig.mounts[i].destination == \"/dev/shm\" {\n                    czConfig.mounts[i].options.removeAll { $0.hasPrefix(\"size=\") }\n                    czConfig.mounts[i].options.append(\"size=\\(shmSize)\")\n                }\n            }\n        }\n\n        for mount in config.mounts {\n            if try mount.isSocket() {\n                let attrs = try? FileManager.default.attributesOfItem(atPath: mount.source)\n                let permissions = (attrs?[.posixPermissions] as? NSNumber)\n                    .map { FilePermissions(rawValue: mode_t($0.intValue)) }\n                let socket = UnixSocketConfiguration(\n                    source: URL(filePath: mount.source),\n                    destination: URL(filePath: mount.destination),\n                    permissions: permissions,\n                    direction: .into,\n                )\n                czConfig.sockets.append(socket)\n            } else {\n                czConfig.mounts.append(mount.asMount)\n            }\n        }\n\n        for publishedSocket in config.publishedSockets {\n            // UnixSocketConfiguration (Containerization) takes URL; convert from FilePath at the boundary.\n            let socketConfig = UnixSocketConfiguration(\n                source: URL(filePath: publishedSocket.containerPath.string),\n                destination: URL(filePath: publishedSocket.hostPath.string),\n                permissions: publishedSocket.permissions,\n                direction: .outOf\n            )\n            czConfig.sockets.append(socketConfig)\n        }\n\n        if let socketUrl = Self.sshAuthSocketHostUrl(config: config, dynamicEnv: dynamicEnv, log: log) {\n            let socketPath = socketUrl.path(percentEncoded: false)\n            let attrs = try? FileManager.default.attributesOfItem(atPath: socketPath)\n            let permissions = (attrs?[.posixPermissions] as? NSNumber)\n                .map { FilePermissions(rawValue: mode_t($0.intValue)) }\n            let socketConfig = UnixSocketConfiguration(\n                source: socketUrl,\n                destination: URL(fileURLWithPath: Self.sshAuthSocketGuestPath),\n                permissions: permissions,\n                direction: .into,\n            )\n            czConfig.sockets.append(socketConfig)\n        }\n\n        let hostnameSource = config.networks.first?.options.hostname ?? config.id\n        czConfig.hostname =\n            hostnameSource.split(separator: \".\", maxSplits: 1, omittingEmptySubsequences: true)\n            .first\n            .map { String($0) } ?? config.id\n\n        if let dns = config.dns {\n            czConfig.dns = DNS(\n                nameservers: dns.nameservers, domain: dns.domain,\n                searchDomains: dns.searchDomains, options: dns.options)\n        }\n\n        try Self.configureInitialProcess(czConfig: &czConfig, config: config)"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-        "location" : {
-          "end_position" : 42012,
-          "start_position" : 38382
+      "location_info": {
+        "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location": {
+          "end_position": 42012,
+          "start_position": 38382,
+          "start_line": 978,
+          "end_line": 1060
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private",
         "static"
       ],
-      "name" : "configureContainer",
-      "parameters" : [
+      "name": "configureContainer",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "inout LinuxContainer.Configuration"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "inout LinuxContainer.Configuration"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-            "location" : {
-              "end_position" : 38481,
-              "start_position" : 38427
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location": {
+              "end_position": 38481,
+              "start_position": 38427,
+              "start_line": 980,
+              "end_line": 981
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "czConfig",
-          "order" : 0
+          "modifiers": [],
+          "name": "czConfig",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "ContainerConfiguration"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "ContainerConfiguration"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-            "location" : {
-              "end_position" : 38521,
-              "start_position" : 38481
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location": {
+              "end_position": 38521,
+              "start_position": 38481,
+              "start_line": 981,
+              "end_line": 982
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "config",
-          "order" : 1
+          "modifiers": [],
+          "name": "config",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String: String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String: String]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[:]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[:]"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-            "location" : {
-              "end_position" : 38565,
-              "start_position" : 38521
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location": {
+              "end_position": 38565,
+              "start_position": 38521,
+              "start_line": 982,
+              "end_line": 983
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "dynamicEnv",
-          "order" : 2
+          "modifiers": [],
+          "name": "dynamicEnv",
+          "order": 2
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "Logger?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "Logger?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-            "location" : {
-              "end_position" : 38593,
-              "start_position" : 38565
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location": {
+              "end_position": 38593,
+              "start_position": 38565,
+              "start_line": 983,
+              "end_line": 984
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "log",
-          "order" : 3
+          "modifiers": [],
+          "name": "log",
+          "order": 3
         }
       ],
-      "specifiers_decl" : {
-        "description" : "throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "description": "throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 1,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 1,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
   ]
 }

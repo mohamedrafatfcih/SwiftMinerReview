@@ -1,64 +1,58 @@
 {
-  "caseID" : "case-b0e434dea325f069939d39cb",
-  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "durationSeconds" : 73.471343994140625,
-  "entityNames" : [
+  "caseID": "case-b0e434dea325f069939d39cb",
+  "commitHash": "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage": "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds": 73.47134399414062,
+  "entityNames": [
     "testThatRetriedRequestsCanBeMassCancelled"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "annotation" : {
-        "unsupported" : {
-          "_0" : "MainActor"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "annotation": {
+        "unsupported": {
+          "_0": "MainActor"
         }
       },
-      "arguments" : [
-
-      ]
+      "arguments": []
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "MainActor"
+          "annotation": {
+            "unsupported": {
+              "_0": "MainActor"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "final class OnceRetrier: RequestInterceptor {\n            private var hasRetried = false\n\n            func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, any Error>) -> Void) {\n                if hasRetried {\n                    var request = urlRequest\n                    request.url = Endpoint.delay(1).url\n                    completion(.success(request))\n                } else {\n                    completion(.success(urlRequest))\n                }\n            }\n\n            func retry(_ request: Request, for session: Session, dueTo error: any Error, completion: @escaping (RetryResult) -> Void) {\n                completion(hasRetried ? .doNotRetry : .retry)\n                hasRetried = true\n            }\n        }\n\n        let queue = DispatchQueue(label: \"com.alamofire.testQueue\")\n        let monitor = ClosureEventMonitor(queue: queue)\n        let session = Session(rootQueue: queue, interceptor: OnceRetrier(), eventMonitors: [monitor])\n        let request = Endpoint.status(401)\n        let completion = expectation(description: \"all requests should finish\")\n        let cancellation = expectation(description: \"cancel all requests should be called\")\n        let createTask = expectation(description: \"should create task twice\")\n        createTask.expectedFulfillmentCount = 2\n        var tasksCreated = 0\n        monitor.requestDidCreateTask = { [unowned session] _, _ in\n            tasksCreated += 1\n            createTask.fulfill()\n            // Cancel after the second task is created to ensure proper lifetime events.\n            if tasksCreated == 2 {\n                session.cancelAllRequests {\n                    cancellation.fulfill()\n                }\n            }\n        }\n\n        var received: DataResponse<Data?, AFError>?\n\n        // When\n        session.request(request).validate().response { response in\n            received = response\n            completion.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(received?.error?.isExplicitlyCancelledError, true)\n        assert(on: session.rootQueue) {\n            XCTAssertTrue(session.requestTaskMap.isEmpty, \"requestTaskMap should be empty but has \\(session.requestTaskMap.count) items\")\n            XCTAssertTrue(session.activeRequests.isEmpty, \"activeRequests should be empty but has \\(session.activeRequests.count) items\")\n        }"
+      "body": {
+        "content": "final class OnceRetrier: RequestInterceptor {\n            private var hasRetried = false\n\n            func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, any Error>) -> Void) {\n                if hasRetried {\n                    var request = urlRequest\n                    request.url = Endpoint.delay(1).url\n                    completion(.success(request))\n                } else {\n                    completion(.success(urlRequest))\n                }\n            }\n\n            func retry(_ request: Request, for session: Session, dueTo error: any Error, completion: @escaping (RetryResult) -> Void) {\n                completion(hasRetried ? .doNotRetry : .retry)\n                hasRetried = true\n            }\n        }\n\n        let queue = DispatchQueue(label: \"com.alamofire.testQueue\")\n        let monitor = ClosureEventMonitor(queue: queue)\n        let session = Session(rootQueue: queue, interceptor: OnceRetrier(), eventMonitors: [monitor])\n        let request = Endpoint.status(401)\n        let completion = expectation(description: \"all requests should finish\")\n        let cancellation = expectation(description: \"cancel all requests should be called\")\n        let createTask = expectation(description: \"should create task twice\")\n        createTask.expectedFulfillmentCount = 2\n        var tasksCreated = 0\n        monitor.requestDidCreateTask = { [unowned session] _, _ in\n            tasksCreated += 1\n            createTask.fulfill()\n            // Cancel after the second task is created to ensure proper lifetime events.\n            if tasksCreated == 2 {\n                session.cancelAllRequests {\n                    cancellation.fulfill()\n                }\n            }\n        }\n\n        var received: DataResponse<Data?, AFError>?\n\n        // When\n        session.request(request).validate().response { response in\n            received = response\n            completion.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(received?.error?.isExplicitlyCancelledError, true)\n        assert(on: session.rootQueue) {\n            XCTAssertTrue(session.requestTaskMap.isEmpty, \"requestTaskMap should be empty but has \\(session.requestTaskMap.count) items\")\n            XCTAssertTrue(session.activeRequests.isEmpty, \"activeRequests should be empty but has \\(session.activeRequests.count) items\")\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/SessionTests.swift",
-        "location" : {
-          "end_position" : 68597,
-          "start_position" : 66063
+      "location_info": {
+        "file_path": "Tests/SessionTests.swift",
+        "location": {
+          "end_position": 68597,
+          "start_position": 66063,
+          "start_line": 1755,
+          "end_line": 1815
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatRetriedRequestsCanBeMassCancelled",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "testThatRetriedRequestsCanBeMassCancelled",
+      "parameters": []
     },
-    "type" : "Add attribute refactoring"
+    "type": "Add attribute refactoring"
   },
-  "refactoringIndex" : 941,
-  "refactoringType" : "Add attribute refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 941,
+  "refactoringType": "Add attribute refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/SessionTests.swift"
   ]
 }

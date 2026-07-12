@@ -1,94 +1,92 @@
 {
-  "caseID" : "case-ca00669300bf75ad3d61535a",
-  "commitHash" : "85f3044b1fba6aabaa48b2109a0ee2e1267e708d",
-  "commitMessage" : "qemu: enable Vulkan support\n\nResolves #4551\n",
-  "commitURL" : "https://github.com/utmapp/UTM/commit/85f3044b1fba6aabaa48b2109a0ee2e1267e708d",
-  "durationSeconds" : 8.1393619775772095,
-  "entityNames" : [
+  "caseID": "case-ca00669300bf75ad3d61535a",
+  "commitHash": "85f3044b1fba6aabaa48b2109a0ee2e1267e708d",
+  "commitMessage": "qemu: enable Vulkan support\n\nResolves #4551\n",
+  "commitURL": "https://github.com/utmapp/UTM/commit/85f3044b1fba6aabaa48b2109a0ee2e1267e708d",
+  "durationSeconds": 8.13936197757721,
+  "entityNames": [
     "UTMVirtualMachineStartOptions",
     "_start",
     "options",
     "vulkanDriver"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "description" : "system.vulkanDriver = vulkanDriver",
-      "left_operand" : "system.vulkanDriver",
-      "location_info" : {
-        "file_path" : "Services/UTMQemuVirtualMachine.swift",
-        "location" : {
-          "end_position" : 11441,
-          "start_position" : 11398
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "description": "system.vulkanDriver = vulkanDriver",
+      "left_operand": "system.vulkanDriver",
+      "location_info": {
+        "file_path": "Services/UTMQemuVirtualMachine.swift",
+        "location": {
+          "end_position": 11441,
+          "start_position": 11398,
+          "start_line": 331,
+          "end_line": 332
         }
       },
-      "operator_value" : "=",
-      "right_operand" : {
-        "reference" : {
-          "arguments" : [
-
-          ],
-          "name" : "vulkanDriver"
+      "operator_value": "=",
+      "right_operand": {
+        "reference": {
+          "arguments": [],
+          "name": "vulkanDriver"
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard await isSupported else {\n            throw UTMQemuVirtualMachineError.emulationNotSupported\n        }\n\n        // create QEMU resource cache if needed\n        try await ensureQemuResourceCacheUpToDate()\n\n        let hasDebugLog = await config.qemu.hasDebugLog\n        // start logging\n        if hasDebugLog, let debugLogURL = await config.qemu.debugLogURL {\n            await qemuVM.setRedirectLog(url: debugLogURL)\n        } else {\n            await qemuVM.setRedirectLog(url: nil)\n        }\n        let isRunningAsDisposible = options.contains(.bootDisposibleMode)\n        let isRemoteSession = options.contains(.remoteSession)\n        #if WITH_SERVER\n        let spicePassword = isRemoteSession ? String.random(length: 32) : nil\n        let spicePort = isRemoteSession ? try SwiftPortmap.Port.TCP(unusedPortStartingAt: UInt16(serverPort)) : nil\n        #else\n        if isRemoteSession {\n            throw UTMVirtualMachineError.notImplemented\n        }\n        #endif\n        await MainActor.run {\n            config.qemu.isDisposable = isRunningAsDisposible\n            #if WITH_SERVER\n            config.qemu.spiceServerPort = spicePort?.internalPort\n            config.qemu.spiceServerPassword = spicePassword\n            config.qemu.isSpiceServerTlsEnabled = true\n            #endif\n        }\n\n        // start TPM\n        if await config.qemu.hasTPMDevice {\n            let swtpm = UTMSWTPM()\n            swtpm.ctrlSocketUrl = await config.swtpmSocketURL\n            swtpm.dataUrl = await config.qemu.tpmDataURL\n            swtpm.currentDirectoryUrl = await config.socketURL\n            try await swtpm.start()\n            self.swtpm = swtpm\n        }\n\n        let allArguments = await config.allArguments\n        let arguments = allArguments.map({ $0.string })\n        let resources = allArguments.compactMap({ $0.fileUrls }).flatMap({ $0 })\n        let remoteBookmarks = await remoteBookmarks\n\n        let system = await UTMQemuSystem(arguments: arguments, architecture: config.system.architecture.rawValue)\n        system.resources = resources\n        system.currentDirectoryUrl = await config.socketURL\n        system.remoteBookmarks = remoteBookmarks\n        system.rendererBackend = rendererBackend\n        system.vulkanDriver = vulkanDriver\n        system.shmemDirectoryURL = await config.shmemDirectoryURL\n        #if os(macOS) // FIXME: verbose logging is broken on iOS\n        system.hasDebugLog = hasDebugLog\n        #endif\n        try Task.checkCancellation()\n\n        if isShortcut {\n            try await accessShortcut()\n            try Task.checkCancellation()\n        }\n\n        var options = UTMSpiceIOOptions()\n        if await !config.sound.isEmpty {\n            options.insert(.hasAudio)\n        }\n        if await config.sharing.hasClipboardSharing {\n            options.insert(.hasClipboardSharing)\n        }\n        if await config.sharing.isDirectoryShareReadOnly {\n            options.insert(.isShareReadOnly)\n        }\n        #if os(macOS) // FIXME: verbose logging is broken on iOS\n        if hasDebugLog {\n            options.insert(.hasDebugLog)\n        }\n        #endif\n        let spiceSocketUrl = await config.spiceSocketURL\n        let interface: any QEMUInterface\n        let spicePublicKey: Data?\n        if isRemoteSession {\n            let pipeInterface = UTMPipeInterface()\n            await MainActor.run {\n                pipeInterface.monitorInPipeURL = config.monitorPipeURL.appendingPathExtension(\"in\")\n                pipeInterface.monitorOutPipeURL = config.monitorPipeURL.appendingPathExtension(\"out\")\n                pipeInterface.guestAgentInPipeURL = config.guestAgentPipeURL.appendingPathExtension(\"in\")\n                pipeInterface.guestAgentOutPipeURL = config.guestAgentPipeURL.appendingPathExtension(\"out\")\n            }\n            try pipeInterface.start()\n            interface = pipeInterface\n            // generate a TLS key for this session\n            guard let key = GenerateRSACertificate(\"UTM Remote SPICE Server\" as CFString,\n                                                   \"UTM\" as CFString,\n                                                   Int.random(in: 1..<CLong.max) as CFNumber,\n                                                   1 as CFNumber,\n                                                   false as CFBoolean)?.takeUnretainedValue() as? [Data] else {\n                throw UTMQemuVirtualMachineError.keyGenerationFailed\n            }\n            try await key[1].write(to: config.spiceTlsKeyUrl)\n            try await key[2].write(to: config.spiceTlsCertUrl)\n            spicePublicKey = key[3]\n        } else {\n            let ioService = UTMSpiceIO(socketUrl: spiceSocketUrl, options: options)\n            ioService.logHandler = { [weak system] (line: String) -> Void in\n                guard !line.contains(\"spice_make_scancode\") else {\n                    return // do not log key presses for privacy reasons\n                }\n                system?.logging?.writeLine(line)\n            }\n            try ioService.start()\n            interface = ioService\n            spicePublicKey = nil\n        }\n        try Task.checkCancellation()\n        \n        // create EFI variables for legacy config as well as handle UEFI resets\n        try await qemuEnsureEfiVarsAvailable()\n        try Task.checkCancellation()\n        \n        // start QEMU\n        await qemuVM.setDelegate(self)\n        try await qemuVM.start(launcher: system, interface: interface)\n        let monitor = await monitor!\n        try Task.checkCancellation()\n        \n        // load saved state if requested\n        let isSuspended = await registryEntry.isSuspended\n        if !isRunningAsDisposible && isSuspended {\n            try await monitor.qemuRestoreSnapshot(kSuspendSnapshotName)\n            try Task.checkCancellation()\n        }\n        \n        // set up SPICE sharing and removable drives\n        try await self.restoreExternalDrives(withMounting: !isSuspended)\n        if let ioService = interface as? UTMSpiceIO {\n            try await self.restoreSharedDirectory(for: ioService)\n        } else {\n            // TODO: implement shared directory in remote interface\n        }\n        try Task.checkCancellation()\n        \n        // continue VM boot\n        try await monitor.continueBoot()\n        \n        // delete saved state\n        if isSuspended {\n            try? await deleteSnapshot()\n        }\n        \n        // save ioService and let it set the delegate\n        self.ioService = interface as? UTMSpiceIO\n        self.pipeInterface = interface as? UTMPipeInterface\n        self.isRunningAsDisposible = isRunningAsDisposible\n        \n        // test out snapshots\n        self.snapshotUnsupportedError = await determineSnapshotSupport()\n\n        #if WITH_SERVER\n        // save server details\n        if let spicePort = spicePort, let spicePublicKey = spicePublicKey, let spicePassword = spicePassword {\n            self.spiceServerInfo = .init(spicePortInternal: spicePort.internalPort,\n                                         spicePortExternal: try? await spicePort.externalPort,\n                                         spiceHostExternal: try? await spicePort.externalIpv4Address,\n                                         spicePublicKey: spicePublicKey,\n                                         spicePassword: spicePassword)\n            self.spicePort = spicePort\n        }\n        #endif\n\n        // update timestamp\n        if !isRunningAsDisposible {\n            try? updateLastModified()\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard await isSupported else {\n            throw UTMQemuVirtualMachineError.emulationNotSupported\n        }\n\n        // create QEMU resource cache if needed\n        try await ensureQemuResourceCacheUpToDate()\n\n        let hasDebugLog = await config.qemu.hasDebugLog\n        // start logging\n        if hasDebugLog, let debugLogURL = await config.qemu.debugLogURL {\n            await qemuVM.setRedirectLog(url: debugLogURL)\n        } else {\n            await qemuVM.setRedirectLog(url: nil)\n        }\n        let isRunningAsDisposible = options.contains(.bootDisposibleMode)\n        let isRemoteSession = options.contains(.remoteSession)\n        #if WITH_SERVER\n        let spicePassword = isRemoteSession ? String.random(length: 32) : nil\n        let spicePort = isRemoteSession ? try SwiftPortmap.Port.TCP(unusedPortStartingAt: UInt16(serverPort)) : nil\n        #else\n        if isRemoteSession {\n            throw UTMVirtualMachineError.notImplemented\n        }\n        #endif\n        await MainActor.run {\n            config.qemu.isDisposable = isRunningAsDisposible\n            #if WITH_SERVER\n            config.qemu.spiceServerPort = spicePort?.internalPort\n            config.qemu.spiceServerPassword = spicePassword\n            config.qemu.isSpiceServerTlsEnabled = true\n            #endif\n        }\n\n        // start TPM\n        if await config.qemu.hasTPMDevice {\n            let swtpm = UTMSWTPM()\n            swtpm.ctrlSocketUrl = await config.swtpmSocketURL\n            swtpm.dataUrl = await config.qemu.tpmDataURL\n            swtpm.currentDirectoryUrl = await config.socketURL\n            try await swtpm.start()\n            self.swtpm = swtpm\n        }\n\n        let allArguments = await config.allArguments\n        let arguments = allArguments.map({ $0.string })\n        let resources = allArguments.compactMap({ $0.fileUrls }).flatMap({ $0 })\n        let remoteBookmarks = await remoteBookmarks\n\n        let system = await UTMQemuSystem(arguments: arguments, architecture: config.system.architecture.rawValue)\n        system.resources = resources\n        system.currentDirectoryUrl = await config.socketURL\n        system.remoteBookmarks = remoteBookmarks\n        system.rendererBackend = rendererBackend\n        system.vulkanDriver = vulkanDriver\n        system.shmemDirectoryURL = await config.shmemDirectoryURL\n        #if os(macOS) // FIXME: verbose logging is broken on iOS\n        system.hasDebugLog = hasDebugLog\n        #endif\n        try Task.checkCancellation()\n\n        if isShortcut {\n            try await accessShortcut()\n            try Task.checkCancellation()\n        }\n\n        var options = UTMSpiceIOOptions()\n        if await !config.sound.isEmpty {\n            options.insert(.hasAudio)\n        }\n        if await config.sharing.hasClipboardSharing {\n            options.insert(.hasClipboardSharing)\n        }\n        if await config.sharing.isDirectoryShareReadOnly {\n            options.insert(.isShareReadOnly)\n        }\n        #if os(macOS) // FIXME: verbose logging is broken on iOS\n        if hasDebugLog {\n            options.insert(.hasDebugLog)\n        }\n        #endif\n        let spiceSocketUrl = await config.spiceSocketURL\n        let interface: any QEMUInterface\n        let spicePublicKey: Data?\n        if isRemoteSession {\n            let pipeInterface = UTMPipeInterface()\n            await MainActor.run {\n                pipeInterface.monitorInPipeURL = config.monitorPipeURL.appendingPathExtension(\"in\")\n                pipeInterface.monitorOutPipeURL = config.monitorPipeURL.appendingPathExtension(\"out\")\n                pipeInterface.guestAgentInPipeURL = config.guestAgentPipeURL.appendingPathExtension(\"in\")\n                pipeInterface.guestAgentOutPipeURL = config.guestAgentPipeURL.appendingPathExtension(\"out\")\n            }\n            try pipeInterface.start()\n            interface = pipeInterface\n            // generate a TLS key for this session\n            guard let key = GenerateRSACertificate(\"UTM Remote SPICE Server\" as CFString,\n                                                   \"UTM\" as CFString,\n                                                   Int.random(in: 1..<CLong.max) as CFNumber,\n                                                   1 as CFNumber,\n                                                   false as CFBoolean)?.takeUnretainedValue() as? [Data] else {\n                throw UTMQemuVirtualMachineError.keyGenerationFailed\n            }\n            try await key[1].write(to: config.spiceTlsKeyUrl)\n            try await key[2].write(to: config.spiceTlsCertUrl)\n            spicePublicKey = key[3]\n        } else {\n            let ioService = UTMSpiceIO(socketUrl: spiceSocketUrl, options: options)\n            ioService.logHandler = { [weak system] (line: String) -> Void in\n                guard !line.contains(\"spice_make_scancode\") else {\n                    return // do not log key presses for privacy reasons\n                }\n                system?.logging?.writeLine(line)\n            }\n            try ioService.start()\n            interface = ioService\n            spicePublicKey = nil\n        }\n        try Task.checkCancellation()\n        \n        // create EFI variables for legacy config as well as handle UEFI resets\n        try await qemuEnsureEfiVarsAvailable()\n        try Task.checkCancellation()\n        \n        // start QEMU\n        await qemuVM.setDelegate(self)\n        try await qemuVM.start(launcher: system, interface: interface)\n        let monitor = await monitor!\n        try Task.checkCancellation()\n        \n        // load saved state if requested\n        let isSuspended = await registryEntry.isSuspended\n        if !isRunningAsDisposible && isSuspended {\n            try await monitor.qemuRestoreSnapshot(kSuspendSnapshotName)\n            try Task.checkCancellation()\n        }\n        \n        // set up SPICE sharing and removable drives\n        try await self.restoreExternalDrives(withMounting: !isSuspended)\n        if let ioService = interface as? UTMSpiceIO {\n            try await self.restoreSharedDirectory(for: ioService)\n        } else {\n            // TODO: implement shared directory in remote interface\n        }\n        try Task.checkCancellation()\n        \n        // continue VM boot\n        try await monitor.continueBoot()\n        \n        // delete saved state\n        if isSuspended {\n            try? await deleteSnapshot()\n        }\n        \n        // save ioService and let it set the delegate\n        self.ioService = interface as? UTMSpiceIO\n        self.pipeInterface = interface as? UTMPipeInterface\n        self.isRunningAsDisposible = isRunningAsDisposible\n        \n        // test out snapshots\n        self.snapshotUnsupportedError = await determineSnapshotSupport()\n\n        #if WITH_SERVER\n        // save server details\n        if let spicePort = spicePort, let spicePublicKey = spicePublicKey, let spicePassword = spicePassword {\n            self.spiceServerInfo = .init(spicePortInternal: spicePort.internalPort,\n                                         spicePortExternal: try? await spicePort.externalPort,\n                                         spiceHostExternal: try? await spicePort.externalIpv4Address,\n                                         spicePublicKey: spicePublicKey,\n                                         spicePassword: spicePassword)\n            self.spicePort = spicePort\n        }\n        #endif\n\n        // update timestamp\n        if !isRunningAsDisposible {\n            try? updateLastModified()\n        }"
       },
-      "location_info" : {
-        "file_path" : "Services/UTMQemuVirtualMachine.swift",
-        "location" : {
-          "end_position" : 16689,
-          "start_position" : 9035
+      "location_info": {
+        "file_path": "Services/UTMQemuVirtualMachine.swift",
+        "location": {
+          "end_position": 16689,
+          "start_position": 9035,
+          "start_line": 275,
+          "end_line": 455
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "_start",
-      "parameters" : [
+      "name": "_start",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "UTMVirtualMachineStartOptions"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "UTMVirtualMachineStartOptions"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Services/UTMQemuVirtualMachine.swift",
-            "location" : {
-              "end_position" : 9103,
-              "start_position" : 9065
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Services/UTMQemuVirtualMachine.swift",
+            "location": {
+              "end_position": 9103,
+              "start_position": 9065,
+              "start_line": 277,
+              "end_line": 277
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "options",
-          "order" : 0
+          "modifiers": [],
+          "name": "options",
+          "order": 0
         }
       ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 8,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "utmapp-utm",
-  "repoName" : "utmapp/UTM",
-  "repoURL" : "https://github.com/utmapp/UTM.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 8,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "utmapp-utm",
+  "repoName": "utmapp/UTM",
+  "repoURL": "https://github.com/utmapp/UTM.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Services/UTMQemuVirtualMachine.swift"
   ]
 }

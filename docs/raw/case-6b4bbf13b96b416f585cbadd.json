@@ -1,190 +1,160 @@
 {
-  "caseID" : "case-6b4bbf13b96b416f585cbadd",
-  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
-  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
-  "durationSeconds" : 14.10075306892395,
-  "entityNames" : [
+  "caseID": "case-6b4bbf13b96b416f585cbadd",
+  "commitHash": "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage": "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds": 14.10075306892395,
+  "entityNames": [
     "TestCLIRemoveSerial",
     "testDeleteAllForce",
     "testDeleteAllSkipsRunning",
     "testDeleteAllStopped"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
+          "arguments": [
             {
-              "value" : ".serialized"
+              "value": ".serialized"
             }
           ]
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name1 = \"\\(f.testID)-c1\"\n            let name2 = \"\\(f.testID)-c2\"\n            try f.doCreate(name: name1, image: image)\n            f.addCleanup { try f.doRemoveIfExists(name1, ignoreFailure: true) }\n            try f.doCreate(name: name2, image: image)\n            f.addCleanup { try f.doRemoveIfExists(name2, ignoreFailure: true) }\n\n            try f.run([\"delete\", \"--all\"]).check()\n\n            #expect(try f.run([\"inspect\", name1]).status != 0, \"name1 should be deleted\")\n            #expect(try f.run([\"inspect\", name2]).status != 0, \"name2 should be deleted\")\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name1 = \"\\(f.testID)-c1\"\n            let name2 = \"\\(f.testID)-c2\"\n            try f.doCreate(name: name1, image: image)\n            f.addCleanup { try f.doRemoveIfExists(name1, ignoreFailure: true) }\n            try f.doCreate(name: name2, image: image)\n            f.addCleanup { try f.doRemoveIfExists(name2, ignoreFailure: true) }\n\n            try f.run([\"delete\", \"--all\"]).check()\n\n            #expect(try f.run([\"inspect\", name1]).status != 0, \"name1 should be deleted\")\n            #expect(try f.run([\"inspect\", name2]).status != 0, \"name2 should be deleted\")\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
-            "location" : {
-              "end_position" : 5007,
-              "start_position" : 4228
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
+            "location": {
+              "end_position": 5007,
+              "start_position": 4228,
+              "start_line": 96,
+              "end_line": 112
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testDeleteAllStopped",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testDeleteAllStopped",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let runningName = \"\\(f.testID)-running\"\n            let stoppedName = \"\\(f.testID)-stopped\"\n\n            try f.doLongRun(name: runningName, image: image, autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(runningName)\n                try? f.doRemove(runningName)\n            }\n            try f.doCreate(name: stoppedName, image: image)\n            f.addCleanup { try f.doRemoveIfExists(stoppedName, ignoreFailure: true) }\n\n            try f.run([\"delete\", \"--all\"]).check()\n\n            #expect(try f.getContainerStatus(runningName) == \"running\", \"running container should survive delete --all\")\n            #expect(try f.run([\"inspect\", stoppedName]).status != 0, \"stopped container should be deleted\")\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let runningName = \"\\(f.testID)-running\"\n            let stoppedName = \"\\(f.testID)-stopped\"\n\n            try f.doLongRun(name: runningName, image: image, autoRemove: false)\n            f.addCleanup {\n                try? f.doStop(runningName)\n                try? f.doRemove(runningName)\n            }\n            try f.doCreate(name: stoppedName, image: image)\n            f.addCleanup { try f.doRemoveIfExists(stoppedName, ignoreFailure: true) }\n\n            try f.run([\"delete\", \"--all\"]).check()\n\n            #expect(try f.getContainerStatus(runningName) == \"running\", \"running container should survive delete --all\")\n            #expect(try f.run([\"inspect\", stoppedName]).status != 0, \"stopped container should be deleted\")\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
-            "location" : {
-              "end_position" : 5951,
-              "start_position" : 5007
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
+            "location": {
+              "end_position": 5951,
+              "start_position": 5007,
+              "start_line": 112,
+              "end_line": 133
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testDeleteAllSkipsRunning",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testDeleteAllSkipsRunning",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doLongRun(name: name, image: image, autoRemove: false)\n            f.addCleanup { try f.doRemoveIfExists(name, force: true, ignoreFailure: true) }\n\n            try f.run([\"delete\", \"--all\", \"--force\"]).check()\n\n            #expect(try f.run([\"inspect\", name]).status != 0, \"container should be deleted by --force\")\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doLongRun(name: name, image: image, autoRemove: false)\n            f.addCleanup { try f.doRemoveIfExists(name, force: true, ignoreFailure: true) }\n\n            try f.run([\"delete\", \"--all\", \"--force\"]).check()\n\n            #expect(try f.run([\"inspect\", name]).status != 0, \"container should be deleted by --force\")\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
-            "location" : {
-              "end_position" : 6518,
-              "start_position" : 5951
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
+            "location": {
+              "end_position": 6518,
+              "start_position": 5951,
+              "start_line": 133,
+              "end_line": 146
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testDeleteAllForce",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testDeleteAllForce",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
-        "location" : {
-          "end_position" : 6520,
-          "start_position" : 4094
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Containers/TestCLIRemove.swift",
+        "location": {
+          "end_position": 6520,
+          "start_position": 4094,
+          "start_line": 92,
+          "end_line": 147
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIRemoveSerial",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIRemoveSerial",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Add struct refactoring"
+    "type": "Add struct refactoring"
   },
-  "refactoringIndex" : 42,
-  "refactoringType" : "Add struct refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 42,
+  "refactoringType": "Add struct refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Containers/TestCLIRemove.swift"
   ]
 }

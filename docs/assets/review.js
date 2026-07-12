@@ -144,7 +144,12 @@
     const tableWrap = document.querySelector(".table-wrap");
     const search = document.getElementById("case-search");
     const repo = document.getElementById("repo-filter");
-    const type = document.getElementById("type-filter");
+    const typePicker = document.getElementById("type-filter");
+    const typeSummary = document.getElementById("type-filter-summary");
+    const typeSearch = document.getElementById("type-filter-search");
+    const typeOptions = document.getElementById("type-filter-options");
+    const typeClear = document.getElementById("type-filter-clear");
+    const typeSelectAll = document.getElementById("type-filter-select-all");
     const status = document.getElementById("review-filter");
     const visibleCount = document.getElementById("visible-count");
     const pageSizeControl = document.getElementById("page-size");
@@ -155,6 +160,8 @@
     const toggles = Array.from(document.querySelectorAll(".column-toggle"));
     const reviews = storedReviews();
     let allCases = [];
+    let typeGroups = [];
+    const selectedTypes = new Set();
     let page = 1;
     let searchTimer = null;
 
@@ -231,11 +238,92 @@
       }
     }
 
+    function typeCategoryLabel(value) {
+      if (value === "swift") return "Swift";
+      const label = readableCategory(value || "");
+      return label === "Not provided" ? "Uncategorized" : label;
+    }
+
+    function buildTypeGroups() {
+      const groups = new Map();
+      for (const reviewCase of allCases) {
+        const category = typeCategoryLabel(reviewCase.refactoringCategory);
+        if (!groups.has(category)) groups.set(category, new Map());
+        const types = groups.get(category);
+        types.set(reviewCase.refactoringType, (types.get(reviewCase.refactoringType) || 0) + 1);
+      }
+      const categoryOrder = ["Basic", "Swift", "Complex", "Uncategorized"];
+      typeGroups = [...groups.entries()]
+        .sort(([left], [right]) => {
+          const leftIndex = categoryOrder.indexOf(left);
+          const rightIndex = categoryOrder.indexOf(right);
+          if (leftIndex !== -1 || rightIndex !== -1) return (leftIndex === -1 ? 99 : leftIndex) - (rightIndex === -1 ? 99 : rightIndex);
+          return left.localeCompare(right);
+        })
+        .map(([category, types]) => ({
+          category,
+          types: [...types.entries()]
+            .sort(([left], [right]) => left.localeCompare(right))
+            .map(([name, count]) => ({ name, count }))
+        }));
+    }
+
+    function allTypeNames() {
+      return typeGroups.flatMap(group => group.types.map(typeEntry => typeEntry.name));
+    }
+
+    function typeMatchesSearch(typeName, category, query) {
+      if (!query) return true;
+      const text = `${typeName} ${category}`.toLowerCase();
+      if (query.includes(" ")) return text.includes(query);
+      return text.split(/[^a-z0-9]+/).some(word => word.startsWith(query));
+    }
+
+    function renderTypePicker() {
+      if (!typeOptions) return;
+      const query = typeSearch?.value.trim().toLowerCase() || "";
+      const html = typeGroups.map(group => {
+        const types = group.types.filter(typeEntry => typeMatchesSearch(typeEntry.name, group.category, query));
+        if (!types.length) return "";
+        const allSelected = types.every(typeEntry => selectedTypes.has(typeEntry.name));
+        const someSelected = types.some(typeEntry => selectedTypes.has(typeEntry.name));
+        const typeRows = types.map(typeEntry => {
+          const checked = selectedTypes.has(typeEntry.name) ? " checked" : "";
+          return `<label class="type-option"><input type="checkbox" data-type="${escapeHTML(typeEntry.name)}"${checked}> <span>${escapeHTML(typeEntry.name)}</span><small>${typeEntry.count.toLocaleString()}</small></label>`;
+        }).join("");
+        return `<section class="type-category"><label class="type-category__header"><input type="checkbox" data-category="${escapeHTML(group.category)}"${allSelected && selectedTypes.size ? " checked" : ""} data-some-selected="${someSelected}"> <span class="type-category__title">${escapeHTML(group.category)}</span><small>${types.length.toLocaleString()} type${types.length === 1 ? "" : "s"}</small></label><div class="type-subtypes">${typeRows}</div></section>`;
+      }).join("");
+      typeOptions.innerHTML = html || '<p class="type-picker__empty">No matching refactoring types.</p>';
+      for (const checkbox of typeOptions.querySelectorAll("[data-category]")) {
+        const group = typeGroups.find(item => item.category === checkbox.dataset.category);
+        const visibleTypes = group?.types.filter(typeEntry => typeMatchesSearch(typeEntry.name, group.category, query)) || [];
+        const selectedCount = visibleTypes.filter(typeEntry => selectedTypes.has(typeEntry.name)).length;
+        checkbox.indeterminate = selectedCount > 0 && selectedCount < visibleTypes.length;
+      }
+    }
+
+    function updateTypeSummary() {
+      if (!typeSummary) return;
+      const total = allTypeNames().length;
+      if (!selectedTypes.size || selectedTypes.size === total) {
+        typeSummary.textContent = "All refactoring types";
+      } else if (selectedTypes.size === 1) {
+        typeSummary.textContent = [...selectedTypes][0];
+      } else {
+        typeSummary.textContent = `${selectedTypes.size.toLocaleString()} refactoring types`;
+      }
+    }
+
+    function updateTypePicker() {
+      renderTypePicker();
+      updateTypeSummary();
+    }
+
     function matchingCases() {
       const query = search.value.trim().toLowerCase();
       return allCases.filter(reviewCase => (!query || reviewCase.searchText.includes(query))
         && (!repo.value || reviewCase.repoName === repo.value)
-        && (!type.value || reviewCase.refactoringType === type.value)
+        && (!selectedTypes.size || selectedTypes.has(reviewCase.refactoringType))
         && (!status.value || String(Boolean(reviews[reviewCase.caseID])) === status.value));
     }
 
@@ -275,6 +363,7 @@
           reviewCase.repoName,
           reviewCase.commitHash,
           reviewCase.refactoringType,
+          reviewCase.refactoringCategory,
           reviewCase.swiftPathsText,
           reviewCase.entityNamesText
         ].join(" ").toLowerCase()
@@ -284,20 +373,53 @@
       updateProgress(allCases.length);
       visibleCount.textContent = allCases.length.toLocaleString();
       populateSelect(repo, [...new Set(allCases.map(reviewCase => reviewCase.repoName))].sort((left, right) => left.localeCompare(right)));
-      populateSelect(type, [...new Set(allCases.map(reviewCase => reviewCase.refactoringType))].sort((left, right) => left.localeCompare(right)));
+      buildTypeGroups();
+      updateTypePicker();
 
       search.addEventListener("input", () => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(resetAndRender, 120);
       });
-      [repo, type, status].forEach(control => control.addEventListener("change", resetAndRender));
+      [repo, status].forEach(control => control.addEventListener("change", resetAndRender));
+      typeSearch?.addEventListener("input", updateTypePicker);
+      typeOptions?.addEventListener("change", event => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (target.dataset.category) {
+          const group = typeGroups.find(item => item.category === target.dataset.category);
+          for (const typeEntry of group?.types || []) {
+            if (target.checked) selectedTypes.add(typeEntry.name);
+            else selectedTypes.delete(typeEntry.name);
+          }
+        } else if (target.dataset.type) {
+          if (target.checked) selectedTypes.add(target.dataset.type);
+          else selectedTypes.delete(target.dataset.type);
+        }
+        updateTypePicker();
+        resetAndRender();
+      });
+      typeClear?.addEventListener("click", () => {
+        selectedTypes.clear();
+        if (typeSearch) typeSearch.value = "";
+        updateTypePicker();
+        resetAndRender();
+      });
+      typeSelectAll?.addEventListener("click", () => {
+        selectedTypes.clear();
+        allTypeNames().forEach(typeName => selectedTypes.add(typeName));
+        updateTypePicker();
+        resetAndRender();
+      });
       pageSizeControl.addEventListener("change", resetAndRender);
       previous.addEventListener("click", () => { page -= 1; renderPage(); });
       next.addEventListener("click", () => { page += 1; renderPage(); });
       document.getElementById("clear-filters")?.addEventListener("click", () => {
         search.value = "";
         repo.value = "";
-        type.value = "";
+        selectedTypes.clear();
+        if (typeSearch) typeSearch.value = "";
+        if (typePicker) typePicker.open = false;
+        updateTypePicker();
         status.value = "";
         resetAndRender();
         search.focus();
@@ -392,6 +514,7 @@
   }
 
   function valueAt(value, path) {
+    if (path === "") return value;
     return path.split(".").reduce((current, key) => current == null ? undefined : current[key], value);
   }
 
@@ -475,6 +598,249 @@
     addDetectionValue(fields, "Category", readableCategory(raw.category));
   }
 
+  function detectorAction(type) {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized.startsWith("add ") || normalized.includes(" add ")) return "add";
+    if (normalized.startsWith("remove ") || normalized.startsWith("delete ") || normalized.includes(" remove ") || normalized.includes(" delete ")) return "remove";
+    return "change";
+  }
+
+  function detectorHighlightSpec(type) {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized.includes("return type")) return { label: "Return type", paths: ["return_clause.data_type.name", "data_type.name", "return_clause.description"] };
+    if (normalized.includes("generic clause")) return { label: "Generic clause", paths: ["generic_clause"] };
+    if (normalized.includes("where clause")) return { label: "Where clause", paths: ["where_clause"] };
+    if (normalized.includes("type alias")) return { label: "Type alias", paths: ["assigned_type.name", "assigned_type", "name", "generic_clause", ""] };
+    if (normalized.includes("datatype") || normalized.includes("data type")) return { label: "Data type", paths: ["data_type.name", "dataType.name", "name", "value", ""] };
+    if (normalized.includes("parameter")) return { label: "Parameter", paths: ["", "parameter", "parameters", "label", "name", "data_type.name"] };
+    if (normalized.includes("argument")) return { label: "Arguments", paths: ["", "arguments", "value"] };
+    if (normalized.includes("function call")) return { label: "Function call", paths: ["", "call", "value", "description"] };
+    if (normalized.includes("member access")) return { label: "Member access", paths: ["", "value", "description", "reference", "call"] };
+    if (normalized.includes("infix") || normalized.includes("operand")) return { label: "Operand", paths: ["", "left_operand", "right_operand", "operator_value", "reference", "other", "function_call", "value", "description"] };
+    if (normalized.includes("return expression") || normalized.includes("expression")) return { label: "Expression", paths: ["description", "value", "call", "reference", "other", "function_call", "infix_expr", ""] };
+    if (normalized.includes("statement")) return { label: "Statement", paths: ["description", "value", "call", "body.content", "body", ""] };
+    if (normalized.includes("condition")) return { label: "Conditions", paths: ["", "conditions", "description", "value"] };
+    if (normalized.includes("modifier")) return { label: "Modifier", paths: ["", "modifiers", "name", "value"] };
+    if (normalized.includes("attribute")) return { label: "Attribute", paths: ["", "annotation", "arguments", "name", "value"] };
+    if (normalized.includes("import")) return { label: "Import", paths: ["name", "kind", "path", ""] };
+    if (normalized.includes("conformed") || normalized.includes("confromed")) return { label: "Conformed type", paths: ["name", ""] };
+    if (normalized.includes("file")) return { label: "File", paths: ["path", "name", ""] };
+    if (normalized.includes("rename") || normalized.includes("name replacement")) return { label: "Renamed", paths: ["", "name", "value", "call", "path"] };
+    if (normalized.includes("variable")) return { label: "Variable", paths: ["name", "data_type.name", "initializer_clause.value", ""] };
+    if (normalized.includes("function") || normalized.includes("initializer")) return { label: "Function", paths: ["name", "parameters", "return_clause.description", "return_clause.data_type.name", ""] };
+    if (["class", "struct", "enum", "protocol", "extension"].some(word => normalized.includes(word))) return { label: "Declaration", paths: ["name", "data_type.name", "conformed_types", ""] };
+    return { label: "Changed", paths: ["", "name", "value", "description", "call", "data_type.name", "path"] };
+  }
+
+  function compactHighlightText(value) {
+    const text = displayValue(value).replace(/\s+/g, " ").trim();
+    if (!text || text === "Not provided") return "";
+    return text.length > 180 ? text.slice(0, 177) + "..." : text;
+  }
+
+  function typeHasWord(type, word) {
+    return String(type || "").toLowerCase().split(/[^a-z0-9]+/).includes(word);
+  }
+
+  function numberOrNull(value) {
+    if (value == null || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function findLocationInfo(value) {
+    if (value == null || typeof value !== "object") return null;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const location = findLocationInfo(item);
+        if (location) return location;
+      }
+      return null;
+    }
+    const info = value.location_info || value.locationInfo;
+    if (info && typeof info === "object") {
+      const location = info.location || {};
+      const found = {
+        filePath: info.file_path || info.filePath || "",
+        startLine: numberOrNull(location.start_line ?? location.startLine),
+        endLine: numberOrNull(location.end_line ?? location.endLine),
+        startOffset: numberOrNull(location.start_position ?? location.startPosition),
+        endOffset: numberOrNull(location.end_position ?? location.endPosition)
+      };
+      if (found.filePath || found.startLine != null || found.endLine != null || found.startOffset != null || found.endOffset != null) return found;
+    }
+    for (const key of Object.keys(value).sort()) {
+      const location = findLocationInfo(value[key]);
+      if (location) return location;
+    }
+    return null;
+  }
+
+  function firstLocation(values) {
+    for (const value of values) {
+      const location = findLocationInfo(value);
+      if (location) return location;
+    }
+    return null;
+  }
+
+  function sourceEvidence(reviewCase, side) {
+    return side === "old" ? reviewCase.beforeSource : reviewCase.afterSource;
+  }
+
+  function locationLineInfo(location, evidence) {
+    const sameFile = !location?.filePath || !evidence?.filePath || location.filePath === evidence.filePath;
+    const start = location?.startLine ?? (sameFile ? evidence?.focusedStartLine : null);
+    const end = location?.endLine ?? (sameFile ? evidence?.focusedEndLine : null);
+    return { start, end };
+  }
+
+  function locationFields(location, evidence) {
+    const filePath = location?.filePath || evidence?.filePath || "";
+    const lines = locationLineInfo(location, evidence);
+    if (!filePath && lines.start == null && lines.end == null) return null;
+    return { filePath, startLine: lines.start, endLine: lines.end };
+  }
+
+  function addLocationValue(container, label, location, evidence) {
+    const fields = locationFields(location, evidence);
+    if (!fields) return false;
+    addDetectionValue(container, label === "Location" ? "File path" : `${label} file path`, fields.filePath || "Not available");
+    addDetectionValue(container, "Start line", fields.startLine ?? "Not available");
+    addDetectionValue(container, "End line", fields.endLine ?? "Not available");
+    return true;
+  }
+
+  function addLocationChange(container, label, before, after, beforeEvidence, afterEvidence) {
+    const oldFields = locationFields(before, beforeEvidence);
+    const newFields = locationFields(after, afterEvidence);
+    if (!oldFields && !newFields) return false;
+    const formatter = value => value == null || value === "" ? "Not available" : String(value);
+    addDetectionChange(container, label === "Location" ? "File path" : `${label} file path`, oldFields?.filePath, newFields?.filePath, formatter);
+    addDetectionChange(container, "Start line", oldFields?.startLine ?? "", newFields?.startLine ?? "", formatter);
+    addDetectionChange(container, "End line", oldFields?.endLine ?? "", newFields?.endLine ?? "", formatter);
+    return true;
+  }
+
+  function detectorSideSources(raw, side) {
+    const parentKey = side === "old" ? "old_parent" : "current_parent";
+    const camelParentKey = side === "old" ? "oldParent" : "currentParent";
+    return [detectorSide(raw, side), raw?.[parentKey], raw?.[camelParentKey], raw?.parent].filter(value => value != null);
+  }
+
+  function locationSources(raw, side) {
+    const ownerKey = side === "old" ? "source_owner" : "target_owner";
+    const ownerCamel = side === "old" ? "sourceOwner" : "targetOwner";
+    return [...detectorSideSources(raw, side), raw?.[ownerKey], raw?.[ownerCamel]].filter(value => value != null);
+  }
+
+  function extractedObject(raw) {
+    return raw?.extracted_element || raw?.extractedElement || raw?.extracted_function || raw?.extractedFunction;
+  }
+
+  function extractionParent(raw) {
+    return raw?.extraction_parent || raw?.extractionParent;
+  }
+
+  function inlinedObject(raw) {
+    return raw?.inlined_function || raw?.inlinedFunction;
+  }
+
+  function inliningParent(raw) {
+    return raw?.inlining_parent || raw?.inliningParent;
+  }
+
+  function moveLocationSources(raw, side) {
+    if (side === "old") {
+      return [...locationSources(raw, "old"), raw?.source_owner, raw?.sourceOwner, inlinedObject(raw), extractionParent(raw)].filter(value => value != null);
+    }
+    return [...locationSources(raw, "current"), raw?.target_owner, raw?.targetOwner, extractedObject(raw), inliningParent(raw)].filter(value => value != null);
+  }
+
+  function firstHighlightValue(raw, side, paths) {
+    for (const source of detectorSideSources(raw, side)) {
+      const value = firstValue(source, paths);
+      if (compactHighlightText(value)) return value;
+    }
+    if (paths.includes("path") && compactHighlightText(raw?.path)) return raw.path;
+    return undefined;
+  }
+
+  function addHighlightValue(container, label, value) {
+    const rendered = compactHighlightText(value);
+    if (!rendered) return false;
+    addDetectionValue(container, label, rendered);
+    return true;
+  }
+
+  function renderInterpretationHighlights(reviewCase) {
+    const raw = reviewCase.rawRefactoring || {};
+    const fields = document.getElementById("interpretation-highlights-fields");
+    if (!fields) return;
+    fields.replaceChildren();
+    const type = detectorType(reviewCase);
+    const action = detectorAction(type);
+    const spec = detectorHighlightSpec(type);
+    let rendered = false;
+
+    if (typeHasWord(type, "extract")) {
+      const extracted = extractedObject(raw);
+      const parent = extractionParent(raw);
+      rendered = addHighlightValue(fields, "Extracted function", firstValue(extracted, ["name", "call", "value", "description"])) || rendered;
+      rendered = addHighlightValue(fields, "Extraction parent", firstValue(parent, ["name", "call", "value", "description"])) || rendered;
+      if (typeHasWord(type, "move")) {
+        rendered = addLocationChange(
+          fields,
+          "Location",
+          firstLocation(moveLocationSources(raw, "old")),
+          firstLocation(moveLocationSources(raw, "current")),
+          sourceEvidence(reviewCase, "old"),
+          sourceEvidence(reviewCase, "current")
+        ) || rendered;
+      } else {
+        rendered = addLocationValue(fields, "Location", findLocationInfo(extracted) || firstLocation([parent]), sourceEvidence(reviewCase, "current")) || rendered;
+      }
+    } else if (typeHasWord(type, "move")) {
+      rendered = addLocationChange(
+        fields,
+        "Location",
+        firstLocation(moveLocationSources(raw, "old")),
+        firstLocation(moveLocationSources(raw, "current")),
+        sourceEvidence(reviewCase, "old"),
+        sourceEvidence(reviewCase, "current")
+      ) || rendered;
+    } else {
+      const oldValue = firstHighlightValue(raw, "old", spec.paths);
+      const currentValue = firstHighlightValue(raw, "current", spec.paths);
+      if (action === "add") {
+        rendered = addHighlightValue(fields, "Added", currentValue) || rendered;
+        rendered = addLocationValue(fields, "Location", firstLocation(locationSources(raw, "current")), sourceEvidence(reviewCase, "current")) || rendered;
+      } else if (action === "remove") {
+        rendered = addHighlightValue(fields, "Removed", oldValue) || rendered;
+        rendered = addLocationValue(fields, "Location", firstLocation(locationSources(raw, "old")), sourceEvidence(reviewCase, "old")) || rendered;
+      } else {
+        if (compactHighlightText(oldValue) || compactHighlightText(currentValue)) {
+          addDetectionChange(fields, spec.label, oldValue, currentValue, compactHighlightText);
+          rendered = true;
+        }
+        rendered = addLocationChange(
+          fields,
+          "Location",
+          firstLocation(locationSources(raw, "old")),
+          firstLocation(locationSources(raw, "current")),
+          sourceEvidence(reviewCase, "old"),
+          sourceEvidence(reviewCase, "current")
+        ) || rendered;
+      }
+    }
+
+    if (rendered) return;
+    const empty = document.createElement("div");
+    empty.className = "interpretation-empty";
+    empty.textContent = "No interpreted highlight available in miner result";
+    fields.append(empty);
+  }
+
   function renderDetectorDetails(raw) {
     const container = document.getElementById("detector-details-content");
     if (!container) return;
@@ -482,10 +848,12 @@
     const type = String(raw?.type || "").toLowerCase();
     const isAdd = type.startsWith("add ") || type.includes(" add ");
     const isRemove = type.startsWith("remove ") || type.startsWith("delete ") || type.includes(" remove ") || type.includes(" delete ");
-    const sections = [
+    let sections = [
       ["Old content", detectorSide(raw, "old"), "old-content-json"],
       ["Current content", detectorSide(raw, "current"), "current-content-json"]
-    ].filter(([label]) => !(isAdd && label === "Old content") && !(isRemove && label === "Current content"));
+    ].filter(([, value]) => value != null)
+      .filter(([label]) => !(isAdd && label === "Old content") && !(isRemove && label === "Current content"));
+    if (!sections.length && raw) sections = [["Full miner result", raw, "full-miner-result-json"]];
     for (const [label, value, id] of sections) {
       const details = document.createElement("details");
       details.className = "json-section";
@@ -592,6 +960,7 @@
       document.getElementById("case-id").textContent = reviewCase.caseID;
       document.getElementById("case-type").textContent = detectorType(reviewCase);
       renderDetectionSummary(reviewCase);
+      renderInterpretationHighlights(reviewCase);
       renderDetectorDetails(reviewCase.rawRefactoring || {});
       const metadata = document.getElementById("case-metadata");
       addMetadata(metadata, "Repository", reviewCase.repoName || reviewCase.repoID, reviewCase.repoURL);

@@ -1,63 +1,59 @@
 {
-  "caseID" : "case-eb40665c75d8c59bbfdf2b51",
-  "commitHash" : "89fa98c55ad4ad015687eda8f8b2f660c5863602",
-  "commitMessage" : "Write log/error output from commands to stderr. (#1632)\n\n- Closes #1631.\n- The standard output should only contain result data,\n  so that scripts consuming stdout don't need to scrape.",
-  "commitURL" : "https://github.com/apple/container/commit/89fa98c55ad4ad015687eda8f8b2f660c5863602",
-  "durationSeconds" : 4.898285984992981,
-  "entityNames" : [
+  "caseID": "case-eb40665c75d8c59bbfdf2b51",
+  "commitHash": "89fa98c55ad4ad015687eda8f8b2f660c5863602",
+  "commitMessage": "Write log/error output from commands to stderr. (#1632)\n\n- Closes #1631.\n- The standard output should only contain result data,\n  so that scripts consuming stdout don't need to scrape.",
+  "commitURL": "https://github.com/apple/container/commit/89fa98c55ad4ad015687eda8f8b2f660c5863602",
+  "durationSeconds": 4.898285984992981,
+  "entityNames": [
     "testContainerPruneStoppedContainers"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "#expect(!output.contains(\"Reclaimed Zero KB in disk space\"), \"reclaimed spaces should not Zero KB\")",
-      "index" : 21
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "#expect(!output.contains(\"Reclaimed Zero KB in disk space\"), \"reclaimed spaces should not Zero KB\")",
+      "index": 21
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Test"
+          "annotation": {
+            "unsupported": {
+              "_0": "Test"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "let testName = getTestName()\n        let npcName = \"\\(testName)_wont_be_pruned\"\n        let pc0Name = \"\\(testName)_pruned_0\"\n        let pc1Name = \"\\(testName)_pruned_1\"\n\n        try doLongRun(name: npcName, containerArgs: [\"sleep\", \"3600\"], autoRemove: true)\n        try doLongRun(name: pc0Name, containerArgs: [\"sleep\", \"3600\"], autoRemove: false)\n        try doLongRun(name: pc1Name, containerArgs: [\"sleep\", \"3600\"], autoRemove: false)\n        defer {\n            try? doStop(name: npcName)\n            try? doStop(name: pc0Name)\n            try? doStop(name: pc1Name)\n            try? doRemove(name: npcName)\n            try? doRemove(name: pc0Name)\n            try? doRemove(name: pc1Name)\n        }\n        try waitForContainerRunning(npcName)\n        try waitForContainerRunning(pc0Name)\n        try waitForContainerRunning(pc1Name)\n\n        try doStop(name: pc0Name)\n        try doStop(name: pc1Name)\n\n        let pc0Id = try getContainerId(pc0Name)\n        let pc1Id = try getContainerId(pc1Name)\n\n        // Poll status until both containers are stopped, with interval checks and a timeout to avoid infinite loop\n        let start = Date()\n        let timeout: TimeInterval = 30  // seconds\n        while true {\n            let s0 = try getContainerStatus(pc0Name)\n            let s1 = try getContainerStatus(pc1Name)\n            if s0 == \"stopped\" && s1 == \"stopped\" { break }\n            if Date().timeIntervalSince(start) > timeout {\n                throw CLIError.executionFailed(\"Timeout waiting for containers to stop: pc0=\\(s0), pc1=\\(s1)\")\n            }\n            Thread.sleep(forTimeInterval: 0.2)\n        }\n\n        let (_, output, error, status) = try run(arguments: [\"prune\"])\n\n        if status != 0 {\n            throw CLIError.executionFailed(\"container prune failed: \\(error)\")\n        }\n\n        #expect(output.contains(pc0Id) && output.contains(pc1Id), \"should show the stopped containers id\")\n        #expect(!output.contains(\"Reclaimed Zero KB in disk space\"), \"reclaimed spaces should not Zero KB\")\n\n        let checkStatus = try getContainerStatus(npcName)\n        #expect(checkStatus == \"running\", \"not pruned container should still be running\")"
+      "body": {
+        "content": "let testName = getTestName()\n        let npcName = \"\\(testName)_wont_be_pruned\"\n        let pc0Name = \"\\(testName)_pruned_0\"\n        let pc1Name = \"\\(testName)_pruned_1\"\n\n        try doLongRun(name: npcName, containerArgs: [\"sleep\", \"3600\"], autoRemove: true)\n        try doLongRun(name: pc0Name, containerArgs: [\"sleep\", \"3600\"], autoRemove: false)\n        try doLongRun(name: pc1Name, containerArgs: [\"sleep\", \"3600\"], autoRemove: false)\n        defer {\n            try? doStop(name: npcName)\n            try? doStop(name: pc0Name)\n            try? doStop(name: pc1Name)\n            try? doRemove(name: npcName)\n            try? doRemove(name: pc0Name)\n            try? doRemove(name: pc1Name)\n        }\n        try waitForContainerRunning(npcName)\n        try waitForContainerRunning(pc0Name)\n        try waitForContainerRunning(pc1Name)\n\n        try doStop(name: pc0Name)\n        try doStop(name: pc1Name)\n\n        let pc0Id = try getContainerId(pc0Name)\n        let pc1Id = try getContainerId(pc1Name)\n\n        // Poll status until both containers are stopped, with interval checks and a timeout to avoid infinite loop\n        let start = Date()\n        let timeout: TimeInterval = 30  // seconds\n        while true {\n            let s0 = try getContainerStatus(pc0Name)\n            let s1 = try getContainerStatus(pc1Name)\n            if s0 == \"stopped\" && s1 == \"stopped\" { break }\n            if Date().timeIntervalSince(start) > timeout {\n                throw CLIError.executionFailed(\"Timeout waiting for containers to stop: pc0=\\(s0), pc1=\\(s1)\")\n            }\n            Thread.sleep(forTimeInterval: 0.2)\n        }\n\n        let (_, output, error, status) = try run(arguments: [\"prune\"])\n\n        if status != 0 {\n            throw CLIError.executionFailed(\"container prune failed: \\(error)\")\n        }\n\n        #expect(output.contains(pc0Id) && output.contains(pc1Id), \"should show the stopped containers id\")\n        #expect(!output.contains(\"Reclaimed Zero KB in disk space\"), \"reclaimed spaces should not Zero KB\")\n\n        let checkStatus = try getContainerStatus(npcName)\n        #expect(checkStatus == \"running\", \"not pruned container should still be running\")"
       },
-      "location_info" : {
-        "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLIPrune.swift",
-        "location" : {
-          "end_position" : 3630,
-          "start_position" : 1371
+      "location_info": {
+        "file_path": "Tests/CLITests/Subcommands/Containers/TestCLIPrune.swift",
+        "location": {
+          "end_position": 3630,
+          "start_position": 1371,
+          "start_line": 33,
+          "end_line": 86
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testContainerPruneStoppedContainers",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "description" : "throws",
-        "throws_specifier" : "throws"
+      "modifiers": [],
+      "name": "testContainerPruneStoppedContainers",
+      "parameters": [],
+      "specifiers_decl": {
+        "description": "throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 24,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 24,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/CLITests/Subcommands/Containers/TestCLIPrune.swift"
   ]
 }

@@ -1,58 +1,54 @@
 {
-  "caseID" : "case-941976f05dc2dbcaaac1d6fa",
-  "commitHash" : "aa7fef3d1d61a4ea8156203cb61817862877a635",
-  "commitMessage" : "Route `container image save` reference list to stderr in stdout mode (#1804)\n\n- Fixes #1801.\n- When `container image save` runs without `--output`,\n  stdout carries the OCI tar archive. The command writes \n  the archive bytes to stdout and then `print(reference)`s\n  each saved image reference to stdout afterward,\n  appending non-archive text after the tar EOF marker,\n  which will cause strict tar/OCI consumers to fail.\n- This routes the saved-reference list to stderr in the\n  no-`--output` branch, so stdout contains only archive\n  bytes. When saving to a file via `--output`, stdout is\n  free, so the references continue to print to stdout\n  exactly as before.\n\nCo-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>",
-  "commitURL" : "https://github.com/apple/container/commit/aa7fef3d1d61a4ea8156203cb61817862877a635",
-  "durationSeconds" : 1.7922130823135376,
-  "entityNames" : [
+  "caseID": "case-941976f05dc2dbcaaac1d6fa",
+  "commitHash": "aa7fef3d1d61a4ea8156203cb61817862877a635",
+  "commitMessage": "Route `container image save` reference list to stderr in stdout mode (#1804)\n\n- Fixes #1801.\n- When `container image save` runs without `--output`,\n  stdout carries the OCI tar archive. The command writes \n  the archive bytes to stdout and then `print(reference)`s\n  each saved image reference to stdout afterward,\n  appending non-archive text after the tar EOF marker,\n  which will cause strict tar/OCI consumers to fail.\n- This routes the saved-reference list to stderr in the\n  no-`--output` branch, so stdout contains only archive\n  bytes. When saving to a file via `--output`, stdout is\n  free, so the references continue to print to stdout\n  exactly as before.\n\nCo-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>",
+  "commitURL": "https://github.com/apple/container/commit/aa7fef3d1d61a4ea8156203cb61817862877a635",
+  "durationSeconds": 1.7922130823135376,
+  "entityNames": [
     "testImageSaveToStdoutProducesCleanArchive"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Test"
+          "annotation": {
+            "unsupported": {
+              "_0": "Test"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "do {\n            // 1. pull and tag an image to save\n            try doPull(imageName: alpine)\n            let alpineRef: Reference = try Reference.parse(alpine)\n            let alpineTagged = \"\\(alpineRef.name):testImageSaveToStdout\"\n            try doImageTag(image: alpine, newName: alpineTagged)\n            defer {\n                try? doRemoveImages(images: [alpineTagged])\n            }\n\n            // 2. save to stdout (no --output): stdout is the archive stream\n            let saveArgs = [\n                \"image\",\n                \"save\",\n                alpineTagged,\n            ]\n            let (outputData, _, error, status) = try run(arguments: saveArgs)\n            if status != 0 {\n                throw CLIError.executionFailed(\"save to stdout failed: \\(error)\")\n            }\n\n            // 3. The archive on stdout must end at the tar EOF marker (two\n            //    512-byte zero blocks). With the bug, the saved-reference list\n            //    is printed to stdout after the archive, so the trailing bytes\n            //    are reference text rather than the tar EOF zeros (#1801).\n            #expect(outputData.count >= 1024, \"stdout archive is too small to contain a tar EOF marker\")\n            let trailer = outputData.suffix(1024)\n            #expect(trailer.allSatisfy { $0 == 0 }, \"stdout archive has trailing non-archive bytes after the tar EOF marker\")\n\n            // 4. The saved-reference list is still surfaced, on stderr.\n            #expect(error.contains(alpineTagged), \"expected the saved image reference on stderr\")\n        } catch {\n            Issue.record(\"failed to save image to stdout \\(error)\")\n            return\n        }"
+      "body": {
+        "content": "do {\n            // 1. pull and tag an image to save\n            try doPull(imageName: alpine)\n            let alpineRef: Reference = try Reference.parse(alpine)\n            let alpineTagged = \"\\(alpineRef.name):testImageSaveToStdout\"\n            try doImageTag(image: alpine, newName: alpineTagged)\n            defer {\n                try? doRemoveImages(images: [alpineTagged])\n            }\n\n            // 2. save to stdout (no --output): stdout is the archive stream\n            let saveArgs = [\n                \"image\",\n                \"save\",\n                alpineTagged,\n            ]\n            let (outputData, _, error, status) = try run(arguments: saveArgs)\n            if status != 0 {\n                throw CLIError.executionFailed(\"save to stdout failed: \\(error)\")\n            }\n\n            // 3. The archive on stdout must end at the tar EOF marker (two\n            //    512-byte zero blocks). With the bug, the saved-reference list\n            //    is printed to stdout after the archive, so the trailing bytes\n            //    are reference text rather than the tar EOF zeros (#1801).\n            #expect(outputData.count >= 1024, \"stdout archive is too small to contain a tar EOF marker\")\n            let trailer = outputData.suffix(1024)\n            #expect(trailer.allSatisfy { $0 == 0 }, \"stdout archive has trailing non-archive bytes after the tar EOF marker\")\n\n            // 4. The saved-reference list is still surfaced, on stderr.\n            #expect(error.contains(alpineTagged), \"expected the saved image reference on stderr\")\n        } catch {\n            Issue.record(\"failed to save image to stdout \\(error)\")\n            return\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/CLITests/Subcommands/Images/TestCLIImagesCommand.swift",
-        "location" : {
-          "end_position" : 12065,
-          "start_position" : 10304
+      "location_info": {
+        "file_path": "Tests/CLITests/Subcommands/Images/TestCLIImagesCommand.swift",
+        "location": {
+          "end_position": 12065,
+          "start_position": 10304,
+          "start_line": 267,
+          "end_line": 305
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testImageSaveToStdoutProducesCleanArchive",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "description" : "throws",
-        "throws_specifier" : "throws"
+      "modifiers": [],
+      "name": "testImageSaveToStdoutProducesCleanArchive",
+      "parameters": [],
+      "specifiers_decl": {
+        "description": "throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add function refactoring"
+    "type": "Add function refactoring"
   },
-  "refactoringIndex" : 2,
-  "refactoringType" : "Add function refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 2,
+  "refactoringType": "Add function refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/CLITests/Subcommands/Images/TestCLIImagesCommand.swift"
   ]
 }

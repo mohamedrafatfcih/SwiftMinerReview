@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-dc677a46f7518e5c5fc8be44",
-  "commitHash" : "e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
-  "commitMessage" : "Add WebSocketRequest Under @_spi(WebSocket) (#3455)\n\n### Goals :soccer:\r\nThis PR adds `WebSocketRequest`, an Alamofire wrapper around\r\n`URLSessionWebSocketTask`, as well as assorted functionality for dealing\r\nwith WebSockets. This includes:\r\n\r\n- Automatic listening: no more manual `listen` calls on the task.\r\n- Automatic ping support: ping the server automatically given an\r\ninterval.\r\n- Response serialization support: parse messages into objects, including\r\nusing `Decodable`.\r\n- Concurrency support: full streams of events and messages.\r\n\r\n### Implementation Details :construction:\r\n`WebSocketRequest` follows most of Alamofire's existing patterns. There\r\nare a few differences:\r\n\r\n- Closure vs. cancellation: web sockets can close expectedly, yet this\r\nclosure produces an error from `URLSession`. This had to be customized\r\nin order to ignore the error and allow the user to close a connection\r\nwith no additional issue.\r\n- Like `DataStreamRequest`, `WebSocketRequest` deals with incoming\r\nstreams of data. However, that data is already framed and then partially\r\ndecoded into `Message`s by `URLSession`, so serialization had to be\r\nbuilt at that level.\r\n- Unlike `DataStreamRequest`, `WebSocketRequest` can send `Message` back\r\nup the connection. This requires some queuing on the request side to\r\nensure messages sent before the connection is established are properly\r\nstored for sending.\r\n\r\n### Testing Details :mag:\r\nFull suite of `WebSocketTests` added, as well as the concurrency\r\nversions. Firewalk was updated with several new `websocket` cases to\r\nsupport scenarios like an echo server or expected ping count.\r\n\r\nP.S. This feature was delayed so long due to the many hours of\r\nfrustration I had to deal with when Apple shipped a message dropping bug\r\nin iOS 14.5 - 14.7. In trying to test the socket connections I would\r\nconnect to the test server, have it reply with a message, and then close\r\nthe connection. Shockingly that meant that *sometimes* the messages\r\nwouldn't come through. But sometimes they would. Investigating other web\r\nsocket clients and inspecting network traffic with Wireshark revealed\r\nthat the messages were being sent by the server but the client just\r\nwasn't receiving them. Further investigation showed that delaying the\r\nclose of the connection by 60ms or so let the client receive the message\r\nreliably. After many hours I finally had reliable tests! Only to then\r\ntest on the iOS 15 betas and see that I didn't need the delay at all,\r\nthe tests were reliable without it! Turns out it was just a bug in iOS\r\n14.5 - 14.7. I was so disgusted by this fact that I gave up on the\r\nfeature for years. I'll call out this bug in the documentation.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
-  "durationSeconds" : 15.012655973434448,
-  "entityNames" : [
+  "caseID": "case-dc677a46f7518e5c5fc8be44",
+  "commitHash": "e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "commitMessage": "Add WebSocketRequest Under @_spi(WebSocket) (#3455)\n\n### Goals :soccer:\r\nThis PR adds `WebSocketRequest`, an Alamofire wrapper around\r\n`URLSessionWebSocketTask`, as well as assorted functionality for dealing\r\nwith WebSockets. This includes:\r\n\r\n- Automatic listening: no more manual `listen` calls on the task.\r\n- Automatic ping support: ping the server automatically given an\r\ninterval.\r\n- Response serialization support: parse messages into objects, including\r\nusing `Decodable`.\r\n- Concurrency support: full streams of events and messages.\r\n\r\n### Implementation Details :construction:\r\n`WebSocketRequest` follows most of Alamofire's existing patterns. There\r\nare a few differences:\r\n\r\n- Closure vs. cancellation: web sockets can close expectedly, yet this\r\nclosure produces an error from `URLSession`. This had to be customized\r\nin order to ignore the error and allow the user to close a connection\r\nwith no additional issue.\r\n- Like `DataStreamRequest`, `WebSocketRequest` deals with incoming\r\nstreams of data. However, that data is already framed and then partially\r\ndecoded into `Message`s by `URLSession`, so serialization had to be\r\nbuilt at that level.\r\n- Unlike `DataStreamRequest`, `WebSocketRequest` can send `Message` back\r\nup the connection. This requires some queuing on the request side to\r\nensure messages sent before the connection is established are properly\r\nstored for sending.\r\n\r\n### Testing Details :mag:\r\nFull suite of `WebSocketTests` added, as well as the concurrency\r\nversions. Firewalk was updated with several new `websocket` cases to\r\nsupport scenarios like an echo server or expected ping count.\r\n\r\nP.S. This feature was delayed so long due to the many hours of\r\nfrustration I had to deal with when Apple shipped a message dropping bug\r\nin iOS 14.5 - 14.7. In trying to test the socket connections I would\r\nconnect to the test server, have it reply with a message, and then close\r\nthe connection. Shockingly that meant that *sometimes* the messages\r\nwouldn't come through. But sometimes they would. Investigating other web\r\nsocket clients and inspecting network traffic with Wireshark revealed\r\nthat the messages were being sent by the server but the client just\r\nwasn't receiving them. Further investigation showed that delaying the\r\nclose of the connection by 60ms or so let the client receive the message\r\nreliably. After many hours I finally had reliable tests! Only to then\r\ntest on the iOS 15 betas and see that I didn't need the delay at all,\r\nthe tests were reliable without it! Turns out it was just a bug in iOS\r\n14.5 - 14.7. I was so disgusted by this fact that I gave up on the\r\nfeature for years. I'll call out this bug in the documentation.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "durationSeconds": 15.012655973434448,
+  "entityNames": [
     "HTTPHeaders?",
     "ParameterEncoder",
     "Parameters?",
@@ -14,307 +14,289 @@
     "WebSocketRequest",
     "WebSocketRequest.Configuration"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "available" : {
-
-            }
+          "annotation": {
+            "available": {}
           },
-          "arguments" : [
+          "arguments": [
             {
-              "label" : "macOS",
-              "value" : "10.15"
+              "label": "macOS",
+              "value": "10.15"
             },
             {
-              "value" : ","
+              "value": ","
             },
             {
-              "label" : "iOS",
-              "value" : "13"
+              "label": "iOS",
+              "value": "13"
             },
             {
-              "value" : ","
+              "value": ","
             },
             {
-              "label" : "tvOS",
-              "value" : "13"
+              "label": "tvOS",
+              "value": "13"
             },
             {
-              "value" : ","
+              "value": ","
             },
             {
-              "label" : "watchOS",
-              "value" : "6"
+              "label": "watchOS",
+              "value": "6"
             },
             {
-              "value" : ","
+              "value": ","
             },
             {
-              "value" : "*"
+              "value": "*"
             }
           ]
         },
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "_spi"
+          "annotation": {
+            "unsupported": {
+              "_0": "_spi"
             }
           },
-          "arguments" : [
+          "arguments": [
             {
-              "value" : "WebSocket"
+              "value": "WebSocket"
             }
           ]
         }
       ],
-      "body" : {
-        "content" : "let convertible = RequestEncodableConvertible(url: url,\n                                                      method: .get,\n                                                      parameters: parameters,\n                                                      encoder: encoder,\n                                                      headers: headers,\n                                                      requestModifier: requestModifier)\n        let request = WebSocketRequest(convertible: convertible,\n                                       configuration: configuration,\n                                       underlyingQueue: rootQueue,\n                                       serializationQueue: serializationQueue,\n                                       eventMonitor: eventMonitor,\n                                       interceptor: interceptor,\n                                       delegate: self)\n\n        perform(request)\n\n        return request"
+      "body": {
+        "content": "let convertible = RequestEncodableConvertible(url: url,\n                                                      method: .get,\n                                                      parameters: parameters,\n                                                      encoder: encoder,\n                                                      headers: headers,\n                                                      requestModifier: requestModifier)\n        let request = WebSocketRequest(convertible: convertible,\n                                       configuration: configuration,\n                                       underlyingQueue: rootQueue,\n                                       serializationQueue: serializationQueue,\n                                       eventMonitor: eventMonitor,\n                                       interceptor: interceptor,\n                                       delegate: self)\n\n        perform(request)\n\n        return request"
       },
-      "generic_clause" : "<Parameters>",
-      "location_info" : {
-        "file_path" : "Source/Session.swift",
-        "location" : {
-          "end_position" : 31819,
-          "start_position" : 30331
+      "generic_clause": "<Parameters>",
+      "location_info": {
+        "file_path": "Source/Session.swift",
+        "location": {
+          "end_position": 31819,
+          "start_position": 30331,
+          "start_line": 482,
+          "end_line": 511
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "open"
       ],
-      "name" : "webSocketRequest",
-      "parameters" : [
+      "name": "webSocketRequest",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "URLConvertible"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "URLConvertible"
           },
-          "is_variadic" : false,
-          "label" : "to",
-          "location_info" : {
-            "file_path" : "Source/Session.swift",
-            "location" : {
-              "end_position" : 30484,
-              "start_position" : 30452
+          "is_variadic": false,
+          "label": "to",
+          "location_info": {
+            "file_path": "Source/Session.swift",
+            "location": {
+              "end_position": 30484,
+              "start_position": 30452,
+              "start_line": 485,
+              "end_line": 486
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "url",
-          "order" : 0
+          "modifiers": [],
+          "name": "url",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "WebSocketRequest.Configuration"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "WebSocketRequest.Configuration"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "reference" : {
-                "arguments" : [
-
-                ],
-                "name" : "default"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "reference": {
+                "arguments": [],
+                "name": "default"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Source/Session.swift",
-            "location" : {
-              "end_position" : 30550,
-              "start_position" : 30484
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Source/Session.swift",
+            "location": {
+              "end_position": 30550,
+              "start_position": 30484,
+              "start_line": 486,
+              "end_line": 487
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "configuration",
-          "order" : 1
+          "modifiers": [],
+          "name": "configuration",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "Parameters?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "Parameters?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Source/Session.swift",
-            "location" : {
-              "end_position" : 30589,
-              "start_position" : 30550
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Source/Session.swift",
+            "location": {
+              "end_position": 30589,
+              "start_position": 30550,
+              "start_line": 487,
+              "end_line": 488
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "parameters",
-          "order" : 2
+          "modifiers": [],
+          "name": "parameters",
+          "order": 2
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "ParameterEncoder"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "ParameterEncoder"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "reference" : {
-                "arguments" : [
-
-                ],
-                "name" : "default"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "reference": {
+                "arguments": [],
+                "name": "default"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Source/Session.swift",
-            "location" : {
-              "end_position" : 30665,
-              "start_position" : 30589
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Source/Session.swift",
+            "location": {
+              "end_position": 30665,
+              "start_position": 30589,
+              "start_line": 488,
+              "end_line": 489
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "encoder",
-          "order" : 3
+          "modifiers": [],
+          "name": "encoder",
+          "order": 3
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "HTTPHeaders?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "HTTPHeaders?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Source/Session.swift",
-            "location" : {
-              "end_position" : 30702,
-              "start_position" : 30665
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Source/Session.swift",
+            "location": {
+              "end_position": 30702,
+              "start_position": 30665,
+              "start_line": 489,
+              "end_line": 490
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "headers",
-          "order" : 4
+          "modifiers": [],
+          "name": "headers",
+          "order": 4
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "RequestInterceptor?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "RequestInterceptor?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Source/Session.swift",
-            "location" : {
-              "end_position" : 30750,
-              "start_position" : 30702
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Source/Session.swift",
+            "location": {
+              "end_position": 30750,
+              "start_position": 30702,
+              "start_line": 490,
+              "end_line": 491
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "interceptor",
-          "order" : 5
+          "modifiers": [],
+          "name": "interceptor",
+          "order": 5
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "RequestModifier?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "RequestModifier?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Source/Session.swift",
-            "location" : {
-              "end_position" : 30798,
-              "start_position" : 30750
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Source/Session.swift",
+            "location": {
+              "end_position": 30798,
+              "start_position": 30750,
+              "start_line": 491,
+              "end_line": 492
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "requestModifier",
-          "order" : 6
+          "modifiers": [],
+          "name": "requestModifier",
+          "order": 6
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "WebSocketRequest"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "WebSocketRequest"
         },
-        "description" : "-> WebSocketRequest"
+        "description": "-> WebSocketRequest"
       },
-      "where_clause" : "where Parameters: Encodable"
+      "where_clause": "where Parameters: Encodable"
     },
-    "type" : "Add function refactoring"
+    "type": "Add function refactoring"
   },
-  "refactoringIndex" : 30,
-  "refactoringType" : "Add function refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 30,
+  "refactoringType": "Add function refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Session.swift"
   ]
 }

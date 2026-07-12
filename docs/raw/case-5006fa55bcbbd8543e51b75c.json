@@ -1,131 +1,115 @@
 {
-  "caseID" : "case-5006fa55bcbbd8543e51b75c",
-  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "durationSeconds" : 31.880328059196472,
-  "entityNames" : [
+  "caseID": "case-5006fa55bcbbd8543e51b75c",
+  "commitHash": "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage": "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds": 31.880328059196472,
+  "entityNames": [
     "Self",
     "needsToPerform",
     "resume"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "function_call" : {
-            "_0" : {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
-
-              ],
-              "call" : "write",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Source/Core/Request.swift",
-                "location" : {
-                  "end_position" : 31777,
-                  "start_position" : 31332
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "function_call": {
+            "_0": {
+              "additional_trailing_closures": [],
+              "arguments": [],
+              "call": "write",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Source/Core/Request.swift",
+                "location": {
+                  "end_position": 31777,
+                  "start_position": 31332,
+                  "start_line": 731,
+                  "end_line": 743
                 }
               },
-              "trailing_closure" : {
-                "attributes" : [
-
-                ],
-                "body" : {
-                  "content" : "guard mutableState.state.canTransitionTo(.resumed) else { return false }\n\n            mutableState.state = .resumed\n\n            underlyingQueue.async { self.didResume() }\n\n            guard let task = mutableState.tasks.last, task.state != .completed else { return true }\n\n            task.resume()\n            underlyingQueue.async { self.didResumeTask(task) }\n            return true"
+              "trailing_closure": {
+                "attributes": [],
+                "body": {
+                  "content": "guard mutableState.state.canTransitionTo(.resumed) else { return false }\n\n            mutableState.state = .resumed\n\n            underlyingQueue.async { self.didResume() }\n\n            guard let task = mutableState.tasks.last, task.state != .completed else { return true }\n\n            task.resume()\n            underlyingQueue.async { self.didResumeTask(task) }\n            return true"
                 },
-                "captures" : [
-
-                ],
-                "location_info" : {
-                  "file_path" : "Source/Core/Request.swift",
-                  "location" : {
-                    "end_position" : 31777,
-                    "start_position" : 31351
+                "captures": [],
+                "location_info": {
+                  "file_path": "Source/Core/Request.swift",
+                  "location": {
+                    "end_position": 31777,
+                    "start_position": 31351,
+                    "start_line": 731,
+                    "end_line": 743
                   }
                 },
-                "parameters" : [
-
-                ]
+                "parameters": []
               }
             }
           }
         }
       },
-      "is_constant" : true,
-      "location_info" : {
-        "file_path" : "Source/Core/Request.swift",
-        "location" : {
-          "end_position" : 31777,
-          "start_position" : 31315
+      "is_constant": true,
+      "location_info": {
+        "file_path": "Source/Core/Request.swift",
+        "location": {
+          "end_position": 31777,
+          "start_position": 31315,
+          "start_line": 731,
+          "end_line": 743
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "needsToPerform"
+      "modifiers": [],
+      "name": "needsToPerform"
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "discardable_result" : {
-
-            }
+          "annotation": {
+            "discardable_result": {}
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "let needsToPerform = mutableState.write { mutableState in\n            guard mutableState.state.canTransitionTo(.resumed) else { return false }\n\n            mutableState.state = .resumed\n\n            underlyingQueue.async { self.didResume() }\n\n            guard let task = mutableState.tasks.last, task.state != .completed else { return true }\n\n            task.resume()\n            underlyingQueue.async { self.didResumeTask(task) }\n            return true\n        }\n\n        if needsToPerform {\n            delegate?.readyToPerform(request: self)\n        }\n\n        return self"
+      "body": {
+        "content": "let needsToPerform = mutableState.write { mutableState in\n            guard mutableState.state.canTransitionTo(.resumed) else { return false }\n\n            mutableState.state = .resumed\n\n            underlyingQueue.async { self.didResume() }\n\n            guard let task = mutableState.tasks.last, task.state != .completed else { return true }\n\n            task.resume()\n            underlyingQueue.async { self.didResumeTask(task) }\n            return true\n        }\n\n        if needsToPerform {\n            delegate?.readyToPerform(request: self)\n        }\n\n        return self"
       },
-      "location_info" : {
-        "file_path" : "Source/Core/Request.swift",
-        "location" : {
-          "end_position" : 31895,
-          "start_position" : 31172
+      "location_info": {
+        "file_path": "Source/Core/Request.swift",
+        "location": {
+          "end_position": 31895,
+          "start_position": 31172,
+          "start_line": 724,
+          "end_line": 750
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "resume",
-      "parameters" : [
-
-      ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "Self"
+      "name": "resume",
+      "parameters": [],
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "Self"
         },
-        "description" : "-> Self"
+        "description": "-> Self"
       }
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 59,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 59,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Core/Request.swift"
   ]
 }

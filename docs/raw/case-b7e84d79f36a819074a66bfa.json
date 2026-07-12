@@ -1,73 +1,71 @@
 {
-  "caseID" : "case-b7e84d79f36a819074a66bfa",
-  "commitHash" : "55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
-  "commitMessage" : "feat: add Combined Display Mode (#1763)\n\n* feat: add Combined Display Mode\n\nAdd a setting to treat multiple monitors as a single virtual display,\nso window actions (half, center, maximize, corners, etc.) operate across\nall connected monitors at once.\n\nSettings window: \"Treat multiple monitors as one\" checkbox with description,\nseparated by a divider line from other options. Localized via NSLocalizedString\nwith Korean translation in Main.xcstrings.\n\nWhen enabled:\n- All window calculations receive a combined bounding frame of all monitors\n- BestEffortWindowMover uses the combined frame to avoid single-screen clamping\n- Left/Right half, Center, CenterProminently respect the combined frame\n- Next/Previous Display menu items are hidden\n\nImplementation:\n- Defaults.combinedDisplayMode (BoolDefault) persists the setting\n- WindowCalculationParameters carries combinedDisplayFrame: CGRect?\n- WindowManager computes the union of all screen visible frames when enabled\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically\nwithout threading a combinedDisplayFrame parameter through\nWindowCalculationParameters and each individual calculation file.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* fix: early return in combined display mode to skip per-screen adjustments\n\nWhen combined display mode is active, return the union immediately so\nstage strip, todo sidebar, and screen edge gap adjustments (all derived\nfrom self, a single NSScreen) are not incorrectly applied to the\nmulti-screen combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically.\nEarly return after the union to avoid incorrectly applying per-screen\nadjustments (stage strip, todo sidebar, edge gaps) to the combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* Remove whitespace changes\n\n* Switch to optional bool default & move checkbox logic into function\n\n* Accommodate todo mode\n\n---------\n\nCo-authored-by: mgrv-dooyeoung <dy.ryu@mgrv.company>\nCo-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>\nCo-authored-by: Ryan Hanson <ryan@ryanhanson.dev>",
-  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
-  "durationSeconds" : 9.0993349552154541,
-  "entityNames" : [
+  "caseID": "case-b7e84d79f36a819074a66bfa",
+  "commitHash": "55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
+  "commitMessage": "feat: add Combined Display Mode (#1763)\n\n* feat: add Combined Display Mode\n\nAdd a setting to treat multiple monitors as a single virtual display,\nso window actions (half, center, maximize, corners, etc.) operate across\nall connected monitors at once.\n\nSettings window: \"Treat multiple monitors as one\" checkbox with description,\nseparated by a divider line from other options. Localized via NSLocalizedString\nwith Korean translation in Main.xcstrings.\n\nWhen enabled:\n- All window calculations receive a combined bounding frame of all monitors\n- BestEffortWindowMover uses the combined frame to avoid single-screen clamping\n- Left/Right half, Center, CenterProminently respect the combined frame\n- Next/Previous Display menu items are hidden\n\nImplementation:\n- Defaults.combinedDisplayMode (BoolDefault) persists the setting\n- WindowCalculationParameters carries combinedDisplayFrame: CGRect?\n- WindowManager computes the union of all screen visible frames when enabled\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically\nwithout threading a combinedDisplayFrame parameter through\nWindowCalculationParameters and each individual calculation file.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* fix: early return in combined display mode to skip per-screen adjustments\n\nWhen combined display mode is active, return the union immediately so\nstage strip, todo sidebar, and screen edge gap adjustments (all derived\nfrom self, a single NSScreen) are not incorrectly applied to the\nmulti-screen combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically.\nEarly return after the union to avoid incorrectly applying per-screen\nadjustments (stage strip, todo sidebar, edge gaps) to the combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* Remove whitespace changes\n\n* Switch to optional bool default & move checkbox logic into function\n\n* Accommodate todo mode\n\n---------\n\nCo-authored-by: mgrv-dooyeoung <dy.ryu@mgrv.company>\nCo-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>\nCo-authored-by: Ryan Hanson <ryan@ryanhanson.dev>",
+  "commitURL": "https://github.com/rxhanson/Rectangle/commit/55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
+  "durationSeconds": 9.099334955215454,
+  "entityNames": [
     "NSMenu",
     "menu",
     "updateWindowActionMenuItems"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "for menuItem in menu.items {\n            guard let windowAction = menuItem.representedObject as? WindowAction else { continue }\n\n            menuItem.image = windowAction.image.copy() as? NSImage\n            menuItem.image?.size = NSSize(width: 18, height: 12)\n            \n            if isPortrait && windowAction.classification == .thirds {\n                menuItem.image = menuItem.image?.rotated(by: 270)\n                menuItem.image?.isTemplate = true\n            }\n\n            if !ApplicationToggle.shortcutsDisabled {\n                if let fullKeyEquivalent = shortcutManager.getKeyEquivalent(action: windowAction),\n                    let keyEquivalent = fullKeyEquivalent.0?.lowercased() {\n                    menuItem.keyEquivalent = keyEquivalent\n                    menuItem.keyEquivalentModifierMask = fullKeyEquivalent.1\n                }\n            }\n            if frontmostWindow == nil {\n                menuItem.isEnabled = false\n            }\n            if screenCount == 1\n                && (windowAction == .nextDisplay || windowAction == .previousDisplay) {\n                menuItem.isEnabled = false\n            }\n        }",
-      "index" : 3
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "for menuItem in menu.items {\n            guard let windowAction = menuItem.representedObject as? WindowAction else { continue }\n\n            menuItem.image = windowAction.image.copy() as? NSImage\n            menuItem.image?.size = NSSize(width: 18, height: 12)\n            \n            if isPortrait && windowAction.classification == .thirds {\n                menuItem.image = menuItem.image?.rotated(by: 270)\n                menuItem.image?.isTemplate = true\n            }\n\n            if !ApplicationToggle.shortcutsDisabled {\n                if let fullKeyEquivalent = shortcutManager.getKeyEquivalent(action: windowAction),\n                    let keyEquivalent = fullKeyEquivalent.0?.lowercased() {\n                    menuItem.keyEquivalent = keyEquivalent\n                    menuItem.keyEquivalentModifierMask = fullKeyEquivalent.1\n                }\n            }\n            if frontmostWindow == nil {\n                menuItem.isEnabled = false\n            }\n            if screenCount == 1\n                && (windowAction == .nextDisplay || windowAction == .previousDisplay) {\n                menuItem.isEnabled = false\n            }\n        }",
+      "index": 3
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let frontmostWindow = AccessibilityElement.getFrontWindowElement()\n        let screenCount = NSScreen.screens.count\n        let isPortrait = NSScreen.main?.frame.isLandscape == false\n\n        for menuItem in menu.items {\n            guard let windowAction = menuItem.representedObject as? WindowAction else { continue }\n\n            menuItem.image = windowAction.image.copy() as? NSImage\n            menuItem.image?.size = NSSize(width: 18, height: 12)\n            \n            if isPortrait && windowAction.classification == .thirds {\n                menuItem.image = menuItem.image?.rotated(by: 270)\n                menuItem.image?.isTemplate = true\n            }\n\n            if !ApplicationToggle.shortcutsDisabled {\n                if let fullKeyEquivalent = shortcutManager.getKeyEquivalent(action: windowAction),\n                    let keyEquivalent = fullKeyEquivalent.0?.lowercased() {\n                    menuItem.keyEquivalent = keyEquivalent\n                    menuItem.keyEquivalentModifierMask = fullKeyEquivalent.1\n                }\n            }\n            if frontmostWindow == nil {\n                menuItem.isEnabled = false\n            }\n            if screenCount == 1\n                && (windowAction == .nextDisplay || windowAction == .previousDisplay) {\n                menuItem.isEnabled = false\n            }\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let frontmostWindow = AccessibilityElement.getFrontWindowElement()\n        let screenCount = NSScreen.screens.count\n        let isPortrait = NSScreen.main?.frame.isLandscape == false\n\n        for menuItem in menu.items {\n            guard let windowAction = menuItem.representedObject as? WindowAction else { continue }\n\n            menuItem.image = windowAction.image.copy() as? NSImage\n            menuItem.image?.size = NSSize(width: 18, height: 12)\n            \n            if isPortrait && windowAction.classification == .thirds {\n                menuItem.image = menuItem.image?.rotated(by: 270)\n                menuItem.image?.isTemplate = true\n            }\n\n            if !ApplicationToggle.shortcutsDisabled {\n                if let fullKeyEquivalent = shortcutManager.getKeyEquivalent(action: windowAction),\n                    let keyEquivalent = fullKeyEquivalent.0?.lowercased() {\n                    menuItem.keyEquivalent = keyEquivalent\n                    menuItem.keyEquivalentModifierMask = fullKeyEquivalent.1\n                }\n            }\n            if frontmostWindow == nil {\n                menuItem.isEnabled = false\n            }\n            if screenCount == 1\n                && (windowAction == .nextDisplay || windowAction == .previousDisplay) {\n                menuItem.isEnabled = false\n            }\n        }"
       },
-      "location_info" : {
-        "file_path" : "Rectangle/AppDelegate.swift",
-        "location" : {
-          "end_position" : 15306,
-          "start_position" : 13878
+      "location_info": {
+        "file_path": "Rectangle/AppDelegate.swift",
+        "location": {
+          "end_position": 15306,
+          "start_position": 13878,
+          "start_line": 351,
+          "end_line": 384
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "updateWindowActionMenuItems",
-      "parameters" : [
+      "name": "updateWindowActionMenuItems",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "NSMenu"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "NSMenu"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Rectangle/AppDelegate.swift",
-            "location" : {
-              "end_position" : 13941,
-              "start_position" : 13929
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Rectangle/AppDelegate.swift",
+            "location": {
+              "end_position": 13941,
+              "start_position": 13929,
+              "start_line": 353,
+              "end_line": 353
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "menu",
-          "order" : 0
+          "modifiers": [],
+          "name": "menu",
+          "order": 0
         }
       ]
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 0,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "rxhanson-rectangle",
-  "repoName" : "rxhanson/Rectangle",
-  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 0,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "rxhanson-rectangle",
+  "repoName": "rxhanson/Rectangle",
+  "repoURL": "https://github.com/rxhanson/Rectangle.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Rectangle/AppDelegate.swift"
   ]
 }

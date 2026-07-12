@@ -1,50 +1,46 @@
 {
-  "caseID" : "case-d5fed6b4e03a782aebc20170",
-  "commitHash" : "57162788f5dc388b5c3692611bcfa179ee8c2067",
-  "commitMessage" : "Fix existential-any for Swift6 (#3881)\n\n### Goals :soccer:\r\nResolve `existential-any` build errors.\r\n\r\n### Implementation Details :construction:\r\n\r\nAdded `any` to each protocols.  \r\n\r\nhttps://github.com/swiftlang/swift-evolution/blob/main/proposals/0335-existential-any.md\r\n\r\nCo-authored-by: Jon Shier <jon@jonshier.com>",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/57162788f5dc388b5c3692611bcfa179ee8c2067",
-  "durationSeconds" : 1755.1486350297928,
-  "entityNames" : [
+  "caseID": "case-d5fed6b4e03a782aebc20170",
+  "commitHash": "57162788f5dc388b5c3692611bcfa179ee8c2067",
+  "commitMessage": "Fix existential-any for Swift6 (#3881)\n\n### Goals :soccer:\r\nResolve `existential-any` build errors.\r\n\r\n### Implementation Details :construction:\r\n\r\nAdded `any` to each protocols.  \r\n\r\nhttps://github.com/swiftlang/swift-evolution/blob/main/proposals/0335-existential-any.md\r\n\r\nCo-authored-by: Jon Shier <jon@jonshier.com>",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/57162788f5dc388b5c3692611bcfa179ee8c2067",
+  "durationSeconds": 1755.1486350297928,
+  "entityNames": [
     "testThatRetriedRequestsCanBeMassCancelled"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "final class OnceRetrier: RequestInterceptor {\n            private var hasRetried = false\n\n            func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {\n                if hasRetried {\n                    var request = urlRequest\n                    request.url = Endpoint.delay(1).url\n                    completion(.success(request))\n                } else {\n                    completion(.success(urlRequest))\n                }\n            }\n\n            func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {\n                completion(hasRetried ? .doNotRetry : .retry)\n                hasRetried = true\n            }\n        }",
-      "index" : 0
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "final class OnceRetrier: RequestInterceptor {\n            private var hasRetried = false\n\n            func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {\n                if hasRetried {\n                    var request = urlRequest\n                    request.url = Endpoint.delay(1).url\n                    completion(.success(request))\n                } else {\n                    completion(.success(urlRequest))\n                }\n            }\n\n            func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {\n                completion(hasRetried ? .doNotRetry : .retry)\n                hasRetried = true\n            }\n        }",
+      "index": 0
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "final class OnceRetrier: RequestInterceptor {\n            private var hasRetried = false\n\n            func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {\n                if hasRetried {\n                    var request = urlRequest\n                    request.url = Endpoint.delay(1).url\n                    completion(.success(request))\n                } else {\n                    completion(.success(urlRequest))\n                }\n            }\n\n            func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {\n                completion(hasRetried ? .doNotRetry : .retry)\n                hasRetried = true\n            }\n        }\n\n        let queue = DispatchQueue(label: \"com.alamofire.testQueue\")\n        let monitor = ClosureEventMonitor(queue: queue)\n        let session = Session(rootQueue: queue, interceptor: OnceRetrier(), eventMonitors: [monitor])\n        let request = Endpoint.status(401)\n        let completion = expectation(description: \"all requests should finish\")\n        let cancellation = expectation(description: \"cancel all requests should be called\")\n        let createTask = expectation(description: \"should create task twice\")\n        createTask.expectedFulfillmentCount = 2\n        var tasksCreated = 0\n        monitor.requestDidCreateTask = { [unowned session] _, _ in\n            tasksCreated += 1\n            createTask.fulfill()\n            // Cancel after the second task is created to ensure proper lifetime events.\n            if tasksCreated == 2 {\n                session.cancelAllRequests {\n                    cancellation.fulfill()\n                }\n            }\n        }\n\n        var received: DataResponse<Data?, AFError>?\n\n        // When\n        session.request(request).validate().response { response in\n            received = response\n            completion.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(received?.error?.isExplicitlyCancelledError, true)\n        assert(on: session.rootQueue) {\n            XCTAssertTrue(session.requestTaskMap.isEmpty, \"requestTaskMap should be empty but has \\(session.requestTaskMap.count) items\")\n            XCTAssertTrue(session.activeRequests.isEmpty, \"activeRequests should be empty but has \\(session.activeRequests.count) items\")\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "final class OnceRetrier: RequestInterceptor {\n            private var hasRetried = false\n\n            func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {\n                if hasRetried {\n                    var request = urlRequest\n                    request.url = Endpoint.delay(1).url\n                    completion(.success(request))\n                } else {\n                    completion(.success(urlRequest))\n                }\n            }\n\n            func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {\n                completion(hasRetried ? .doNotRetry : .retry)\n                hasRetried = true\n            }\n        }\n\n        let queue = DispatchQueue(label: \"com.alamofire.testQueue\")\n        let monitor = ClosureEventMonitor(queue: queue)\n        let session = Session(rootQueue: queue, interceptor: OnceRetrier(), eventMonitors: [monitor])\n        let request = Endpoint.status(401)\n        let completion = expectation(description: \"all requests should finish\")\n        let cancellation = expectation(description: \"cancel all requests should be called\")\n        let createTask = expectation(description: \"should create task twice\")\n        createTask.expectedFulfillmentCount = 2\n        var tasksCreated = 0\n        monitor.requestDidCreateTask = { [unowned session] _, _ in\n            tasksCreated += 1\n            createTask.fulfill()\n            // Cancel after the second task is created to ensure proper lifetime events.\n            if tasksCreated == 2 {\n                session.cancelAllRequests {\n                    cancellation.fulfill()\n                }\n            }\n        }\n\n        var received: DataResponse<Data?, AFError>?\n\n        // When\n        session.request(request).validate().response { response in\n            received = response\n            completion.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(received?.error?.isExplicitlyCancelledError, true)\n        assert(on: session.rootQueue) {\n            XCTAssertTrue(session.requestTaskMap.isEmpty, \"requestTaskMap should be empty but has \\(session.requestTaskMap.count) items\")\n            XCTAssertTrue(session.activeRequests.isEmpty, \"activeRequests should be empty but has \\(session.activeRequests.count) items\")\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/SessionTests.swift",
-        "location" : {
-          "end_position" : 66188,
-          "start_position" : 63677
+      "location_info": {
+        "file_path": "Tests/SessionTests.swift",
+        "location": {
+          "end_position": 66188,
+          "start_position": 63677,
+          "start_line": 1695,
+          "end_line": 1754
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatRetriedRequestsCanBeMassCancelled",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "testThatRetriedRequestsCanBeMassCancelled",
+      "parameters": []
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 963,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 963,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/SessionTests.swift"
   ]
 }

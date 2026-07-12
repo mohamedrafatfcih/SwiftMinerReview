@@ -1,225 +1,189 @@
 {
-  "caseID" : "case-ddc3a8d541a4d2b97836e46f",
-  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
-  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
-  "durationSeconds" : 14.10075306892395,
-  "entityNames" : [
+  "caseID": "case-ddc3a8d541a4d2b97836e46f",
+  "commitHash": "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage": "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds": 14.10075306892395,
+  "entityNames": [
     "TestCLIExecCommand",
     "testCreateExecCommand",
     "testExecDetach",
     "testExecDetachProcessRunning",
     "testExecOnExitingContainer"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doCreate(name: name, image: image)\n            f.addCleanup { try? f.doStop(name) }\n            try f.doStart(name)\n            try await f.waitForContainerRunning(name)\n            let uname = try f.doExec(name, cmd: [\"uname\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(uname == \"Linux\", \"expected OS to be Linux, got \\(uname)\")\n            try f.doStop(name)\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doCreate(name: name, image: image)\n            f.addCleanup { try? f.doStop(name) }\n            try f.doStart(name)\n            try await f.waitForContainerRunning(name)\n            let uname = try f.doExec(name, cmd: [\"uname\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            #expect(uname == \"Linux\", \"expected OS to be Linux, got \\(uname)\")\n            try f.doStop(name)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIExec.swift",
-            "location" : {
-              "end_position" : 1495,
-              "start_position" : 837
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIExec.swift",
+            "location": {
+              "end_position": 1495,
+              "start_position": 837,
+              "start_line": 20,
+              "end_line": 34
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testCreateExecCommand",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testCreateExecCommand",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doCreate(name: name, image: image)\n            f.addCleanup { try? f.doStop(name) }\n            try f.doStart(name)\n            try await f.waitForContainerRunning(name)\n\n            let output = try f.doExec(name, cmd: [\"sh\", \"-c\", \"touch /tmp/detach_test_marker\"], detach: true)\n            try #require(\n                output.trimmingCharacters(in: .whitespacesAndNewlines) == name,\n                \"exec --detach should print the container name\")\n\n            let ls = try f.doExec(name, cmd: [\"ls\", \"/\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(ls.contains(\"tmp\"), \"container should still be running after detached exec\")\n\n            // Retry until the detached process creates the marker file.\n            var markerFound = false\n            for _ in 0..<3 {\n                let result = try f.run([\"exec\", name, \"test\", \"-f\", \"/tmp/detach_test_marker\"])\n                if result.status == 0 {\n                    markerFound = true\n                    break\n                }\n                try await Task.sleep(for: .seconds(1))\n            }\n            try #require(markerFound, \"marker file should be created by detached process within 3 seconds\")\n\n            try f.doStop(name)\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doCreate(name: name, image: image)\n            f.addCleanup { try? f.doStop(name) }\n            try f.doStart(name)\n            try await f.waitForContainerRunning(name)\n\n            let output = try f.doExec(name, cmd: [\"sh\", \"-c\", \"touch /tmp/detach_test_marker\"], detach: true)\n            try #require(\n                output.trimmingCharacters(in: .whitespacesAndNewlines) == name,\n                \"exec --detach should print the container name\")\n\n            let ls = try f.doExec(name, cmd: [\"ls\", \"/\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(ls.contains(\"tmp\"), \"container should still be running after detached exec\")\n\n            // Retry until the detached process creates the marker file.\n            var markerFound = false\n            for _ in 0..<3 {\n                let result = try f.run([\"exec\", name, \"test\", \"-f\", \"/tmp/detach_test_marker\"])\n                if result.status == 0 {\n                    markerFound = true\n                    break\n                }\n                try await Task.sleep(for: .seconds(1))\n            }\n            try #require(markerFound, \"marker file should be created by detached process within 3 seconds\")\n\n            try f.doStop(name)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIExec.swift",
-            "location" : {
-              "end_position" : 2988,
-              "start_position" : 1495
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIExec.swift",
+            "location": {
+              "end_position": 2988,
+              "start_position": 1495,
+              "start_line": 34,
+              "end_line": 68
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testExecDetach",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testExecDetach",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doCreate(name: name, image: image)\n            f.addCleanup { try? f.doStop(name) }\n            try f.doStart(name)\n            try await f.waitForContainerRunning(name)\n\n            let output = try f.doExec(name, cmd: [\"sleep\", \"10\"], detach: true)\n            try #require(\n                output.trimmingCharacters(in: .whitespacesAndNewlines) == name,\n                \"exec --detach should print the container name\")\n\n            let ps = try f.doExec(name, cmd: [\"ps\", \"aux\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(ps.contains(\"sleep 10\"), \"detached 'sleep 10' should appear in ps output\")\n\n            try f.doStop(name)\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            try f.doCreate(name: name, image: image)\n            f.addCleanup { try? f.doStop(name) }\n            try f.doStart(name)\n            try await f.waitForContainerRunning(name)\n\n            let output = try f.doExec(name, cmd: [\"sleep\", \"10\"], detach: true)\n            try #require(\n                output.trimmingCharacters(in: .whitespacesAndNewlines) == name,\n                \"exec --detach should print the container name\")\n\n            let ps = try f.doExec(name, cmd: [\"ps\", \"aux\"])\n                .trimmingCharacters(in: .whitespacesAndNewlines)\n            try #require(ps.contains(\"sleep 10\"), \"detached 'sleep 10' should appear in ps output\")\n\n            try f.doStop(name)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIExec.swift",
-            "location" : {
-              "end_position" : 3930,
-              "start_position" : 2988
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIExec.swift",
+            "location": {
+              "end_position": 3930,
+              "start_position": 2988,
+              "start_line": 68,
+              "end_line": 90
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testExecDetachProcessRunning",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testExecDetachProcessRunning",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            // sh exits immediately in detached mode with no stdin; container stops on its own.\n            try f.doLongRun(name: name, image: image, containerArgs: [\"sh\"], autoRemove: false)\n            f.addCleanup { try? f.doRemove(name) }\n            try await Task.sleep(for: .seconds(1))\n\n            try f.doStart(name)\n            let execResult = try f.run([\"exec\", name, \"sleep\", \"infinity\"])\n            if execResult.status != 0 {\n                #expect(\n                    execResult.error.contains(\"is not running\")\n                        || execResult.error.contains(\"failed to create process\"),\n                    \"expected 'not running' error, got: \\(execResult.error)\")\n            }\n\n            try await Task.sleep(for: .seconds(1))\n            // Container should still exist even if exec failed.\n            _ = try f.getContainerStatus(name)\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            let name = \"\\(f.testID)-c\"\n            // sh exits immediately in detached mode with no stdin; container stops on its own.\n            try f.doLongRun(name: name, image: image, containerArgs: [\"sh\"], autoRemove: false)\n            f.addCleanup { try? f.doRemove(name) }\n            try await Task.sleep(for: .seconds(1))\n\n            try f.doStart(name)\n            let execResult = try f.run([\"exec\", name, \"sleep\", \"infinity\"])\n            if execResult.status != 0 {\n                #expect(\n                    execResult.error.contains(\"is not running\")\n                        || execResult.error.contains(\"failed to create process\"),\n                    \"expected 'not running' error, got: \\(execResult.error)\")\n            }\n\n            try await Task.sleep(for: .seconds(1))\n            // Container should still exist even if exec failed.\n            _ = try f.getContainerStatus(name)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIExec.swift",
-            "location" : {
-              "end_position" : 5042,
-              "start_position" : 3930
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIExec.swift",
+            "location": {
+              "end_position": 5042,
+              "start_position": 3930,
+              "start_line": 90,
+              "end_line": 114
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testExecOnExitingContainer",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testExecOnExitingContainer",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Containers/TestCLIExec.swift",
-        "location" : {
-          "end_position" : 5044,
-          "start_position" : 801
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Containers/TestCLIExec.swift",
+        "location": {
+          "end_position": 5044,
+          "start_position": 801,
+          "start_line": 17,
+          "end_line": 115
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIExecCommand",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIExecCommand",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Add struct refactoring"
+    "type": "Add struct refactoring"
   },
-  "refactoringIndex" : 35,
-  "refactoringType" : "Add struct refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 35,
+  "refactoringType": "Add struct refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Containers/TestCLIExec.swift"
   ]
 }

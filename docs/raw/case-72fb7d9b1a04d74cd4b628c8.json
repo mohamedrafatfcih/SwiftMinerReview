@@ -1,66 +1,60 @@
 {
-  "caseID" : "case-72fb7d9b1a04d74cd4b628c8",
-  "commitHash" : "d85c0154cb052667f634514fd8e32764095d9d2b",
-  "commitMessage" : "feat: enabled Network preview\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/d85c0154cb052667f634514fd8e32764095d9d2b",
-  "durationSeconds" : 3.2712239027023315,
-  "entityNames" : [
+  "caseID": "case-72fb7d9b1a04d74cd4b628c8",
+  "commitHash": "d85c0154cb052667f634514fd8e32764095d9d2b",
+  "commitMessage": "feat: enabled Network preview\n",
+  "commitURL": "https://github.com/exelban/stats/commit/d85c0154cb052667f634514fd8e32764095d9d2b",
+  "durationSeconds": 3.2712239027023315,
+  "entityNames": [
     "read"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
-
-      ],
-      "call" : "waitUntilExit",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Modules/Net/readers.swift",
-        "location" : {
-          "end_position" : 25322,
-          "start_position" : 25289
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "additional_trailing_closures": [],
+      "arguments": [],
+      "call": "waitUntilExit",
+      "has_self_reference": false,
+      "internal_inline_calls": [],
+      "location_info": {
+        "file_path": "Modules/Net/readers.swift",
+        "location": {
+          "end_position": 25322,
+          "start_position": 25289,
+          "start_line": 639,
+          "end_line": 640
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "if self.numberOfProcesses == 0 {\n            return\n        }\n        \n        let task = Process()\n        task.launchPath = \"/usr/bin/nettop\"\n        task.arguments = [\"-P\", \"-L\", \"1\", \"-n\", \"-k\", \"time,interface,state,rx_dupe,rx_ooo,re-tx,rtt_avg,rcvsize,tx_win,tc_class,tc_mgt,cc_algo,P,C,R,W,arch\"]\n        task.environment = [\n            \"NSUnbufferedIO\": \"YES\",\n            \"LC_ALL\": \"en_US.UTF-8\"\n        ]\n        \n        let inputPipe = Pipe()\n        let outputPipe = Pipe()\n        let errorPipe = Pipe()\n        \n        task.standardInput = inputPipe\n        task.standardOutput = outputPipe\n        task.standardError = errorPipe\n        \n        defer {\n            if task.isRunning {\n                task.terminate()\n            }\n            task.waitUntilExit()\n            inputPipe.fileHandleForWriting.closeFile()\n            outputPipe.fileHandleForReading.closeFile()\n            errorPipe.fileHandleForReading.closeFile()\n        }\n        \n        do {\n            try task.run()\n        } catch let error {\n            print(error)\n            return\n        }\n        \n        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()\n        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()\n        let output = String(data: outputData, encoding: .utf8)\n        _ = String(data: errorData, encoding: .utf8)\n        guard let output, !output.isEmpty else { return }\n        \n        var list: [Network_Process] = []\n        var firstLine = false\n        output.enumerateLines { (line, _) in\n            if !firstLine {\n                firstLine = true\n                return\n            }\n            \n            let parsedLine = line.split(separator: \",\")\n            guard parsedLine.count >= 3 else {\n                return\n            }\n            \n            var process = Network_Process()\n            process.time = Date()\n            \n            let nameArray = parsedLine[0].split(separator: \".\")\n            if let pid = nameArray.last {\n                process.pid = Int(pid) ?? 0\n            }\n            if let app = NSRunningApplication(processIdentifier: pid_t(process.pid) ) {\n                process.name = app.localizedName ?? nameArray.dropLast().joined(separator: \".\")\n            } else {\n                process.name = nameArray.dropLast().joined(separator: \".\")\n            }\n            \n            if process.name == \"\" {\n                process.name = \"\\(process.pid)\"\n            }\n            \n            if let download = Int(parsedLine[1]) {\n                process.download = download\n            }\n            if let upload = Int(parsedLine[2]) {\n                process.upload = upload\n            }\n            \n            list.append(process)\n        }\n        \n        var processes: [Network_Process] = []\n        if self.previous.isEmpty {\n            self.previous = list\n            processes = list\n        } else {\n            self.previous.forEach { (pp: Network_Process) in\n                if let i = list.firstIndex(where: { $0.pid == pp.pid }) {\n                    let p = list[i]\n                    \n                    var download = p.download - pp.download\n                    var upload = p.upload - pp.upload\n                    let time = download == 0 && upload == 0 ? pp.time : Date()\n                    list[i].time = time\n                    \n                    if download < 0 {\n                        download = 0\n                    }\n                    if upload < 0 {\n                        upload = 0\n                    }\n                    \n                    processes.append(Network_Process(pid: p.pid, name: p.name, time: time, download: download, upload: upload))\n                }\n            }\n            self.previous = list\n        }\n        \n        processes.sort {\n            let firstMax = max($0.download, $0.upload)\n            let secondMax = max($1.download, $1.upload)\n            let firstMin = min($0.download, $0.upload)\n            let secondMin = min($1.download, $1.upload)\n            \n            if firstMax == secondMax && firstMin == secondMin { // download and upload values are the same, sort by time\n                return $0.time < $1.time\n            } else if firstMax == secondMax && firstMin != secondMin { // max values are the same, min not. Sort by min values\n                return firstMin < secondMin\n            }\n            return firstMax < secondMax // max values are not the same, sort by max value\n        }\n        \n        self.callback(processes.suffix(self.numberOfProcesses).reversed())"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "if self.numberOfProcesses == 0 {\n            return\n        }\n        \n        let task = Process()\n        task.launchPath = \"/usr/bin/nettop\"\n        task.arguments = [\"-P\", \"-L\", \"1\", \"-n\", \"-k\", \"time,interface,state,rx_dupe,rx_ooo,re-tx,rtt_avg,rcvsize,tx_win,tc_class,tc_mgt,cc_algo,P,C,R,W,arch\"]\n        task.environment = [\n            \"NSUnbufferedIO\": \"YES\",\n            \"LC_ALL\": \"en_US.UTF-8\"\n        ]\n        \n        let inputPipe = Pipe()\n        let outputPipe = Pipe()\n        let errorPipe = Pipe()\n        \n        task.standardInput = inputPipe\n        task.standardOutput = outputPipe\n        task.standardError = errorPipe\n        \n        defer {\n            if task.isRunning {\n                task.terminate()\n            }\n            task.waitUntilExit()\n            inputPipe.fileHandleForWriting.closeFile()\n            outputPipe.fileHandleForReading.closeFile()\n            errorPipe.fileHandleForReading.closeFile()\n        }\n        \n        do {\n            try task.run()\n        } catch let error {\n            print(error)\n            return\n        }\n        \n        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()\n        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()\n        let output = String(data: outputData, encoding: .utf8)\n        _ = String(data: errorData, encoding: .utf8)\n        guard let output, !output.isEmpty else { return }\n        \n        var list: [Network_Process] = []\n        var firstLine = false\n        output.enumerateLines { (line, _) in\n            if !firstLine {\n                firstLine = true\n                return\n            }\n            \n            let parsedLine = line.split(separator: \",\")\n            guard parsedLine.count >= 3 else {\n                return\n            }\n            \n            var process = Network_Process()\n            process.time = Date()\n            \n            let nameArray = parsedLine[0].split(separator: \".\")\n            if let pid = nameArray.last {\n                process.pid = Int(pid) ?? 0\n            }\n            if let app = NSRunningApplication(processIdentifier: pid_t(process.pid) ) {\n                process.name = app.localizedName ?? nameArray.dropLast().joined(separator: \".\")\n            } else {\n                process.name = nameArray.dropLast().joined(separator: \".\")\n            }\n            \n            if process.name == \"\" {\n                process.name = \"\\(process.pid)\"\n            }\n            \n            if let download = Int(parsedLine[1]) {\n                process.download = download\n            }\n            if let upload = Int(parsedLine[2]) {\n                process.upload = upload\n            }\n            \n            list.append(process)\n        }\n        \n        var processes: [Network_Process] = []\n        if self.previous.isEmpty {\n            self.previous = list\n            processes = list\n        } else {\n            self.previous.forEach { (pp: Network_Process) in\n                if let i = list.firstIndex(where: { $0.pid == pp.pid }) {\n                    let p = list[i]\n                    \n                    var download = p.download - pp.download\n                    var upload = p.upload - pp.upload\n                    let time = download == 0 && upload == 0 ? pp.time : Date()\n                    list[i].time = time\n                    \n                    if download < 0 {\n                        download = 0\n                    }\n                    if upload < 0 {\n                        upload = 0\n                    }\n                    \n                    processes.append(Network_Process(pid: p.pid, name: p.name, time: time, download: download, upload: upload))\n                }\n            }\n            self.previous = list\n        }\n        \n        processes.sort {\n            let firstMax = max($0.download, $0.upload)\n            let secondMax = max($1.download, $1.upload)\n            let firstMin = min($0.download, $0.upload)\n            let secondMin = min($1.download, $1.upload)\n            \n            if firstMax == secondMax && firstMin == secondMin { // download and upload values are the same, sort by time\n                return $0.time < $1.time\n            } else if firstMax == secondMax && firstMin != secondMin { // max values are the same, min not. Sort by min values\n                return firstMin < secondMin\n            }\n            return firstMax < secondMax // max values are not the same, sort by max value\n        }\n        \n        self.callback(processes.suffix(self.numberOfProcesses).reversed())"
       },
-      "location_info" : {
-        "file_path" : "Modules/Net/readers.swift",
-        "location" : {
-          "end_position" : 29133,
-          "start_position" : 24491
+      "location_info": {
+        "file_path": "Modules/Net/readers.swift",
+        "location": {
+          "end_position": 29133,
+          "start_position": 24491,
+          "start_line": 613,
+          "end_line": 741
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public",
         "override"
       ],
-      "name" : "read",
-      "parameters" : [
-
-      ]
+      "name": "read",
+      "parameters": []
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 9,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 9,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Modules/Net/readers.swift"
   ]
 }

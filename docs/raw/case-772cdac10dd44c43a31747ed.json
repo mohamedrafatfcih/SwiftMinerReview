@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-772cdac10dd44c43a31747ed",
-  "commitHash" : "6aa825fc3f5c4ea6153ab3a659d8bbb3fd5a0f33",
-  "commitMessage" : "Fix false positive overlap detection for half/third actions (#1766)\n\nOrigin-only matching caused false positives when a larger window\n(e.g. maximized or near-fullscreen) shared the same origin as the\ntarget position. Now excludes windows that cover more than 90% of\nthe screen on both axes from overlap detection, while preserving\noffset behavior for mixed-size grid windows at the same position\n(e.g. an eighth behind a quarter).\n\nCo-authored-by: Claude Opus 4.6 (1M context) <noreply@anthropic.com>",
-  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/6aa825fc3f5c4ea6153ab3a659d8bbb3fd5a0f33",
-  "durationSeconds" : 0.74477994441986084,
-  "entityNames" : [
+  "caseID": "case-772cdac10dd44c43a31747ed",
+  "commitHash": "6aa825fc3f5c4ea6153ab3a659d8bbb3fd5a0f33",
+  "commitMessage": "Fix false positive overlap detection for half/third actions (#1766)\n\nOrigin-only matching caused false positives when a larger window\n(e.g. maximized or near-fullscreen) shared the same origin as the\ntarget position. Now excludes windows that cover more than 90% of\nthe screen on both axes from overlap detection, while preserving\noffset behavior for mixed-size grid windows at the same position\n(e.g. an eighth behind a quarter).\n\nCo-authored-by: Claude Opus 4.6 (1M context) <noreply@anthropic.com>",
+  "commitURL": "https://github.com/rxhanson/Rectangle/commit/6aa825fc3f5c4ea6153ab3a659d8bbb3fd5a0f33",
+  "durationSeconds": 0.7447799444198608,
+  "entityNames": [
     "CGRect",
     "CGWindowID",
     "NSScreen",
@@ -13,117 +13,111 @@
     "screen",
     "windowId"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "while cascadeLevel < maxCascade {\n            let candidateAX = candidate.screenFlipped\n            let hasOverlap = otherWindows.contains { element in\n                let otherFrame = element.frame\n                return abs(otherFrame.origin.x - candidateAX.origin.x) < tolerance\n                    && abs(otherFrame.origin.y - candidateAX.origin.y) < tolerance\n            }\n\n            guard hasOverlap else { break }\n\n            candidate.origin.x += overlapOffset\n            candidate.origin.y += overlapOffset\n            cascadeLevel += 1\n\n            if candidate.origin.x + candidate.width > screenFrameNormalized.maxX {\n                candidate.origin.x = screenFrameNormalized.maxX - candidate.width\n            }\n            if candidate.origin.y + candidate.height > screenFrameNormalized.maxY {\n                candidate.origin.y = screenFrameNormalized.maxY - candidate.height\n            }\n            if candidate.origin.x < screenFrameNormalized.origin.x {\n                candidate.origin.x = screenFrameNormalized.origin.x\n            }\n            if candidate.origin.y < screenFrameNormalized.origin.y {\n                candidate.origin.y = screenFrameNormalized.origin.y\n            }\n        }",
-      "index" : 9
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "while cascadeLevel < maxCascade {\n            let candidateAX = candidate.screenFlipped\n            let hasOverlap = otherWindows.contains { element in\n                let otherFrame = element.frame\n                return abs(otherFrame.origin.x - candidateAX.origin.x) < tolerance\n                    && abs(otherFrame.origin.y - candidateAX.origin.y) < tolerance\n            }\n\n            guard hasOverlap else { break }\n\n            candidate.origin.x += overlapOffset\n            candidate.origin.y += overlapOffset\n            cascadeLevel += 1\n\n            if candidate.origin.x + candidate.width > screenFrameNormalized.maxX {\n                candidate.origin.x = screenFrameNormalized.maxX - candidate.width\n            }\n            if candidate.origin.y + candidate.height > screenFrameNormalized.maxY {\n                candidate.origin.y = screenFrameNormalized.maxY - candidate.height\n            }\n            if candidate.origin.x < screenFrameNormalized.origin.x {\n                candidate.origin.x = screenFrameNormalized.origin.x\n            }\n            if candidate.origin.y < screenFrameNormalized.origin.y {\n                candidate.origin.y = screenFrameNormalized.origin.y\n            }\n        }",
+      "index": 9
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let overlapOffset = CGFloat(Defaults.cyclingOverlapOffsetSize.value)\n        guard overlapOffset > 0 else { return rect }\n\n        let screenFrameAX = screen.adjustedVisibleFrame().screenFlipped\n        let tolerance: CGFloat = 4\n        let maxCascade = min(5, max(1, Defaults.cyclingOverlapMaxCascade.value))\n\n        let otherWindows = AccessibilityElement.getAllWindowElements().filter { element in\n            guard element.getWindowId() != windowId,\n                  element.isWindow == true,\n                  element.isMinimized != true,\n                  element.isHidden != true,\n                  element.isSheet != true\n            else { return false }\n\n            let frame = element.frame\n            return !frame.isNull && screenFrameAX.intersects(frame)\n        }\n\n        let screenFrameNormalized = screen.adjustedVisibleFrame()\n        var candidate = rect\n        var cascadeLevel = 0\n\n        while cascadeLevel < maxCascade {\n            let candidateAX = candidate.screenFlipped\n            let hasOverlap = otherWindows.contains { element in\n                let otherFrame = element.frame\n                return abs(otherFrame.origin.x - candidateAX.origin.x) < tolerance\n                    && abs(otherFrame.origin.y - candidateAX.origin.y) < tolerance\n            }\n\n            guard hasOverlap else { break }\n\n            candidate.origin.x += overlapOffset\n            candidate.origin.y += overlapOffset\n            cascadeLevel += 1\n\n            if candidate.origin.x + candidate.width > screenFrameNormalized.maxX {\n                candidate.origin.x = screenFrameNormalized.maxX - candidate.width\n            }\n            if candidate.origin.y + candidate.height > screenFrameNormalized.maxY {\n                candidate.origin.y = screenFrameNormalized.maxY - candidate.height\n            }\n            if candidate.origin.x < screenFrameNormalized.origin.x {\n                candidate.origin.x = screenFrameNormalized.origin.x\n            }\n            if candidate.origin.y < screenFrameNormalized.origin.y {\n                candidate.origin.y = screenFrameNormalized.origin.y\n            }\n        }\n\n        if cascadeLevel > 0 {\n            Logger.log(\"Cycling overlap detected, applied \\(cascadeLevel) x \\(overlapOffset)pt cascade offset\")\n        }\n        return candidate"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let overlapOffset = CGFloat(Defaults.cyclingOverlapOffsetSize.value)\n        guard overlapOffset > 0 else { return rect }\n\n        let screenFrameAX = screen.adjustedVisibleFrame().screenFlipped\n        let tolerance: CGFloat = 4\n        let maxCascade = min(5, max(1, Defaults.cyclingOverlapMaxCascade.value))\n\n        let otherWindows = AccessibilityElement.getAllWindowElements().filter { element in\n            guard element.getWindowId() != windowId,\n                  element.isWindow == true,\n                  element.isMinimized != true,\n                  element.isHidden != true,\n                  element.isSheet != true\n            else { return false }\n\n            let frame = element.frame\n            return !frame.isNull && screenFrameAX.intersects(frame)\n        }\n\n        let screenFrameNormalized = screen.adjustedVisibleFrame()\n        var candidate = rect\n        var cascadeLevel = 0\n\n        while cascadeLevel < maxCascade {\n            let candidateAX = candidate.screenFlipped\n            let hasOverlap = otherWindows.contains { element in\n                let otherFrame = element.frame\n                return abs(otherFrame.origin.x - candidateAX.origin.x) < tolerance\n                    && abs(otherFrame.origin.y - candidateAX.origin.y) < tolerance\n            }\n\n            guard hasOverlap else { break }\n\n            candidate.origin.x += overlapOffset\n            candidate.origin.y += overlapOffset\n            cascadeLevel += 1\n\n            if candidate.origin.x + candidate.width > screenFrameNormalized.maxX {\n                candidate.origin.x = screenFrameNormalized.maxX - candidate.width\n            }\n            if candidate.origin.y + candidate.height > screenFrameNormalized.maxY {\n                candidate.origin.y = screenFrameNormalized.maxY - candidate.height\n            }\n            if candidate.origin.x < screenFrameNormalized.origin.x {\n                candidate.origin.x = screenFrameNormalized.origin.x\n            }\n            if candidate.origin.y < screenFrameNormalized.origin.y {\n                candidate.origin.y = screenFrameNormalized.origin.y\n            }\n        }\n\n        if cascadeLevel > 0 {\n            Logger.log(\"Cycling overlap detected, applied \\(cascadeLevel) x \\(overlapOffset)pt cascade offset\")\n        }\n        return candidate"
       },
-      "location_info" : {
-        "file_path" : "Rectangle/WindowManager.swift",
-        "location" : {
-          "end_position" : 11184,
-          "start_position" : 8733
+      "location_info": {
+        "file_path": "Rectangle/WindowManager.swift",
+        "location": {
+          "end_position": 11184,
+          "start_position": 8733,
+          "start_line": 201,
+          "end_line": 259
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "applyOverlapOffsetIfNeeded",
-      "parameters" : [
+      "name": "applyOverlapOffsetIfNeeded",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "CGRect"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "CGRect"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Rectangle/WindowManager.swift",
-            "location" : {
-              "end_position" : 8799,
-              "start_position" : 8783
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Rectangle/WindowManager.swift",
+            "location": {
+              "end_position": 8799,
+              "start_position": 8783,
+              "start_line": 203,
+              "end_line": 203
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "rect",
-          "order" : 0
+          "modifiers": [],
+          "name": "rect",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "CGWindowID"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "CGWindowID"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Rectangle/WindowManager.swift",
-            "location" : {
-              "end_position" : 8821,
-              "start_position" : 8799
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Rectangle/WindowManager.swift",
+            "location": {
+              "end_position": 8821,
+              "start_position": 8799,
+              "start_line": 203,
+              "end_line": 203
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "windowId",
-          "order" : 1
+          "modifiers": [],
+          "name": "windowId",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "NSScreen"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "NSScreen"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Rectangle/WindowManager.swift",
-            "location" : {
-              "end_position" : 8837,
-              "start_position" : 8821
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Rectangle/WindowManager.swift",
+            "location": {
+              "end_position": 8837,
+              "start_position": 8821,
+              "start_line": 203,
+              "end_line": 203
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "screen",
-          "order" : 2
+          "modifiers": [],
+          "name": "screen",
+          "order": 2
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "CGRect"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "CGRect"
         },
-        "description" : "-> CGRect"
+        "description": "-> CGRect"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 0,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "rxhanson-rectangle",
-  "repoName" : "rxhanson/Rectangle",
-  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 0,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "rxhanson-rectangle",
+  "repoName": "rxhanson/Rectangle",
+  "repoURL": "https://github.com/rxhanson/Rectangle.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Rectangle/WindowManager.swift"
   ]
 }

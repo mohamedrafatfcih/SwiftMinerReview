@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-417fdb60b648eee187a4a2fc",
-  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
-  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
-  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
-  "durationSeconds" : 16.732138991355896,
-  "entityNames" : [
+  "caseID": "case-417fdb60b648eee187a4a2fc",
+  "commitHash": "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage": "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL": "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds": 16.732138991355896,
+  "entityNames": [
     "Attachment?",
     "String",
     "guard",
@@ -12,135 +12,137 @@
     "lookup",
     "status"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "conditions" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "conditions": [
         {
-          "condition_value" : {
-            "optional_binding" : {
-              "_0" : {
-                "description" : "let status = await network.status",
-                "initializer_clause" : {
-                  "has_self_reference" : false,
-                  "value" : {
-                    "await_stmt" : {
-                      "_0" : {
-                        "expression" : {
-                          "other" : {
-                            "_0" : "network.status"
+          "condition_value": {
+            "optional_binding": {
+              "_0": {
+                "description": "let status = await network.status",
+                "initializer_clause": {
+                  "has_self_reference": false,
+                  "value": {
+                    "await_stmt": {
+                      "_0": {
+                        "expression": {
+                          "other": {
+                            "_0": "network.status"
                           }
                         },
-                        "location_info" : {
-                          "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
-                          "location" : {
-                            "end_position" : 5067,
-                            "start_position" : 5046
+                        "location_info": {
+                          "file_path": "Sources/Services/Network/Server/DefaultNetworkService.swift",
+                          "location": {
+                            "end_position": 5067,
+                            "start_position": 5046,
+                            "start_line": 125,
+                            "end_line": 125
                           }
                         }
                       }
                     }
                   }
                 },
-                "is_binding_self" : false,
-                "is_in_out" : false,
-                "is_let" : true,
-                "is_var" : false,
-                "name" : "status"
+                "is_binding_self": false,
+                "is_in_out": false,
+                "is_let": true,
+                "is_var": false,
+                "name": "status"
               }
             }
           },
-          "location_info" : {
-            "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
-            "location" : {
-              "end_position" : 5067,
-              "start_position" : 5033
+          "location_info": {
+            "file_path": "Sources/Services/Network/Server/DefaultNetworkService.swift",
+            "location": {
+              "end_position": 5067,
+              "start_position": 5033,
+              "start_line": 125,
+              "end_line": 125
             }
           }
         }
       ],
-      "location_info" : {
-        "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
-        "location" : {
-          "end_position" : 5188,
-          "start_position" : 5017
+      "location_info": {
+        "file_path": "Sources/Services/Network/Server/DefaultNetworkService.swift",
+        "location": {
+          "end_position": 5188,
+          "start_position": 5017,
+          "start_line": 123,
+          "end_line": 127
         }
       },
-      "name" : "guard"
+      "name": "guard"
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "sendable" : {
-
-            }
+          "annotation": {
+            "sendable": {}
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        guard let status = await network.status else {\n            throw ContainerizationError(.invalidState, message: \"network \\(network.id) must be running\")\n        }\n\n        // Invariant: hostname -> index if and only if index -> MAC address\n        let index = try await allocator.lookup(hostname: hostname)\n        guard let index else {\n            return nil\n        }\n        guard let macAddress = macAddresses[index] else {\n            return nil\n        }\n\n        let address = IPv4Address(index)\n        let subnet = status.ipv4Subnet\n        let ipv4Address = try CIDRv4(address, prefix: subnet.prefix)\n        let ipv6Address = try status.ipv6Subnet\n            .map { try CIDRv6(macAddress.ipv6Address(network: $0.lower), prefix: $0.prefix) }\n        let attachment = Attachment(\n            network: network.id,\n            hostname: hostname,\n            ipv4Address: ipv4Address,\n            ipv4Gateway: status.ipv4Gateway,\n            ipv6Address: ipv6Address,\n            macAddress: macAddress\n        )\n        log.debug(\n            \"lookup attachment\",\n            metadata: [\n                \"hostname\": \"\\(hostname)\",\n                \"address\": \"\\(address)\",\n            ])\n\n        return attachment"
+      "body": {
+        "content": "log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        guard let status = await network.status else {\n            throw ContainerizationError(.invalidState, message: \"network \\(network.id) must be running\")\n        }\n\n        // Invariant: hostname -> index if and only if index -> MAC address\n        let index = try await allocator.lookup(hostname: hostname)\n        guard let index else {\n            return nil\n        }\n        guard let macAddress = macAddresses[index] else {\n            return nil\n        }\n\n        let address = IPv4Address(index)\n        let subnet = status.ipv4Subnet\n        let ipv4Address = try CIDRv4(address, prefix: subnet.prefix)\n        let ipv6Address = try status.ipv6Subnet\n            .map { try CIDRv6(macAddress.ipv6Address(network: $0.lower), prefix: $0.prefix) }\n        let attachment = Attachment(\n            network: network.id,\n            hostname: hostname,\n            ipv4Address: ipv4Address,\n            ipv4Gateway: status.ipv4Gateway,\n            ipv6Address: ipv6Address,\n            macAddress: macAddress\n        )\n        log.debug(\n            \"lookup attachment\",\n            metadata: [\n                \"hostname\": \"\\(hostname)\",\n                \"address\": \"\\(address)\",\n            ])\n\n        return attachment"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
-        "location" : {
-          "end_position" : 6255,
-          "start_position" : 4796
+      "location_info": {
+        "file_path": "Sources/Services/Network/Server/DefaultNetworkService.swift",
+        "location": {
+          "end_position": 6255,
+          "start_position": 4796,
+          "start_line": 118,
+          "end_line": 159
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "lookup",
-      "parameters" : [
+      "name": "lookup",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "String"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "String"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/Network/Server/DefaultNetworkService.swift",
-            "location" : {
-              "end_position" : 4851,
-              "start_position" : 4835
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/Network/Server/DefaultNetworkService.swift",
+            "location": {
+              "end_position": 4851,
+              "start_position": 4835,
+              "start_line": 121,
+              "end_line": 121
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "hostname",
-          "order" : 0
+          "modifiers": [],
+          "name": "hostname",
+          "order": 0
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : true,
-          "name" : "Attachment?"
+      "return_clause": {
+        "data_type": {
+          "is_optional": true,
+          "name": "Attachment?"
         },
-        "description" : "-> Attachment?"
+        "description": "-> Attachment?"
       },
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 160,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 160,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/Network/Server/DefaultNetworkService.swift"
   ]
 }

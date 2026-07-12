@@ -1,98 +1,90 @@
 {
-  "caseID" : "case-09029c3cc718db20f2a13dec",
-  "commitHash" : "7174b877a445ce78b291175b08cfdf3f7713d166",
-  "commitMessage" : "feat: improvements in the Remote module\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/7174b877a445ce78b291175b08cfdf3f7713d166",
-  "durationSeconds" : 3.142071008682251,
-  "entityNames" : [
+  "caseID": "case-09029c3cc718db20f2a13dec",
+  "commitHash": "7174b877a445ce78b291175b08cfdf3f7713d166",
+  "commitMessage": "feat: improvements in the Remote module\n",
+  "commitURL": "https://github.com/exelban/stats/commit/7174b877a445ce78b291175b08cfdf3f7713d166",
+  "durationSeconds": 3.142071008682251,
+  "entityNames": [
     "@escaping (Bool) -> Void",
     "completion",
     "validate"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
-
-      ],
-      "call" : "lock",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Kit/plugins/Remote.swift",
-        "location" : {
-          "end_position" : 19628,
-          "start_position" : 19579
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "additional_trailing_closures": [],
+      "arguments": [],
+      "call": "lock",
+      "has_self_reference": false,
+      "internal_inline_calls": [],
+      "location_info": {
+        "file_path": "Kit/plugins/Remote.swift",
+        "location": {
+          "end_position": 19628,
+          "start_position": 19579,
+          "start_line": 556,
+          "end_line": 557
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard !self.accessToken.isEmpty && !self.refreshToken.isEmpty, let url = URL(string: \"\\(Remote.authHost)/me\") else {\n            completion(false)\n            return\n        }\n        \n        let now = Date()\n        self.cooldownLock.lock()\n        let dynamicCooldown = min(self.baseCooldown * pow(2.0, Double(self.validationAttempts)), self.maxCooldown)\n        if let lastTime = self.lastValidationTime, now.timeIntervalSince(lastTime) < dynamicCooldown {\n            let remainingTime = dynamicCooldown - now.timeIntervalSince(lastTime)\n            self.cooldownLock.unlock()\n            DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {\n                self.validate(completion)\n            }\n            return\n        }\n        self.lastValidationTime = now\n        self.validationAttempts += 1\n        self.cooldownLock.unlock()\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"GET\"\n        request.setValue(\"Bearer \\(self.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        \n        self.session.dataTask(with: request) { [weak self] _, response, error in\n            guard let self = self, error == nil, let httpResponse = response as? HTTPURLResponse else {\n                completion(false)\n                return\n            }\n            \n            if httpResponse.statusCode == 401 {\n                self.refreshTokenFunc { ok in\n                    if ok == true {\n                        self.cooldownLock.lock()\n                        self.validationAttempts = 0\n                        self.lastValidationTime = nil\n                        self.cooldownLock.unlock()\n                    }\n                    completion(ok ?? false)\n                }\n            } else if httpResponse.statusCode == 200 {\n                self.cooldownLock.lock()\n                self.validationAttempts = 0\n                self.lastValidationTime = nil\n                self.cooldownLock.unlock()\n                completion(true)\n            } else {\n                completion(false)\n            }\n        }.resume()"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard !self.accessToken.isEmpty && !self.refreshToken.isEmpty, let url = URL(string: \"\\(Remote.authHost)/me\") else {\n            completion(false)\n            return\n        }\n        \n        let now = Date()\n        self.cooldownLock.lock()\n        let dynamicCooldown = min(self.baseCooldown * pow(2.0, Double(self.validationAttempts)), self.maxCooldown)\n        if let lastTime = self.lastValidationTime, now.timeIntervalSince(lastTime) < dynamicCooldown {\n            let remainingTime = dynamicCooldown - now.timeIntervalSince(lastTime)\n            self.cooldownLock.unlock()\n            DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {\n                self.validate(completion)\n            }\n            return\n        }\n        self.lastValidationTime = now\n        self.validationAttempts += 1\n        self.cooldownLock.unlock()\n        \n        var request = URLRequest(url: url)\n        request.httpMethod = \"GET\"\n        request.setValue(\"Bearer \\(self.accessToken)\", forHTTPHeaderField: \"Authorization\")\n        \n        self.session.dataTask(with: request) { [weak self] _, response, error in\n            guard let self = self, error == nil, let httpResponse = response as? HTTPURLResponse else {\n                completion(false)\n                return\n            }\n            \n            if httpResponse.statusCode == 401 {\n                self.refreshTokenFunc { ok in\n                    if ok == true {\n                        self.cooldownLock.lock()\n                        self.validationAttempts = 0\n                        self.lastValidationTime = nil\n                        self.cooldownLock.unlock()\n                    }\n                    completion(ok ?? false)\n                }\n            } else if httpResponse.statusCode == 200 {\n                self.cooldownLock.lock()\n                self.validationAttempts = 0\n                self.lastValidationTime = nil\n                self.cooldownLock.unlock()\n                completion(true)\n            } else {\n                completion(false)\n            }\n        }.resume()"
       },
-      "location_info" : {
-        "file_path" : "Kit/plugins/Remote.swift",
-        "location" : {
-          "end_position" : 20225,
-          "start_position" : 18056
+      "location_info": {
+        "file_path": "Kit/plugins/Remote.swift",
+        "location": {
+          "end_position": 20225,
+          "start_position": 18056,
+          "start_line": 521,
+          "end_line": 574
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "validate",
-      "parameters" : [
+      "name": "validate",
+      "parameters": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "escaping" : {
-
-                }
+              "annotation": {
+                "escaping": {}
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "@escaping (Bool) -> Void"
+          "data_type": {
+            "is_optional": false,
+            "name": "@escaping (Bool) -> Void"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Kit/plugins/Remote.swift",
-            "location" : {
-              "end_position" : 18126,
-              "start_position" : 18088
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Kit/plugins/Remote.swift",
+            "location": {
+              "end_position": 18126,
+              "start_position": 18088,
+              "start_line": 523,
+              "end_line": 523
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "completion",
-          "order" : 0
+          "modifiers": [],
+          "name": "completion",
+          "order": 0
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 22,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 22,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Kit/plugins/Remote.swift"
   ]
 }

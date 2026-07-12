@@ -1,64 +1,58 @@
 {
-  "caseID" : "case-0058430eb79a2af8b03792ac",
-  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "durationSeconds" : 73.471343994140625,
-  "entityNames" : [
+  "caseID": "case-0058430eb79a2af8b03792ac",
+  "commitHash": "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage": "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds": 73.47134399414062,
+  "entityNames": [
     "testThatDataStreamRequestHasAppropriateLifetimeEvents"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "annotation" : {
-        "unsupported" : {
-          "_0" : "MainActor"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "annotation": {
+        "unsupported": {
+          "_0": "MainActor"
         }
       },
-      "arguments" : [
-
-      ]
+      "arguments": []
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "MainActor"
+          "annotation": {
+            "unsupported": {
+              "_0": "MainActor"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "final class Monitor: EventMonitor {\n            private let called: (@Sendable () -> Void)?\n\n            init(called: (@Sendable () -> Void)? = nil) {\n                self.called = called\n            }\n\n            func request<Value>(_ request: DataStreamRequest, didParseStream result: Result<Value, AFError>) {\n                called?()\n            }\n        }\n        let eventMonitor = ClosureEventMonitor()\n        // Disable event test until Firewalk supports HTTPS.\n        //  let didReceiveChallenge = expectation(description: \"didReceiveChallenge should fire\")\n        let taskDidFinishCollecting = expectation(description: \"taskDidFinishCollecting should fire\")\n        let didReceiveData = expectation(description: \"didReceiveData should fire\")\n        let willCacheResponse = expectation(description: \"willCacheResponse should fire\")\n        let didCreateURLRequest = expectation(description: \"didCreateInitialURLRequest should fire\")\n        let didCreateTask = expectation(description: \"didCreateTask should fire\")\n        let didGatherMetrics = expectation(description: \"didGatherMetrics should fire\")\n        let didComplete = expectation(description: \"didComplete should fire\")\n        let didFinish = expectation(description: \"didFinish should fire\")\n        let didResume = expectation(description: \"didResume should fire\")\n        let didResumeTask = expectation(description: \"didResumeTask should fire\")\n        let didValidate = expectation(description: \"didValidateRequest should fire\")\n        didValidate.expectedFulfillmentCount = 2\n        let didParse = expectation(description: \"streamDidParse should fire\")\n        let didReceive = expectation(description: \"stream should receive\")\n        let didCompleteStream = expectation(description: \"stream should complete\")\n\n        var dataReceived = false\n\n        // Disable event test until Firewalk supports HTTPS.\n        //  eventMonitor.taskDidReceiveChallenge = { _, _, _ in didReceiveChallenge.fulfill() }\n        eventMonitor.taskDidFinishCollectingMetrics = { _, _, _ in taskDidFinishCollecting.fulfill() }\n        eventMonitor.dataTaskDidReceiveData = { _, _, _ in\n            guard !dataReceived else { return }\n            // Data may be received many times, fulfill only once.\n            dataReceived = true\n            didReceiveData.fulfill()\n        }\n        eventMonitor.dataTaskWillCacheResponse = { _, _, _ in willCacheResponse.fulfill() }\n        eventMonitor.requestDidCreateInitialURLRequest = { _, _ in didCreateURLRequest.fulfill() }\n        eventMonitor.requestDidCreateTask = { _, _ in didCreateTask.fulfill() }\n        eventMonitor.requestDidGatherMetrics = { _, _ in didGatherMetrics.fulfill() }\n        eventMonitor.requestDidCompleteTaskWithError = { _, _, _ in didComplete.fulfill() }\n        eventMonitor.requestDidFinish = { _ in didFinish.fulfill() }\n        eventMonitor.requestDidResume = { _ in didResume.fulfill() }\n        eventMonitor.requestDidResumeTask = { _, _ in didResumeTask.fulfill() }\n        eventMonitor.requestDidValidateRequestResponseWithResult = { _, _, _, _ in didValidate.fulfill() }\n\n        let session = Session(eventMonitors: [eventMonitor, Monitor { didParse.fulfill() }])\n\n        // When\n        let request = session.streamRequest(.stream(1))\n            .validate()\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case .stream:\n                    didReceive.fulfill()\n                case .complete:\n                    didCompleteStream.fulfill()\n                }\n            }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(request.state, .finished)"
+      "body": {
+        "content": "final class Monitor: EventMonitor {\n            private let called: (@Sendable () -> Void)?\n\n            init(called: (@Sendable () -> Void)? = nil) {\n                self.called = called\n            }\n\n            func request<Value>(_ request: DataStreamRequest, didParseStream result: Result<Value, AFError>) {\n                called?()\n            }\n        }\n        let eventMonitor = ClosureEventMonitor()\n        // Disable event test until Firewalk supports HTTPS.\n        //  let didReceiveChallenge = expectation(description: \"didReceiveChallenge should fire\")\n        let taskDidFinishCollecting = expectation(description: \"taskDidFinishCollecting should fire\")\n        let didReceiveData = expectation(description: \"didReceiveData should fire\")\n        let willCacheResponse = expectation(description: \"willCacheResponse should fire\")\n        let didCreateURLRequest = expectation(description: \"didCreateInitialURLRequest should fire\")\n        let didCreateTask = expectation(description: \"didCreateTask should fire\")\n        let didGatherMetrics = expectation(description: \"didGatherMetrics should fire\")\n        let didComplete = expectation(description: \"didComplete should fire\")\n        let didFinish = expectation(description: \"didFinish should fire\")\n        let didResume = expectation(description: \"didResume should fire\")\n        let didResumeTask = expectation(description: \"didResumeTask should fire\")\n        let didValidate = expectation(description: \"didValidateRequest should fire\")\n        didValidate.expectedFulfillmentCount = 2\n        let didParse = expectation(description: \"streamDidParse should fire\")\n        let didReceive = expectation(description: \"stream should receive\")\n        let didCompleteStream = expectation(description: \"stream should complete\")\n\n        var dataReceived = false\n\n        // Disable event test until Firewalk supports HTTPS.\n        //  eventMonitor.taskDidReceiveChallenge = { _, _, _ in didReceiveChallenge.fulfill() }\n        eventMonitor.taskDidFinishCollectingMetrics = { _, _, _ in taskDidFinishCollecting.fulfill() }\n        eventMonitor.dataTaskDidReceiveData = { _, _, _ in\n            guard !dataReceived else { return }\n            // Data may be received many times, fulfill only once.\n            dataReceived = true\n            didReceiveData.fulfill()\n        }\n        eventMonitor.dataTaskWillCacheResponse = { _, _, _ in willCacheResponse.fulfill() }\n        eventMonitor.requestDidCreateInitialURLRequest = { _, _ in didCreateURLRequest.fulfill() }\n        eventMonitor.requestDidCreateTask = { _, _ in didCreateTask.fulfill() }\n        eventMonitor.requestDidGatherMetrics = { _, _ in didGatherMetrics.fulfill() }\n        eventMonitor.requestDidCompleteTaskWithError = { _, _, _ in didComplete.fulfill() }\n        eventMonitor.requestDidFinish = { _ in didFinish.fulfill() }\n        eventMonitor.requestDidResume = { _ in didResume.fulfill() }\n        eventMonitor.requestDidResumeTask = { _, _ in didResumeTask.fulfill() }\n        eventMonitor.requestDidValidateRequestResponseWithResult = { _, _, _, _ in didValidate.fulfill() }\n\n        let session = Session(eventMonitors: [eventMonitor, Monitor { didParse.fulfill() }])\n\n        // When\n        let request = session.streamRequest(.stream(1))\n            .validate()\n            .responseStreamDecodable(of: TestResponse.self) { stream in\n                switch stream.event {\n                case .stream:\n                    didReceive.fulfill()\n                case .complete:\n                    didCompleteStream.fulfill()\n                }\n            }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(request.state, .finished)"
       },
-      "location_info" : {
-        "file_path" : "Tests/DataStreamTests.swift",
-        "location" : {
-          "end_position" : 53042,
-          "start_position" : 49213
+      "location_info": {
+        "file_path": "Tests/DataStreamTests.swift",
+        "location": {
+          "end_position": 53042,
+          "start_position": 49213,
+          "start_line": 1245,
+          "end_line": 1318
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatDataStreamRequestHasAppropriateLifetimeEvents",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "testThatDataStreamRequestHasAppropriateLifetimeEvents",
+      "parameters": []
     },
-    "type" : "Add attribute refactoring"
+    "type": "Add attribute refactoring"
   },
-  "refactoringIndex" : 634,
-  "refactoringType" : "Add attribute refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 634,
+  "refactoringType": "Add attribute refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/DataStreamTests.swift"
   ]
 }

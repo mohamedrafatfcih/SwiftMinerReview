@@ -1,106 +1,82 @@
 {
-  "caseID" : "case-d475bd606b821d5c1501370a",
-  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
-  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
-  "durationSeconds" : 14.10075306892395,
-  "entityNames" : [
+  "caseID": "case-d475bd606b821d5c1501370a",
+  "commitHash": "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage": "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds": 14.10075306892395,
+  "entityNames": [
     "ContainerFixture",
     "String",
     "makeFakeSSHAgentSocket"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "ContainerFixture"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "ContainerFixture"
       },
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let socketDir = \"/tmp/\\(testID)-ssh\"\n        try FileManager.default.createDirectory(\n            atPath: socketDir, withIntermediateDirectories: true, attributes: nil)\n        let socketPath = socketDir + \"/ssh-auth.sock\"\n\n        let serverFd = socket(AF_UNIX, SOCK_STREAM, 0)\n        guard serverFd >= 0 else {\n            throw CommandError.executionFailed(\"socket() failed with errno \\(errno)\")\n        }\n\n        var addr = sockaddr_un()\n        addr.sun_family = sa_family_t(AF_UNIX)\n        withUnsafeMutableBytes(of: &addr.sun_path) { bytes in\n            socketPath.withCString { cStr in\n                bytes.copyMemory(\n                    from: UnsafeRawBufferPointer(start: cStr, count: socketPath.utf8.count + 1))\n            }\n        }\n        let bindResult = withUnsafePointer(to: addr) { ptr in\n            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {\n                bind(serverFd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))\n            }\n        }\n        guard bindResult == 0 else {\n            let savedErrno = errno\n            Darwin.close(serverFd)\n            throw CommandError.executionFailed(\"bind() failed with errno \\(savedErrno) for path \\(socketPath)\")\n        }\n        guard listen(serverFd, 5) == 0 else {\n            let savedErrno = errno\n            Darwin.close(serverFd)\n            throw CommandError.executionFailed(\"listen() failed with errno \\(savedErrno)\")\n        }\n\n        let acceptThread = Thread {\n            while true {\n                let clientFd = accept(serverFd, nil, nil)\n                if clientFd < 0 { break }\n                Darwin.close(clientFd)\n            }\n        }\n        acceptThread.start()\n\n        addCleanup {\n            Darwin.close(serverFd)\n            try? FileManager.default.removeItem(atPath: socketDir)\n        }\n\n        return socketPath"
+          "attributes": [],
+          "body": {
+            "content": "let socketDir = \"/tmp/\\(testID)-ssh\"\n        try FileManager.default.createDirectory(\n            atPath: socketDir, withIntermediateDirectories: true, attributes: nil)\n        let socketPath = socketDir + \"/ssh-auth.sock\"\n\n        let serverFd = socket(AF_UNIX, SOCK_STREAM, 0)\n        guard serverFd >= 0 else {\n            throw CommandError.executionFailed(\"socket() failed with errno \\(errno)\")\n        }\n\n        var addr = sockaddr_un()\n        addr.sun_family = sa_family_t(AF_UNIX)\n        withUnsafeMutableBytes(of: &addr.sun_path) { bytes in\n            socketPath.withCString { cStr in\n                bytes.copyMemory(\n                    from: UnsafeRawBufferPointer(start: cStr, count: socketPath.utf8.count + 1))\n            }\n        }\n        let bindResult = withUnsafePointer(to: addr) { ptr in\n            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {\n                bind(serverFd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))\n            }\n        }\n        guard bindResult == 0 else {\n            let savedErrno = errno\n            Darwin.close(serverFd)\n            throw CommandError.executionFailed(\"bind() failed with errno \\(savedErrno) for path \\(socketPath)\")\n        }\n        guard listen(serverFd, 5) == 0 else {\n            let savedErrno = errno\n            Darwin.close(serverFd)\n            throw CommandError.executionFailed(\"listen() failed with errno \\(savedErrno)\")\n        }\n\n        let acceptThread = Thread {\n            while true {\n                let clientFd = accept(serverFd, nil, nil)\n                if clientFd < 0 { break }\n                Darwin.close(clientFd)\n            }\n        }\n        acceptThread.start()\n\n        addCleanup {\n            Darwin.close(serverFd)\n            try? FileManager.default.removeItem(atPath: socketDir)\n        }\n\n        return socketPath"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture+SSHTestHelpers.swift",
-            "location" : {
-              "end_position" : 3652,
-              "start_position" : 882
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Utilities/ContainerFixture+SSHTestHelpers.swift",
+            "location": {
+              "end_position": 3652,
+              "start_position": 882,
+              "start_line": 22,
+              "end_line": 88
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "makeFakeSSHAgentSocket",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "String"
+          "modifiers": [],
+          "name": "makeFakeSSHAgentSocket",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "String"
             },
-            "description" : "-> String"
+            "description": "-> String"
           },
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Utilities/ContainerFixture+SSHTestHelpers.swift",
-        "location" : {
-          "end_position" : 3654,
-          "start_position" : 818
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Utilities/ContainerFixture+SSHTestHelpers.swift",
+        "location": {
+          "end_position": 3654,
+          "start_position": 818,
+          "start_line": 18,
+          "end_line": 89
         }
       },
-      "modifiers" : [
-
-      ],
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Add Extension refactoring"
+    "type": "Add Extension refactoring"
   },
-  "refactoringIndex" : 67,
-  "refactoringType" : "Add Extension refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 67,
+  "refactoringType": "Add Extension refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Utilities/ContainerFixture+SSHTestHelpers.swift"
   ]
 }

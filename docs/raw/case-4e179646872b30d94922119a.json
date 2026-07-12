@@ -1,79 +1,75 @@
 {
-  "caseID" : "case-4e179646872b30d94922119a",
-  "commitHash" : "02184d37b6dc65709009ac05c496347e5ebe4f56",
-  "commitMessage" : "ui: new playlist sidebar\n",
-  "commitURL" : "https://github.com/iina/iina/commit/02184d37b6dc65709009ac05c496347e5ebe4f56",
-  "durationSeconds" : 31.784569978713989,
-  "entityNames" : [
+  "caseID": "case-4e179646872b30d94922119a",
+  "commitHash": "02184d37b6dc65709009ac05c496347e5ebe4f56",
+  "commitMessage": "ui: new playlist sidebar\n",
+  "commitURL": "https://github.com/iina/iina/commit/02184d37b6dc65709009ac05c496347e5ebe4f56",
+  "durationSeconds": 31.78456997871399,
+  "entityNames": [
     "SyncUIOption",
     "option",
     "syncUI"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "is_default_case" : false,
-      "items" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "is_default_case": false,
+      "items": [
         {
-          "literal_expression" : {
-            "_0" : ".playlist"
+          "literal_expression": {
+            "_0": ".playlist"
           }
         }
       ]
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard mainWindow.loaded, info.state.active else { return }\n    // This is too noisy and making verbose logs unreadable. Please uncomment when debugging syncing related issues.\n    // log(\"Syncing UI \\(option)\", level: .verbose)\n\n    switch option {\n\n    case .time:\n      let isNetworkStream = info.isNetworkResource\n      syncPosition()\n      info.videoRemaining?.second = Preference.bool(for: .scaleRemainingTime) ?\n        mpv.getDouble(MPVProperty.playtimeRemainingFull) :\n        mpv.getDouble(MPVProperty.timeRemainingFull)\n      if isNetworkStream {\n        // Update cache info\n        info.pausedForCache = mpv.getFlag(MPVProperty.pausedForCache)\n        let cacheState = mpv.getNode(MPVProperty.demuxerCacheState) as? [String: Any] ?? [:]\n        info.cacheUsed = Int(cacheState[\"fw-bytes\"] as? Int64 ?? 0)\n        info.cacheSpeed = Int(cacheState[\"raw-input-rate\"] as? Int64 ?? 0)\n        info.cacheTime = mpv.getInt(MPVProperty.demuxerCacheTime)\n        info.bufferingState = mpv.getInt(MPVProperty.cacheBufferingState)\n      }\n      DispatchQueue.main.async { [self] in\n        currentController.updatePlayTime(withDuration: isNetworkStream, andProgressBar: true)\n        if !self.isInMiniPlayer && mainWindow.fsState.isFullscreen && mainWindow.displayTimeAndBatteryInFullScreen && !mainWindow.additionalInfoView.isHidden {\n          self.mainWindow.additionalInfoView.update()\n        }\n        if isNetworkStream {\n          self.mainWindow.bufferIndicatorView.updateNetworkState()\n        }\n      }\n\n    case .playButton:\n      DispatchQueue.main.async { [self] in\n        currentController.updatePlayButtonState(paused: info.state == .paused)\n        touchBarSupport.updateTouchBarPlayBtn()\n      }\n\n    case .volume:\n      DispatchQueue.main.async {\n        self.currentController.updateVolume()\n      }\n\n    case .chapterList:\n      DispatchQueue.main.async {\n        // this should avoid sending reload when table view is not ready\n        if self.isInMiniPlayer ? self.miniPlayer.isPlaylistVisible : self.mainWindow.sidebars.isShowing(.playlist) {\n          self.log(\"Syncing UI: chapterList\")\n          self.mainWindow.sidebars.playlistView.chapterTableView.reloadData()\n        }\n      }\n\n    case .playlist:\n      DispatchQueue.main.async {\n        if self.isPlaylistVisible {\n          self.mainWindow.sidebars.playlistView.playlistTableView.reloadData()\n        }\n      }\n\n    case .loop:\n      DispatchQueue.main.async {\n        self.mainWindow.sidebars.playlistView.updateLoopBtnStatus()\n      }\n    }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard mainWindow.loaded, info.state.active else { return }\n    // This is too noisy and making verbose logs unreadable. Please uncomment when debugging syncing related issues.\n    // log(\"Syncing UI \\(option)\", level: .verbose)\n\n    switch option {\n\n    case .time:\n      let isNetworkStream = info.isNetworkResource\n      syncPosition()\n      info.videoRemaining?.second = Preference.bool(for: .scaleRemainingTime) ?\n        mpv.getDouble(MPVProperty.playtimeRemainingFull) :\n        mpv.getDouble(MPVProperty.timeRemainingFull)\n      if isNetworkStream {\n        // Update cache info\n        info.pausedForCache = mpv.getFlag(MPVProperty.pausedForCache)\n        let cacheState = mpv.getNode(MPVProperty.demuxerCacheState) as? [String: Any] ?? [:]\n        info.cacheUsed = Int(cacheState[\"fw-bytes\"] as? Int64 ?? 0)\n        info.cacheSpeed = Int(cacheState[\"raw-input-rate\"] as? Int64 ?? 0)\n        info.cacheTime = mpv.getInt(MPVProperty.demuxerCacheTime)\n        info.bufferingState = mpv.getInt(MPVProperty.cacheBufferingState)\n      }\n      DispatchQueue.main.async { [self] in\n        currentController.updatePlayTime(withDuration: isNetworkStream, andProgressBar: true)\n        if !self.isInMiniPlayer && mainWindow.fsState.isFullscreen && mainWindow.displayTimeAndBatteryInFullScreen && !mainWindow.additionalInfoView.isHidden {\n          self.mainWindow.additionalInfoView.update()\n        }\n        if isNetworkStream {\n          self.mainWindow.bufferIndicatorView.updateNetworkState()\n        }\n      }\n\n    case .playButton:\n      DispatchQueue.main.async { [self] in\n        currentController.updatePlayButtonState(paused: info.state == .paused)\n        touchBarSupport.updateTouchBarPlayBtn()\n      }\n\n    case .volume:\n      DispatchQueue.main.async {\n        self.currentController.updateVolume()\n      }\n\n    case .chapterList:\n      DispatchQueue.main.async {\n        // this should avoid sending reload when table view is not ready\n        if self.isInMiniPlayer ? self.miniPlayer.isPlaylistVisible : self.mainWindow.sidebars.isShowing(.playlist) {\n          self.log(\"Syncing UI: chapterList\")\n          self.mainWindow.sidebars.playlistView.chapterTableView.reloadData()\n        }\n      }\n\n    case .playlist:\n      DispatchQueue.main.async {\n        if self.isPlaylistVisible {\n          self.mainWindow.sidebars.playlistView.playlistTableView.reloadData()\n        }\n      }\n\n    case .loop:\n      DispatchQueue.main.async {\n        self.mainWindow.sidebars.playlistView.updateLoopBtnStatus()\n      }\n    }"
       },
-      "location_info" : {
-        "file_path" : "iina/PlayerCore.swift",
-        "location" : {
-          "end_position" : 117733,
-          "start_position" : 115085
+      "location_info": {
+        "file_path": "iina/PlayerCore.swift",
+        "location": {
+          "end_position": 117733,
+          "start_position": 115085,
+          "start_line": 2748,
+          "end_line": 2815
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "syncUI",
-      "parameters" : [
+      "modifiers": [],
+      "name": "syncUI",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "SyncUIOption"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "SyncUIOption"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "iina/PlayerCore.swift",
-            "location" : {
-              "end_position" : 115123,
-              "start_position" : 115101
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "iina/PlayerCore.swift",
+            "location": {
+              "end_position": 115123,
+              "start_position": 115101,
+              "start_line": 2750,
+              "end_line": 2750
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "option",
-          "order" : 0
+          "modifiers": [],
+          "name": "option",
+          "order": 0
         }
       ]
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 33,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "iina-iina",
-  "repoName" : "iina/iina",
-  "repoURL" : "https://github.com/iina/iina.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 33,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "iina-iina",
+  "repoName": "iina/iina",
+  "repoURL": "https://github.com/iina/iina.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "iina/PlayerCore.swift"
   ]
 }

@@ -1,64 +1,58 @@
 {
-  "caseID" : "case-8454aedc82b5012e94df2f96",
-  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "durationSeconds" : 73.471343994140625,
-  "entityNames" : [
+  "caseID": "case-8454aedc82b5012e94df2f96",
+  "commitHash": "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage": "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds": 73.47134399414062,
+  "entityNames": [
     "testThatDataCanBeStreamedManyTimes"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "annotation" : {
-        "unsupported" : {
-          "_0" : "MainActor"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "annotation": {
+        "unsupported": {
+          "_0": "MainActor"
         }
       },
-      "arguments" : [
-
-      ]
+      "arguments": []
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "MainActor"
+          "annotation": {
+            "unsupported": {
+              "_0": "MainActor"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "let expectedSize = 1\n        var initialResponse: HTTPURLResponse?\n        let onHTTPResponse = expectation(description: \"onHTTPResponse should be called\")\n        var firstAccumulatedData = Data()\n        var firstResponse: HTTPURLResponse?\n        var firstStreamOnMain = false\n        var firstCompleteOnMain = false\n        let firstReceive = expectation(description: \"first stream should receive\")\n        let firstCompletion = expectation(description: \"first stream should complete\")\n        var secondAccumulatedData = Data()\n        var secondResponse: HTTPURLResponse?\n        var secondStreamOnMain = false\n        var secondCompleteOnMain = false\n        let secondReceive = expectation(description: \"second stream should receive\")\n        let secondCompletion = expectation(description: \"second stream should complete\")\n\n        // When\n        AF.streamRequest(.bytes(expectedSize))\n            .onHTTPResponse { response in\n                initialResponse = response\n                onHTTPResponse.fulfill()\n            }\n            .responseStream { stream in\n                switch stream.event {\n                case let .stream(result):\n                    firstStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(data):\n                        firstAccumulatedData.append(data)\n                    }\n                    firstReceive.fulfill()\n                case let .complete(completion):\n                    firstCompleteOnMain = Thread.isMainThread\n                    firstResponse = completion.response\n                    firstCompletion.fulfill()\n                }\n            }\n            .responseStream { stream in\n                switch stream.event {\n                case let .stream(result):\n                    secondStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(data):\n                        secondAccumulatedData.append(data)\n                    }\n                    secondReceive.fulfill()\n                case let .complete(completion):\n                    secondCompleteOnMain = Thread.isMainThread\n                    secondResponse = completion.response\n                    secondCompletion.fulfill()\n                }\n            }\n\n        wait(for: [onHTTPResponse, firstReceive, firstCompletion], timeout: timeout, enforceOrder: true)\n        wait(for: [secondReceive, secondCompletion], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertEqual(initialResponse, firstResponse)\n        XCTAssertEqual(initialResponse, secondResponse)\n        XCTAssertTrue(firstStreamOnMain)\n        XCTAssertTrue(firstCompleteOnMain)\n        XCTAssertEqual(firstResponse?.statusCode, 200)\n        XCTAssertEqual(firstAccumulatedData.count, expectedSize)\n        XCTAssertTrue(secondStreamOnMain)\n        XCTAssertTrue(secondCompleteOnMain)\n        XCTAssertEqual(secondResponse?.statusCode, 200)\n        XCTAssertEqual(secondAccumulatedData.count, expectedSize)"
+      "body": {
+        "content": "let expectedSize = 1\n        var initialResponse: HTTPURLResponse?\n        let onHTTPResponse = expectation(description: \"onHTTPResponse should be called\")\n        var firstAccumulatedData = Data()\n        var firstResponse: HTTPURLResponse?\n        var firstStreamOnMain = false\n        var firstCompleteOnMain = false\n        let firstReceive = expectation(description: \"first stream should receive\")\n        let firstCompletion = expectation(description: \"first stream should complete\")\n        var secondAccumulatedData = Data()\n        var secondResponse: HTTPURLResponse?\n        var secondStreamOnMain = false\n        var secondCompleteOnMain = false\n        let secondReceive = expectation(description: \"second stream should receive\")\n        let secondCompletion = expectation(description: \"second stream should complete\")\n\n        // When\n        AF.streamRequest(.bytes(expectedSize))\n            .onHTTPResponse { response in\n                initialResponse = response\n                onHTTPResponse.fulfill()\n            }\n            .responseStream { stream in\n                switch stream.event {\n                case let .stream(result):\n                    firstStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(data):\n                        firstAccumulatedData.append(data)\n                    }\n                    firstReceive.fulfill()\n                case let .complete(completion):\n                    firstCompleteOnMain = Thread.isMainThread\n                    firstResponse = completion.response\n                    firstCompletion.fulfill()\n                }\n            }\n            .responseStream { stream in\n                switch stream.event {\n                case let .stream(result):\n                    secondStreamOnMain = Thread.isMainThread\n                    switch result {\n                    case let .success(data):\n                        secondAccumulatedData.append(data)\n                    }\n                    secondReceive.fulfill()\n                case let .complete(completion):\n                    secondCompleteOnMain = Thread.isMainThread\n                    secondResponse = completion.response\n                    secondCompletion.fulfill()\n                }\n            }\n\n        wait(for: [onHTTPResponse, firstReceive, firstCompletion], timeout: timeout, enforceOrder: true)\n        wait(for: [secondReceive, secondCompletion], timeout: timeout, enforceOrder: true)\n\n        // Then\n        XCTAssertEqual(initialResponse, firstResponse)\n        XCTAssertEqual(initialResponse, secondResponse)\n        XCTAssertTrue(firstStreamOnMain)\n        XCTAssertTrue(firstCompleteOnMain)\n        XCTAssertEqual(firstResponse?.statusCode, 200)\n        XCTAssertEqual(firstAccumulatedData.count, expectedSize)\n        XCTAssertTrue(secondStreamOnMain)\n        XCTAssertTrue(secondCompleteOnMain)\n        XCTAssertEqual(secondResponse?.statusCode, 200)\n        XCTAssertEqual(secondAccumulatedData.count, expectedSize)"
       },
-      "location_info" : {
-        "file_path" : "Tests/DataStreamTests.swift",
-        "location" : {
-          "end_position" : 13840,
-          "start_position" : 10710
+      "location_info": {
+        "file_path": "Tests/DataStreamTests.swift",
+        "location": {
+          "end_position": 13840,
+          "start_position": 10710,
+          "start_line": 266,
+          "end_line": 338
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatDataCanBeStreamedManyTimes",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "testThatDataCanBeStreamedManyTimes",
+      "parameters": []
     },
-    "type" : "Add attribute refactoring"
+    "type": "Add attribute refactoring"
   },
-  "refactoringIndex" : 612,
-  "refactoringType" : "Add attribute refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 612,
+  "refactoringType": "Add attribute refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/DataStreamTests.swift"
   ]
 }

@@ -1,64 +1,58 @@
 {
-  "caseID" : "case-8847bd105c63441a05e25eec",
-  "commitHash" : "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "commitMessage" : "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
-  "durationSeconds" : 73.471343994140625,
-  "entityNames" : [
+  "caseID": "case-8847bd105c63441a05e25eec",
+  "commitHash": "7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "commitMessage": "Swift 6 Native Builds (#3880)\n\n### Goals :soccer:\r\nThis PR tracks the implementation of full concurrency checking when\r\nbuilding in Swift 6 mode. It's unknown whether all of these changes will\r\nbe fully backward compatible.\r\n\r\n### Implementation Details :construction:\r\nThis PR largely consists of `Sendable` annotations, with a few logic\r\nchanges to fix actual safety issues.\r\n\r\n### Testing Details :mag:\r\nTests updated with needed annotations, but mutation warnings need a\r\nlarger overall refactor.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/7500a8ec2bb20a1e96d4fc6e18e5a88f23091807",
+  "durationSeconds": 73.47134399414062,
+  "entityNames": [
     "testThatCancelledDownloadCanBeResumedWithResumeData"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "annotation" : {
-        "unsupported" : {
-          "_0" : "MainActor"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "annotation": {
+        "unsupported": {
+          "_0": "MainActor"
         }
       },
-      "arguments" : [
-
-      ]
+      "arguments": []
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "MainActor"
+          "annotation": {
+            "unsupported": {
+              "_0": "MainActor"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "let expectation1 = expectation(description: \"Download should be cancelled\")\n        var cancelled = false\n\n        var response1: DownloadResponse<Data, AFError>?\n\n        // When\n        let download = AF.download(.download())\n        download.downloadProgress { [unowned download] progress in\n            guard !cancelled else { return }\n\n            if progress.fractionCompleted > 0.1 {\n                download.cancel(producingResumeData: true)\n                cancelled = true\n            }\n        }\n        download.responseData { resp in\n            response1 = resp\n            expectation1.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        guard let resumeData = download.resumeData else {\n            XCTFail(\"resumeData should not be nil\")\n            return\n        }\n\n        let expectation2 = expectation(description: \"Download should complete\")\n\n        var progressValues: [Double] = []\n        var response2: DownloadResponse<Data, AFError>?\n\n        AF.download(resumingWith: resumeData)\n            .downloadProgress { progress in\n                progressValues.append(progress.fractionCompleted)\n            }\n            .responseData { resp in\n                response2 = resp\n                expectation2.fulfill()\n            }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response1?.request)\n        XCTAssertNotNil(response1?.response)\n        XCTAssertNil(response1?.fileURL)\n        XCTAssertEqual(response1?.result.isFailure, true)\n        XCTAssertNotNil(response1?.result.failure)\n\n        XCTAssertNotNil(response2?.response)\n        XCTAssertNotNil(response2?.fileURL)\n        XCTAssertEqual(response2?.result.isSuccess, true)\n        XCTAssertNil(response2?.result.failure)\n\n        progressValues.forEach { XCTAssertGreaterThanOrEqual($0, 0.1) }"
+      "body": {
+        "content": "let expectation1 = expectation(description: \"Download should be cancelled\")\n        var cancelled = false\n\n        var response1: DownloadResponse<Data, AFError>?\n\n        // When\n        let download = AF.download(.download())\n        download.downloadProgress { [unowned download] progress in\n            guard !cancelled else { return }\n\n            if progress.fractionCompleted > 0.1 {\n                download.cancel(producingResumeData: true)\n                cancelled = true\n            }\n        }\n        download.responseData { resp in\n            response1 = resp\n            expectation1.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)\n\n        guard let resumeData = download.resumeData else {\n            XCTFail(\"resumeData should not be nil\")\n            return\n        }\n\n        let expectation2 = expectation(description: \"Download should complete\")\n\n        var progressValues: [Double] = []\n        var response2: DownloadResponse<Data, AFError>?\n\n        AF.download(resumingWith: resumeData)\n            .downloadProgress { progress in\n                progressValues.append(progress.fractionCompleted)\n            }\n            .responseData { resp in\n                response2 = resp\n                expectation2.fulfill()\n            }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertNotNil(response1?.request)\n        XCTAssertNotNil(response1?.response)\n        XCTAssertNil(response1?.fileURL)\n        XCTAssertEqual(response1?.result.isFailure, true)\n        XCTAssertNotNil(response1?.result.failure)\n\n        XCTAssertNotNil(response2?.response)\n        XCTAssertNotNil(response2?.fileURL)\n        XCTAssertEqual(response2?.result.isSuccess, true)\n        XCTAssertNil(response2?.result.failure)\n\n        progressValues.forEach { XCTAssertGreaterThanOrEqual($0, 0.1) }"
       },
-      "location_info" : {
-        "file_path" : "Tests/DownloadTests.swift",
-        "location" : {
-          "end_position" : 26415,
-          "start_position" : 24450
+      "location_info": {
+        "file_path": "Tests/DownloadTests.swift",
+        "location": {
+          "end_position": 26415,
+          "start_position": 24450,
+          "start_line": 653,
+          "end_line": 714
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatCancelledDownloadCanBeResumedWithResumeData",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "testThatCancelledDownloadCanBeResumedWithResumeData",
+      "parameters": []
     },
-    "type" : "Add attribute refactoring"
+    "type": "Add attribute refactoring"
   },
-  "refactoringIndex" : 658,
-  "refactoringType" : "Add attribute refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 658,
+  "refactoringType": "Add attribute refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/DownloadTests.swift"
   ]
 }

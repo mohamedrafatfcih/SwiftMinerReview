@@ -1,155 +1,131 @@
 {
-  "caseID" : "case-015d77422a536e8fc3b6a5ea",
-  "commitHash" : "9bd3c473451a40a1ee28f02104826d224636948d",
-  "commitMessage" : "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
-  "durationSeconds" : 14.10075306892395,
-  "entityNames" : [
+  "caseID": "case-015d77422a536e8fc3b6a5ea",
+  "commitHash": "9bd3c473451a40a1ee28f02104826d224636948d",
+  "commitMessage": "Migrates container create, run-lifecycle, exec, remove, copy. (#1844)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/9bd3c473451a40a1ee28f02104826d224636948d",
+  "durationSeconds": 14.10075306892395,
+  "entityNames": [
     "TestCLIPruneCommandSerial",
     "testContainerPruneNoContainers",
     "testContainerPruneStoppedContainers"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
+          "arguments": [
             {
-              "value" : ".serialized"
+              "value": ".serialized"
             }
           ]
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "value" : ".disabled(\"flaky — prune picks up containers from concurrent suites; tests being rewritten\")"
+                  "value": ".disabled(\"flaky — prune picks up containers from concurrent suites; tests being rewritten\")"
                 }
               ]
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let result = try f.run([\"prune\"]).check()\n            #expect(result.error.contains(\"Reclaimed Zero KB in disk space\"), \"should show no containers message\")\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let result = try f.run([\"prune\"]).check()\n            #expect(result.error.contains(\"Reclaimed Zero KB in disk space\"), \"should show no containers message\")\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIPruneCommandSerial.swift",
-            "location" : {
-              "end_position" : 1366,
-              "start_position" : 971
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIPruneCommandSerial.swift",
+            "location": {
+              "end_position": 1366,
+              "start_position": 971,
+              "start_line": 22,
+              "end_line": 29
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testContainerPruneNoContainers",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testContainerPruneNoContainers",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n\n            // One running container that must survive the prune.\n            try await f.withContainer(image: image, tag: \"running\", containerArgs: [\"sleep\", \"3600\"]) { npcName in\n                // Two containers to stop and prune.\n                try await f.withContainer(\n                    image: image, tag: \"prune0\", containerArgs: [\"sleep\", \"3600\"], autoRemove: false\n                ) { pc0Name in\n                    try await f.withContainer(\n                        image: image, tag: \"prune1\", containerArgs: [\"sleep\", \"3600\"], autoRemove: false\n                    ) { pc1Name in\n                        let pc0Id = try f.getContainerId(pc0Name)\n                        let pc1Id = try f.getContainerId(pc1Name)\n\n                        try f.doStop(pc0Name)\n                        try f.doStop(pc1Name)\n\n                        // Poll until both containers reach stopped state.\n                        let deadline = Date().addingTimeInterval(30)\n                        while true {\n                            let s0 = try f.getContainerStatus(pc0Name)\n                            let s1 = try f.getContainerStatus(pc1Name)\n                            if s0 == \"stopped\" && s1 == \"stopped\" { break }\n                            guard Date() < deadline else {\n                                throw CommandError.executionFailed(\n                                    \"Timeout waiting for containers to stop: pc0=\\(s0), pc1=\\(s1)\")\n                            }\n                            try await Task.sleep(for: .milliseconds(200))\n                        }\n\n                        let result = try f.run([\"prune\"]).check()\n                        #expect(\n                            result.output.contains(pc0Id) && result.output.contains(pc1Id),\n                            \"prune output should list stopped container IDs\")\n                        #expect(\n                            !result.error.contains(\"Reclaimed Zero KB in disk space\"),\n                            \"reclaimed space should not be zero\")\n\n                        let npcStatus = try f.getContainerStatus(npcName)\n                        #expect(npcStatus == \"running\", \"running container should not be pruned\")\n                    }\n                }\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n\n            // One running container that must survive the prune.\n            try await f.withContainer(image: image, tag: \"running\", containerArgs: [\"sleep\", \"3600\"]) { npcName in\n                // Two containers to stop and prune.\n                try await f.withContainer(\n                    image: image, tag: \"prune0\", containerArgs: [\"sleep\", \"3600\"], autoRemove: false\n                ) { pc0Name in\n                    try await f.withContainer(\n                        image: image, tag: \"prune1\", containerArgs: [\"sleep\", \"3600\"], autoRemove: false\n                    ) { pc1Name in\n                        let pc0Id = try f.getContainerId(pc0Name)\n                        let pc1Id = try f.getContainerId(pc1Name)\n\n                        try f.doStop(pc0Name)\n                        try f.doStop(pc1Name)\n\n                        // Poll until both containers reach stopped state.\n                        let deadline = Date().addingTimeInterval(30)\n                        while true {\n                            let s0 = try f.getContainerStatus(pc0Name)\n                            let s1 = try f.getContainerStatus(pc1Name)\n                            if s0 == \"stopped\" && s1 == \"stopped\" { break }\n                            guard Date() < deadline else {\n                                throw CommandError.executionFailed(\n                                    \"Timeout waiting for containers to stop: pc0=\\(s0), pc1=\\(s1)\")\n                            }\n                            try await Task.sleep(for: .milliseconds(200))\n                        }\n\n                        let result = try f.run([\"prune\"]).check()\n                        #expect(\n                            result.output.contains(pc0Id) && result.output.contains(pc1Id),\n                            \"prune output should list stopped container IDs\")\n                        #expect(\n                            !result.error.contains(\"Reclaimed Zero KB in disk space\"),\n                            \"reclaimed space should not be zero\")\n\n                        let npcStatus = try f.getContainerStatus(npcName)\n                        #expect(npcStatus == \"running\", \"running container should not be pruned\")\n                    }\n                }\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIPruneCommandSerial.swift",
-            "location" : {
-              "end_position" : 3840,
-              "start_position" : 1366
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIPruneCommandSerial.swift",
+            "location": {
+              "end_position": 3840,
+              "start_position": 1366,
+              "start_line": 29,
+              "end_line": 77
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testContainerPruneStoppedContainers",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testContainerPruneStoppedContainers",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Containers/TestCLIPruneCommandSerial.swift",
-        "location" : {
-          "end_position" : 3842,
-          "start_position" : 819
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Containers/TestCLIPruneCommandSerial.swift",
+        "location": {
+          "end_position": 3842,
+          "start_position": 819,
+          "start_line": 18,
+          "end_line": 78
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIPruneCommandSerial",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIPruneCommandSerial",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Add struct refactoring"
+    "type": "Add struct refactoring"
   },
-  "refactoringIndex" : 38,
-  "refactoringType" : "Add struct refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 38,
+  "refactoringType": "Add struct refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Containers/TestCLIPruneCommandSerial.swift"
   ]
 }

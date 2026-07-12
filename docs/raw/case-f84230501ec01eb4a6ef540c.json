@@ -1,101 +1,93 @@
 {
-  "caseID" : "case-f84230501ec01eb4a6ef540c",
-  "commitHash" : "f5f25f2965cd3e3bb24d6e10fa5b593f7ce7c49d",
-  "commitMessage" : "fix: fixed a lot of optional values that was not properly checked\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/f5f25f2965cd3e3bb24d6e10fa5b593f7ce7c49d",
-  "durationSeconds" : 26.011842012405396,
-  "entityNames" : [
+  "caseID": "case-f84230501ec01eb4a6ef540c",
+  "commitHash": "f5f25f2965cd3e3bb24d6e10fa5b593f7ce7c49d",
+  "commitMessage": "fix: fixed a lot of optional values that was not properly checked\n",
+  "commitURL": "https://github.com/exelban/stats/commit/f5f25f2965cd3e3bb24d6e10fa5b593f7ce7c49d",
+  "durationSeconds": 26.011842012405396,
+  "entityNames": [
     "paths",
     "read"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "function_call" : {
-            "_0" : {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "accessors": [],
+      "attributes": [],
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "function_call": {
+            "_0": {
+              "additional_trailing_closures": [],
+              "arguments": [
                 {
-                  "label" : "includingResourceValuesForKeys",
-                  "value" : "keys"
+                  "label": "includingResourceValuesForKeys",
+                  "value": "keys"
                 },
                 {
-                  "label" : "options",
-                  "value" : "[.skipHiddenVolumes]"
+                  "label": "options",
+                  "value": "[.skipHiddenVolumes]"
                 }
               ],
-              "call" : "mountedVolumeURLs",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 2098,
-                  "start_position" : 1992
+              "call": "mountedVolumeURLs",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 2098,
+                  "start_position": 1992,
+                  "start_line": 48,
+                  "end_line": 48
                 }
               }
             }
           }
         }
       },
-      "is_constant" : true,
-      "location_info" : {
-        "file_path" : "Modules/Disk/readers.swift",
-        "location" : {
-          "end_position" : 2099,
-          "start_position" : 1984
+      "is_constant": true,
+      "location_info": {
+        "file_path": "Modules/Disk/readers.swift",
+        "location": {
+          "end_position": 2099,
+          "start_position": 1984,
+          "start_line": 48,
+          "end_line": 48
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "paths"
+      "modifiers": [],
+      "name": "paths"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let keys: [URLResourceKey] = [.volumeNameKey]\n        let removableState = Store.shared.bool(key: \"Disk_removable\", defaultValue: false)\n        let paths = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes])!\n        \n        guard let session = DASessionCreate(kCFAllocatorDefault) else {\n            error(\"cannot create main DASessionCreate()\", log: self.log)\n            return\n        }\n        \n        var active: [String] = []\n        for url in paths {\n            if url.pathComponents.count == 1 || (url.pathComponents.count > 1 && url.pathComponents[1] == \"Volumes\") {\n                if let disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, url as CFURL) {\n                    if let diskName = DADiskGetBSDName(disk) {\n                        let BSDName: String = String(cString: diskName)\n                        active.append(BSDName)\n                        \n                        if let d = self.list.first(where: { $0.BSDName == BSDName}), let idx = self.list.index(where: { $0.BSDName == BSDName}) {\n                            if d.removable && !removableState {\n                                self.list.remove(at: idx)\n                                continue\n                            }\n                            \n                            if let path = d.path {\n                                self.list.updateFreeSize(idx, newValue: self.freeDiskSpaceInBytes(path))\n                                self.list.updateSMARTData(idx, smart: self.getSMARTDetails(for: BSDName))\n                            }\n                            \n                            continue\n                        }\n                        \n                        if var d = driveDetails(disk, removableState: removableState) {\n                            if let path = d.path {\n                                d.free = self.freeDiskSpaceInBytes(path)\n                                d.size = self.totalDiskSpaceInBytes(path)\n                            }\n                            d.smart = self.getSMARTDetails(for: BSDName)\n                            guard d.size != 0 else { continue }\n                            self.list.append(d)\n                            self.list.sort()\n                        }\n                    }\n                }\n            }\n        }\n        \n        active.difference(from: self.list.map{ $0.BSDName }).forEach { (BSDName: String) in\n            if let idx = self.list.index(where: { $0.BSDName == BSDName }) {\n                self.list.remove(at: idx)\n            }\n        }\n        \n        self.callback(self.list)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let keys: [URLResourceKey] = [.volumeNameKey]\n        let removableState = Store.shared.bool(key: \"Disk_removable\", defaultValue: false)\n        let paths = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes])!\n        \n        guard let session = DASessionCreate(kCFAllocatorDefault) else {\n            error(\"cannot create main DASessionCreate()\", log: self.log)\n            return\n        }\n        \n        var active: [String] = []\n        for url in paths {\n            if url.pathComponents.count == 1 || (url.pathComponents.count > 1 && url.pathComponents[1] == \"Volumes\") {\n                if let disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, url as CFURL) {\n                    if let diskName = DADiskGetBSDName(disk) {\n                        let BSDName: String = String(cString: diskName)\n                        active.append(BSDName)\n                        \n                        if let d = self.list.first(where: { $0.BSDName == BSDName}), let idx = self.list.index(where: { $0.BSDName == BSDName}) {\n                            if d.removable && !removableState {\n                                self.list.remove(at: idx)\n                                continue\n                            }\n                            \n                            if let path = d.path {\n                                self.list.updateFreeSize(idx, newValue: self.freeDiskSpaceInBytes(path))\n                                self.list.updateSMARTData(idx, smart: self.getSMARTDetails(for: BSDName))\n                            }\n                            \n                            continue\n                        }\n                        \n                        if var d = driveDetails(disk, removableState: removableState) {\n                            if let path = d.path {\n                                d.free = self.freeDiskSpaceInBytes(path)\n                                d.size = self.totalDiskSpaceInBytes(path)\n                            }\n                            d.smart = self.getSMARTDetails(for: BSDName)\n                            guard d.size != 0 else { continue }\n                            self.list.append(d)\n                            self.list.sort()\n                        }\n                    }\n                }\n            }\n        }\n        \n        active.difference(from: self.list.map{ $0.BSDName }).forEach { (BSDName: String) in\n            if let idx = self.list.index(where: { $0.BSDName == BSDName }) {\n                self.list.remove(at: idx)\n            }\n        }\n        \n        self.callback(self.list)"
       },
-      "location_info" : {
-        "file_path" : "Modules/Disk/readers.swift",
-        "location" : {
-          "end_position" : 4495,
-          "start_position" : 1787
+      "location_info": {
+        "file_path": "Modules/Disk/readers.swift",
+        "location": {
+          "end_position": 4495,
+          "start_position": 1787,
+          "start_line": 43,
+          "end_line": 100
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public",
         "override"
       ],
-      "name" : "read",
-      "parameters" : [
-
-      ]
+      "name": "read",
+      "parameters": []
     },
-    "type" : "Remove variable refactoring"
+    "type": "Remove variable refactoring"
   },
-  "refactoringIndex" : 20,
-  "refactoringType" : "Remove variable refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 20,
+  "refactoringType": "Remove variable refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Modules/Disk/readers.swift"
   ]
 }

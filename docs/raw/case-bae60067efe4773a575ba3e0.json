@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-bae60067efe4773a575ba3e0",
-  "commitHash" : "6317a832d400b39786b5fe750bdf49f99950511f",
-  "commitMessage" : "Adds build fixture and migrates build CLI tests. (#1848)\n\n- Part of #1833.\n- Also changes test directory names to include test ID so that they are\neasily identifiable.",
-  "commitURL" : "https://github.com/apple/container/commit/6317a832d400b39786b5fe750bdf49f99950511f",
-  "durationSeconds" : 7.3106390237808228,
-  "entityNames" : [
+  "caseID": "case-bae60067efe4773a575ba3e0",
+  "commitHash": "6317a832d400b39786b5fe750bdf49f99950511f",
+  "commitMessage": "Adds build fixture and migrates build CLI tests. (#1848)\n\n- Part of #1833.\n- Also changes test directory names to include test ID so that they are\neasily identifiable.",
+  "commitURL": "https://github.com/apple/container/commit/6317a832d400b39786b5fe750bdf49f99950511f",
+  "durationSeconds": 7.310639023780823,
+  "entityNames": [
     "CLIBuilderLocalOutputTest",
     "String",
     "TestCLIBuildBase",
@@ -14,554 +14,474 @@
     "buildWithLocalOutput",
     "buildWithPathsAndLocalOutput"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "attributes": [],
+      "classes": [
         {
-          "attributes" : [
-
-          ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
+          "attributes": [],
+          "classes": [],
+          "conformed_types": [
             {
-              "name" : "TestCLIBuildBase"
+              "name": "TestCLIBuildBase"
             }
           ],
-          "deinitializer" : {
-            "attributes" : [
-
-            ],
-            "body" : {
-              "content" : "try? builderDelete(force: true)"
+          "deinitializer": {
+            "attributes": [],
+            "body": {
+              "content": "try? builderDelete(force: true)"
             },
-            "has_async_specifier" : false,
-            "location_info" : {
-              "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-              "location" : {
-                "end_position" : 1054,
-                "start_position" : 982
+            "has_async_specifier": false,
+            "location_info": {
+              "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+              "location": {
+                "end_position": 1054,
+                "start_position": 982,
+                "start_line": 24,
+                "end_line": 28
               }
             },
-            "modifiers" : [
-
-            ],
-            "name" : "deinit"
+            "modifiers": [],
+            "name": "deinit"
           },
-          "enums" : [
-
-          ],
-          "functions" : [
+          "enums": [],
+          "functions": [
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "unsupported" : {
-                      "_0" : "Test"
+                  "annotation": {
+                    "unsupported": {
+                      "_0": "Test"
                     }
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "body" : {
-                "content" : "let tempDir: URL = try createTempDir()\n\n            // Test comprehensive multi-stage build with context and build arguments\n            let dockerfile: String =\n                \"\"\"\n                ARG MESSAGE=default\n                FROM scratch AS builder\n                ADD build.txt /build.txt\n                ADD testfile.txt /hello.txt\n\n                FROM scratch\n                COPY --from=builder /build.txt /final.txt\n                COPY --from=builder /hello.txt /app/hello.txt\n                ADD message.txt /message.txt\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"build.txt\", content: .data(\"Building stage\\n\".data(using: .utf8)!)),\n                .file(\"testfile.txt\", content: .data(\"Hello from local build\\n\".data(using: .utf8)!)),\n                .file(\"message.txt\", content: .data(\"Hello from build args\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let outputDir = tempDir.appendingPathComponent(\"comprehensive-local-output\")\n            let imageName = \"local-comprehensive-test:\\(UUID().uuidString)\"\n\n            let response = try buildWithLocalOutput(\n                tag: imageName,\n                tempDir: tempDir,\n                outputDir: outputDir,\n                args: [\"MESSAGE=Hello from build args\"]\n            )\n\n            // Verify the build succeeded\n            #expect(response.contains(outputDir.absolutePath()), \"Expected successful local export message\")\n\n            // Verify the output directory was created\n            #expect(FileManager.default.fileExists(atPath: outputDir.path), \"Expected local output directory to exist\")\n\n            // Verify the output contains expected structure\n            let contents = try FileManager.default.contentsOfDirectory(atPath: outputDir.path)\n            #expect(!contents.isEmpty, \"Expected local output directory to contain files\")\n\n            // Test basic functionality - verify basic local output works\n            let basicTempDir: URL = try createTempDir()\n            let basicDockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD testfile.txt /hello.txt\n                \"\"\"\n            let basicContext: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"Hello from basic build\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: basicTempDir, dockerfile: basicDockerfile, context: basicContext)\n\n            let basicOutputDir = basicTempDir.appendingPathComponent(\"basic-local-output\")\n            let basicImageName = \"local-basic-test:\\(UUID().uuidString)\"\n\n            let basicResponse = try buildWithLocalOutput(tag: basicImageName, tempDir: basicTempDir, outputDir: basicOutputDir)\n\n            // Verify basic build succeeded\n            #expect(basicResponse.contains(basicOutputDir.absolutePath()), \"Expected successful basic local export message\")\n            #expect(FileManager.default.fileExists(atPath: basicOutputDir.path), \"Expected basic local output directory to exist\")\n\n            // Test context functionality - verify COPY works with context\n            let contextTempDir: URL = try createTempDir()\n            let contextDockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                COPY testfile.txt /app/testfile.txt\n                \"\"\"\n            let contextContext: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"Test content for context build\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: contextTempDir, dockerfile: contextDockerfile, context: contextContext)\n\n            let contextOutputDir = contextTempDir.appendingPathComponent(\"context-local-output\")\n            let contextImageName = \"local-context-test:\\(UUID().uuidString)\"\n\n            let contextResponse = try buildWithLocalOutput(tag: contextImageName, tempDir: contextTempDir, outputDir: contextOutputDir)\n\n            // Verify context build succeeded\n            #expect(contextResponse.contains(contextOutputDir.absolutePath()), \"Expected successful context local export message\")\n            #expect(FileManager.default.fileExists(atPath: contextOutputDir.path), \"Expected context local output directory to exist\")"
+              "body": {
+                "content": "let tempDir: URL = try createTempDir()\n\n            // Test comprehensive multi-stage build with context and build arguments\n            let dockerfile: String =\n                \"\"\"\n                ARG MESSAGE=default\n                FROM scratch AS builder\n                ADD build.txt /build.txt\n                ADD testfile.txt /hello.txt\n\n                FROM scratch\n                COPY --from=builder /build.txt /final.txt\n                COPY --from=builder /hello.txt /app/hello.txt\n                ADD message.txt /message.txt\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"build.txt\", content: .data(\"Building stage\\n\".data(using: .utf8)!)),\n                .file(\"testfile.txt\", content: .data(\"Hello from local build\\n\".data(using: .utf8)!)),\n                .file(\"message.txt\", content: .data(\"Hello from build args\\n\".data(using: .utf8)!)),\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            let outputDir = tempDir.appendingPathComponent(\"comprehensive-local-output\")\n            let imageName = \"local-comprehensive-test:\\(UUID().uuidString)\"\n\n            let response = try buildWithLocalOutput(\n                tag: imageName,\n                tempDir: tempDir,\n                outputDir: outputDir,\n                args: [\"MESSAGE=Hello from build args\"]\n            )\n\n            // Verify the build succeeded\n            #expect(response.contains(outputDir.absolutePath()), \"Expected successful local export message\")\n\n            // Verify the output directory was created\n            #expect(FileManager.default.fileExists(atPath: outputDir.path), \"Expected local output directory to exist\")\n\n            // Verify the output contains expected structure\n            let contents = try FileManager.default.contentsOfDirectory(atPath: outputDir.path)\n            #expect(!contents.isEmpty, \"Expected local output directory to contain files\")\n\n            // Test basic functionality - verify basic local output works\n            let basicTempDir: URL = try createTempDir()\n            let basicDockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD testfile.txt /hello.txt\n                \"\"\"\n            let basicContext: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"Hello from basic build\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: basicTempDir, dockerfile: basicDockerfile, context: basicContext)\n\n            let basicOutputDir = basicTempDir.appendingPathComponent(\"basic-local-output\")\n            let basicImageName = \"local-basic-test:\\(UUID().uuidString)\"\n\n            let basicResponse = try buildWithLocalOutput(tag: basicImageName, tempDir: basicTempDir, outputDir: basicOutputDir)\n\n            // Verify basic build succeeded\n            #expect(basicResponse.contains(basicOutputDir.absolutePath()), \"Expected successful basic local export message\")\n            #expect(FileManager.default.fileExists(atPath: basicOutputDir.path), \"Expected basic local output directory to exist\")\n\n            // Test context functionality - verify COPY works with context\n            let contextTempDir: URL = try createTempDir()\n            let contextDockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                COPY testfile.txt /app/testfile.txt\n                \"\"\"\n            let contextContext: [FileSystemEntry] = [\n                .file(\"testfile.txt\", content: .data(\"Test content for context build\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: contextTempDir, dockerfile: contextDockerfile, context: contextContext)\n\n            let contextOutputDir = contextTempDir.appendingPathComponent(\"context-local-output\")\n            let contextImageName = \"local-context-test:\\(UUID().uuidString)\"\n\n            let contextResponse = try buildWithLocalOutput(tag: contextImageName, tempDir: contextTempDir, outputDir: contextOutputDir)\n\n            // Verify context build succeeded\n            #expect(contextResponse.contains(contextOutputDir.absolutePath()), \"Expected successful context local export message\")\n            #expect(FileManager.default.fileExists(atPath: contextOutputDir.path), \"Expected context local output directory to exist\")"
               },
-              "location_info" : {
-                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                "location" : {
-                  "end_position" : 5481,
-                  "start_position" : 1054
+              "location_info": {
+                "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                "location": {
+                  "end_position": 5481,
+                  "start_position": 1054,
+                  "start_line": 28,
+                  "end_line": 116
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "testBuildLocalOutputHappyPath",
-              "parameters" : [
-
-              ],
-              "specifiers_decl" : {
-                "description" : "throws",
-                "throws_specifier" : "throws"
+              "modifiers": [],
+              "name": "testBuildLocalOutputHappyPath",
+              "parameters": [],
+              "specifiers_decl": {
+                "description": "throws",
+                "throws_specifier": "throws"
               }
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "unsupported" : {
-                      "_0" : "Test"
+                  "annotation": {
+                    "unsupported": {
+                      "_0": "Test"
                     }
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "body" : {
-                "content" : "let dockerfileCtxDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                COPY . /app\n                \"\"\"\n            let dockerfileCtx: [FileSystemEntry] = [\n                .file(\"dockerfile-context.txt\", content: .data(\"Dockerfile context file\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: dockerfileCtxDir, dockerfile: dockerfile, context: dockerfileCtx)\n\n            let buildContextDir: URL = try createTempDir()\n            let buildContext: [FileSystemEntry] = [\n                .file(\"build-context.txt\", content: .data(\"Build context file\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: buildContextDir, dockerfile: \"\", context: buildContext)\n\n            let outputDir = dockerfileCtxDir.appendingPathComponent(\"diffpaths-local-output\")\n            let imageName = \"local-diffpaths-test:\\(UUID().uuidString)\"\n\n            let response = try buildWithPathsAndLocalOutput(\n                tag: imageName,\n                tempContext: buildContextDir,\n                tempDockerfileContext: dockerfileCtxDir,\n                outputDir: outputDir\n            )\n\n            // Verify the build succeeded\n            #expect(response.contains(outputDir.absolutePath()), \"Expected successful local export message\")\n\n            // Verify the output directory exists\n            #expect(FileManager.default.fileExists(atPath: outputDir.path), \"Expected local output directory to exist\")\n\n            // Test building to existing output directory\n            let existingTempDir: URL = try createTempDir()\n            let existingDockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD newfile.txt /newfile.txt\n                \"\"\"\n            let existingContext: [FileSystemEntry] = [\n                .file(\"newfile.txt\", content: .data(\"New content from build\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: existingTempDir, dockerfile: existingDockerfile, context: existingContext)\n\n            let existingOutputDir = existingTempDir.appendingPathComponent(\"existing-output\")\n\n            // Create the output directory and add some existing files\n            try FileManager.default.createDirectory(at: existingOutputDir, withIntermediateDirectories: true)\n            let existingFile = existingOutputDir.appendingPathComponent(\"existing.txt\")\n            try \"Existing file content\\n\".data(using: .utf8)!.write(to: existingFile)\n\n            let existingImageName = \"local-existing-test:\\(UUID().uuidString)\"\n\n            let existingResponse = try buildWithLocalOutput(tag: existingImageName, tempDir: existingTempDir, outputDir: existingOutputDir)\n\n            // Verify the build succeeded\n            #expect(existingResponse.contains(existingOutputDir.absolutePath()), \"Expected successful local export message\")\n\n            // Verify the output directory exists\n            #expect(FileManager.default.fileExists(atPath: existingOutputDir.path), \"Expected local output directory to exist\")\n\n            // Verify the existing file is still there (local output should merge/overwrite)\n            let contents = try FileManager.default.contentsOfDirectory(atPath: existingOutputDir.path)\n            #expect(!contents.isEmpty, \"Expected local output directory to contain files\")"
+              "body": {
+                "content": "let dockerfileCtxDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                COPY . /app\n                \"\"\"\n            let dockerfileCtx: [FileSystemEntry] = [\n                .file(\"dockerfile-context.txt\", content: .data(\"Dockerfile context file\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: dockerfileCtxDir, dockerfile: dockerfile, context: dockerfileCtx)\n\n            let buildContextDir: URL = try createTempDir()\n            let buildContext: [FileSystemEntry] = [\n                .file(\"build-context.txt\", content: .data(\"Build context file\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: buildContextDir, dockerfile: \"\", context: buildContext)\n\n            let outputDir = dockerfileCtxDir.appendingPathComponent(\"diffpaths-local-output\")\n            let imageName = \"local-diffpaths-test:\\(UUID().uuidString)\"\n\n            let response = try buildWithPathsAndLocalOutput(\n                tag: imageName,\n                tempContext: buildContextDir,\n                tempDockerfileContext: dockerfileCtxDir,\n                outputDir: outputDir\n            )\n\n            // Verify the build succeeded\n            #expect(response.contains(outputDir.absolutePath()), \"Expected successful local export message\")\n\n            // Verify the output directory exists\n            #expect(FileManager.default.fileExists(atPath: outputDir.path), \"Expected local output directory to exist\")\n\n            // Test building to existing output directory\n            let existingTempDir: URL = try createTempDir()\n            let existingDockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD newfile.txt /newfile.txt\n                \"\"\"\n            let existingContext: [FileSystemEntry] = [\n                .file(\"newfile.txt\", content: .data(\"New content from build\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: existingTempDir, dockerfile: existingDockerfile, context: existingContext)\n\n            let existingOutputDir = existingTempDir.appendingPathComponent(\"existing-output\")\n\n            // Create the output directory and add some existing files\n            try FileManager.default.createDirectory(at: existingOutputDir, withIntermediateDirectories: true)\n            let existingFile = existingOutputDir.appendingPathComponent(\"existing.txt\")\n            try \"Existing file content\\n\".data(using: .utf8)!.write(to: existingFile)\n\n            let existingImageName = \"local-existing-test:\\(UUID().uuidString)\"\n\n            let existingResponse = try buildWithLocalOutput(tag: existingImageName, tempDir: existingTempDir, outputDir: existingOutputDir)\n\n            // Verify the build succeeded\n            #expect(existingResponse.contains(existingOutputDir.absolutePath()), \"Expected successful local export message\")\n\n            // Verify the output directory exists\n            #expect(FileManager.default.fileExists(atPath: existingOutputDir.path), \"Expected local output directory to exist\")\n\n            // Verify the existing file is still there (local output should merge/overwrite)\n            let contents = try FileManager.default.contentsOfDirectory(atPath: existingOutputDir.path)\n            #expect(!contents.isEmpty, \"Expected local output directory to contain files\")"
               },
-              "location_info" : {
-                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                "location" : {
-                  "end_position" : 9225,
-                  "start_position" : 5481
+              "location_info": {
+                "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                "location": {
+                  "end_position": 9225,
+                  "start_position": 5481,
+                  "start_line": 116,
+                  "end_line": 190
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "testBuildLocalOutputEdgeCases",
-              "parameters" : [
-
-              ],
-              "specifiers_decl" : {
-                "description" : "throws",
-                "throws_specifier" : "throws"
+              "modifiers": [],
+              "name": "testBuildLocalOutputEdgeCases",
+              "parameters": [],
+              "specifiers_decl": {
+                "description": "throws",
+                "throws_specifier": "throws"
               }
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "unsupported" : {
-                      "_0" : "Test"
+                  "annotation": {
+                    "unsupported": {
+                      "_0": "Test"
                     }
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "body" : {
-                "content" : "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD test.txt /test.txt\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"test.txt\", content: .data(\"test\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            // Use a path that doesn't exist and can't be created (invalid parent)\n            let invalidOutputDir = URL(fileURLWithPath: \"/nonexistent/invalid/path\")\n            let imageName = \"local-invalid-test:\\(UUID().uuidString)\"\n\n            #expect(throws: CLIError.self) {\n                try buildWithLocalOutput(tag: imageName, tempDir: tempDir, outputDir: invalidOutputDir)\n            }"
+              "body": {
+                "content": "let tempDir: URL = try createTempDir()\n            let dockerfile: String =\n                \"\"\"\n                FROM scratch\n\n                ADD test.txt /test.txt\n                \"\"\"\n            let context: [FileSystemEntry] = [\n                .file(\"test.txt\", content: .data(\"test\\n\".data(using: .utf8)!))\n            ]\n            try createContext(tempDir: tempDir, dockerfile: dockerfile, context: context)\n\n            // Use a path that doesn't exist and can't be created (invalid parent)\n            let invalidOutputDir = URL(fileURLWithPath: \"/nonexistent/invalid/path\")\n            let imageName = \"local-invalid-test:\\(UUID().uuidString)\"\n\n            #expect(throws: CLIError.self) {\n                try buildWithLocalOutput(tag: imageName, tempDir: tempDir, outputDir: invalidOutputDir)\n            }"
               },
-              "location_info" : {
-                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                "location" : {
-                  "end_position" : 10125,
-                  "start_position" : 9225
+              "location_info": {
+                "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                "location": {
+                  "end_position": 10125,
+                  "start_position": 9225,
+                  "start_line": 190,
+                  "end_line": 212
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "testBuildLocalOutputFailure",
-              "parameters" : [
-
-              ],
-              "specifiers_decl" : {
-                "description" : "throws",
-                "throws_specifier" : "throws"
+              "modifiers": [],
+              "name": "testBuildLocalOutputFailure",
+              "parameters": [],
+              "specifiers_decl": {
+                "description": "throws",
+                "throws_specifier": "throws"
               }
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "discardable_result" : {
-
-                    }
+                  "annotation": {
+                    "discardable_result": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "body" : {
-                "content" : "try buildWithPathsAndLocalOutput(\n                tag: tag,\n                tempContext: tempDir,\n                tempDockerfileContext: tempDir,\n                outputDir: outputDir,\n                args: args\n            )"
+              "body": {
+                "content": "try buildWithPathsAndLocalOutput(\n                tag: tag,\n                tempContext: tempDir,\n                tempDockerfileContext: tempDir,\n                outputDir: outputDir,\n                args: args\n            )"
               },
-              "location_info" : {
-                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                "location" : {
-                  "end_position" : 10573,
-                  "start_position" : 10125
+              "location_info": {
+                "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                "location": {
+                  "end_position": 10573,
+                  "start_position": 10125,
+                  "start_line": 212,
+                  "end_line": 224
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "buildWithLocalOutput",
-              "parameters" : [
+              "modifiers": [],
+              "name": "buildWithLocalOutput",
+              "parameters": [
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "String"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "String"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10255,
-                      "start_position" : 10242
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10255,
+                      "start_position": 10242,
+                      "start_line": 216,
+                      "end_line": 216
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "tag",
-                  "order" : 0
+                  "modifiers": [],
+                  "name": "tag",
+                  "order": 0
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "URL"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "URL"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10269,
-                      "start_position" : 10255
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10269,
+                      "start_position": 10255,
+                      "start_line": 216,
+                      "end_line": 216
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "tempDir",
-                  "order" : 1
+                  "modifiers": [],
+                  "name": "tempDir",
+                  "order": 1
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "URL"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "URL"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10285,
-                      "start_position" : 10269
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10285,
+                      "start_position": 10269,
+                      "start_line": 216,
+                      "end_line": 216
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "outputDir",
-                  "order" : 2
+                  "modifiers": [],
+                  "name": "outputDir",
+                  "order": 2
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : true,
-                    "name" : "[String]?"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": true,
+                    "name": "[String]?"
                   },
-                  "initializer_clause" : {
-                    "has_self_reference" : false,
-                    "value" : {
-                      "other" : {
-                        "_0" : "nil"
+                  "initializer_clause": {
+                    "has_self_reference": false,
+                    "value": {
+                      "other": {
+                        "_0": "nil"
                       }
                     }
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10306,
-                      "start_position" : 10285
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10306,
+                      "start_position": 10285,
+                      "start_line": 216,
+                      "end_line": 216
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "args",
-                  "order" : 3
+                  "modifiers": [],
+                  "name": "args",
+                  "order": 3
                 }
               ],
-              "return_clause" : {
-                "data_type" : {
-                  "is_optional" : false,
-                  "name" : "String"
+              "return_clause": {
+                "data_type": {
+                  "is_optional": false,
+                  "name": "String"
                 },
-                "description" : "-> String"
+                "description": "-> String"
               },
-              "specifiers_decl" : {
-                "description" : "throws",
-                "throws_specifier" : "throws"
+              "specifiers_decl": {
+                "description": "throws",
+                "throws_specifier": "throws"
               }
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "discardable_result" : {
-
-                    }
+                  "annotation": {
+                    "discardable_result": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "body" : {
-                "content" : "let contextDir: URL = tempContext.appendingPathComponent(\"context\")\n            let contextDirPath = contextDir.absoluteURL.path\n            var buildArgs = [\n                \"build\",\n                \"-f\",\n                tempDockerfileContext.appendingPathComponent(\"Dockerfile\").path,\n                \"-t\",\n                tag,\n                \"--output\",\n                \"type=local,dest=\\(outputDir.path)\",\n            ]\n            if let args = args {\n                for arg in args {\n                    buildArgs.append(\"--build-arg\")\n                    buildArgs.append(arg)\n                }\n            }\n            buildArgs.append(contextDirPath)\n\n            let response = try run(arguments: buildArgs)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            return response.output"
+              "body": {
+                "content": "let contextDir: URL = tempContext.appendingPathComponent(\"context\")\n            let contextDirPath = contextDir.absoluteURL.path\n            var buildArgs = [\n                \"build\",\n                \"-f\",\n                tempDockerfileContext.appendingPathComponent(\"Dockerfile\").path,\n                \"-t\",\n                tag,\n                \"--output\",\n                \"type=local,dest=\\(outputDir.path)\",\n            ]\n            if let args = args {\n                for arg in args {\n                    buildArgs.append(\"--build-arg\")\n                    buildArgs.append(arg)\n                }\n            }\n            buildArgs.append(contextDirPath)\n\n            let response = try run(arguments: buildArgs)\n            if response.status != 0 {\n                throw CLIError.executionFailed(\"build failed: stdout=\\(response.output) stderr=\\(response.error)\")\n            }\n\n            return response.output"
               },
-              "location_info" : {
-                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                "location" : {
-                  "end_position" : 11850,
-                  "start_position" : 10573
+              "location_info": {
+                "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                "location": {
+                  "end_position": 11850,
+                  "start_position": 10573,
+                  "start_line": 224,
+                  "end_line": 260
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "buildWithPathsAndLocalOutput",
-              "parameters" : [
+              "modifiers": [],
+              "name": "buildWithPathsAndLocalOutput",
+              "parameters": [
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "String"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "String"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10743,
-                      "start_position" : 10718
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10743,
+                      "start_position": 10718,
+                      "start_line": 228,
+                      "end_line": 229
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "tag",
-                  "order" : 0
+                  "modifiers": [],
+                  "name": "tag",
+                  "order": 0
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "URL"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "URL"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10773,
-                      "start_position" : 10743
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10773,
+                      "start_position": 10743,
+                      "start_line": 229,
+                      "end_line": 230
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "tempContext",
-                  "order" : 1
+                  "modifiers": [],
+                  "name": "tempContext",
+                  "order": 1
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "URL"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "URL"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10813,
-                      "start_position" : 10773
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10813,
+                      "start_position": 10773,
+                      "start_line": 230,
+                      "end_line": 231
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "tempDockerfileContext",
-                  "order" : 2
+                  "modifiers": [],
+                  "name": "tempDockerfileContext",
+                  "order": 2
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : false,
-                    "name" : "URL"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": false,
+                    "name": "URL"
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10841,
-                      "start_position" : 10813
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10841,
+                      "start_position": 10813,
+                      "start_line": 231,
+                      "end_line": 232
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "outputDir",
-                  "order" : 3
+                  "modifiers": [],
+                  "name": "outputDir",
+                  "order": 3
                 },
                 {
-                  "attributes" : [
-
-                  ],
-                  "data_type" : {
-                    "is_optional" : true,
-                    "name" : "[String]?"
+                  "attributes": [],
+                  "data_type": {
+                    "is_optional": true,
+                    "name": "[String]?"
                   },
-                  "initializer_clause" : {
-                    "has_self_reference" : false,
-                    "value" : {
-                      "other" : {
-                        "_0" : "nil"
+                  "initializer_clause": {
+                    "has_self_reference": false,
+                    "value": {
+                      "other": {
+                        "_0": "nil"
                       }
                     }
                   },
-                  "is_variadic" : false,
-                  "location_info" : {
-                    "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                    "location" : {
-                      "end_position" : 10875,
-                      "start_position" : 10841
+                  "is_variadic": false,
+                  "location_info": {
+                    "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                    "location": {
+                      "end_position": 10875,
+                      "start_position": 10841,
+                      "start_line": 232,
+                      "end_line": 233
                     }
                   },
-                  "modifiers" : [
-
-                  ],
-                  "name" : "args",
-                  "order" : 4
+                  "modifiers": [],
+                  "name": "args",
+                  "order": 4
                 }
               ],
-              "return_clause" : {
-                "data_type" : {
-                  "is_optional" : false,
-                  "name" : "String"
+              "return_clause": {
+                "data_type": {
+                  "is_optional": false,
+                  "name": "String"
                 },
-                "description" : "-> String"
+                "description": "-> String"
               },
-              "specifiers_decl" : {
-                "description" : "throws",
-                "throws_specifier" : "throws"
+              "specifiers_decl": {
+                "description": "throws",
+                "throws_specifier": "throws"
               }
             }
           ],
-          "initializers" : [
+          "initializers": [
             {
-              "attributes" : [
-
-              ],
-              "functions" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-                "location" : {
-                  "end_position" : 982,
-                  "start_position" : 910
+              "attributes": [],
+              "functions": [],
+              "location_info": {
+                "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+                "location": {
+                  "end_position": 982,
+                  "start_position": 910,
+                  "start_line": 21,
+                  "end_line": 24
                 }
               },
-              "modifiers" : [
+              "modifiers": [
                 "override"
               ],
-              "name" : "init",
-              "parameters" : [
-
-              ]
+              "name": "init",
+              "parameters": []
             }
           ],
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-            "location" : {
-              "end_position" : 11856,
-              "start_position" : 854
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+            "location": {
+              "end_position": 11856,
+              "start_position": 854,
+              "start_line": 20,
+              "end_line": 261
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "CLIBuilderLocalOutputTest",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
-
-          ]
+          "modifiers": [],
+          "name": "CLIBuilderLocalOutputTest",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": []
         }
       ],
-      "conformed_types" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "TestCLIBuildBase"
+      "conformed_types": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "TestCLIBuildBase"
       },
-      "enums" : [
-
-      ],
-      "functions" : [
-
-      ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
-        "location" : {
-          "end_position" : 11858,
-          "start_position" : 824
+      "enums": [],
+      "functions": [],
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift",
+        "location": {
+          "end_position": 11858,
+          "start_position": 824,
+          "start_line": 18,
+          "end_line": 262
         }
       },
-      "modifiers" : [
-
-      ],
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Remove Extension refactoring"
+    "type": "Remove Extension refactoring"
   },
-  "refactoringIndex" : 12,
-  "refactoringType" : "Remove Extension refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 12,
+  "refactoringType": "Remove Extension refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/CLITests/Subcommands/Build/CLIBuilderLocalOutputTest.swift"
   ]
 }

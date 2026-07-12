@@ -1,55 +1,53 @@
 {
-  "caseID" : "case-b65ce1800ff3b5c31819023d",
-  "commitHash" : "aa7fef3d1d61a4ea8156203cb61817862877a635",
-  "commitMessage" : "Route `container image save` reference list to stderr in stdout mode (#1804)\n\n- Fixes #1801.\n- When `container image save` runs without `--output`,\n  stdout carries the OCI tar archive. The command writes \n  the archive bytes to stdout and then `print(reference)`s\n  each saved image reference to stdout afterward,\n  appending non-archive text after the tar EOF marker,\n  which will cause strict tar/OCI consumers to fail.\n- This routes the saved-reference list to stderr in the\n  no-`--output` branch, so stdout contains only archive\n  bytes. When saving to a file via `--output`, stdout is\n  free, so the references continue to print to stdout\n  exactly as before.\n\nCo-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>",
-  "commitURL" : "https://github.com/apple/container/commit/aa7fef3d1d61a4ea8156203cb61817862877a635",
-  "durationSeconds" : 1.7922130823135376,
-  "entityNames" : [
+  "caseID": "case-b65ce1800ff3b5c31819023d",
+  "commitHash": "aa7fef3d1d61a4ea8156203cb61817862877a635",
+  "commitMessage": "Route `container image save` reference list to stderr in stdout mode (#1804)\n\n- Fixes #1801.\n- When `container image save` runs without `--output`,\n  stdout carries the OCI tar archive. The command writes \n  the archive bytes to stdout and then `print(reference)`s\n  each saved image reference to stdout afterward,\n  appending non-archive text after the tar EOF marker,\n  which will cause strict tar/OCI consumers to fail.\n- This routes the saved-reference list to stderr in the\n  no-`--output` branch, so stdout contains only archive\n  bytes. When saving to a file via `--output`, stdout is\n  free, so the references continue to print to stdout\n  exactly as before.\n\nCo-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>",
+  "commitURL": "https://github.com/apple/container/commit/aa7fef3d1d61a4ea8156203cb61817862877a635",
+  "durationSeconds": 1.7922130823135376,
+  "entityNames": [
     "run"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "for reference in references {\n                print(reference)\n            }",
-      "index" : 12
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "for reference in references {\n                print(reference)\n            }",
+      "index": 12
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let containerSystemConfig: ContainerSystemConfig = try await Application.loadContainerSystemConfig()\n            let p = try DefaultPlatform.resolve(platform: platform, os: os, arch: arch, log: log)\n\n            let progressConfig = try ProgressConfig(\n                description: \"Saving image(s)\"\n            )\n            let progress = ProgressBar(config: progressConfig)\n            defer {\n                progress.finish()\n            }\n            progress.start()\n\n            var images: [ImageDescription] = []\n            for reference in references {\n                do {\n                    images.append(try await ClientImage.get(reference: reference, containerSystemConfig: containerSystemConfig).description)\n                } catch {\n                    log.error(\"failed to get image for reference \\(reference): \\(error)\")\n                }\n            }\n\n            guard images.count == references.count else {\n                throw ContainerizationError(.invalidArgument, message: \"failed to save image(s)\")\n            }\n\n            if let p {\n                for (reference, description) in zip(references, images) {\n                    let image = ClientImage(description: description)\n                    do {\n                        _ = try await image.manifest(for: p)\n                    } catch {\n                        var available: [String] = []\n                        if let index = try? await image.index() {\n                            available = index.manifests\n                                .compactMap { $0.platform?.description }\n                                .filter { $0 != \"unknown/unknown\" }\n                        }\n                        let availableStr = available.isEmpty ? \"none\" : available.joined(separator: \", \")\n                        throw ContainerizationError(\n                            .invalidArgument,\n                            message: \"image \\(reference) has no content for platform \\(p.description); available platforms: \\(availableStr)\"\n                        )\n                    }\n                }\n            }\n\n            // Write to stdout; otherwise write to the output file\n            if let output {\n                try await ClientImage.save(references: references, out: output.string, platform: p, containerSystemConfig: containerSystemConfig)\n            } else {\n                let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(\"\\(UUID().uuidString).tar\")\n                defer {\n                    try? FileManager.default.removeItem(at: tempFile)\n                }\n\n                guard FileManager.default.createFile(atPath: tempFile.path(), contents: nil) else {\n                    throw ContainerizationError(.internalError, message: \"unable to create temporary file\")\n                }\n\n                try await ClientImage.save(references: references, out: tempFile.path(), platform: p, containerSystemConfig: containerSystemConfig)\n\n                guard let fileHandle = try? FileHandle(forReadingFrom: tempFile) else {\n                    throw ContainerizationError(.internalError, message: \"unable to open temporary file for reading\")\n                }\n\n                let bufferSize = 4096\n                while true {\n                    let chunk = fileHandle.readData(ofLength: bufferSize)\n                    if chunk.isEmpty { break }\n                    FileHandle.standardOutput.write(chunk)\n                }\n                try fileHandle.close()\n            }\n\n            progress.finish()\n            for reference in references {\n                print(reference)\n            }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let containerSystemConfig: ContainerSystemConfig = try await Application.loadContainerSystemConfig()\n            let p = try DefaultPlatform.resolve(platform: platform, os: os, arch: arch, log: log)\n\n            let progressConfig = try ProgressConfig(\n                description: \"Saving image(s)\"\n            )\n            let progress = ProgressBar(config: progressConfig)\n            defer {\n                progress.finish()\n            }\n            progress.start()\n\n            var images: [ImageDescription] = []\n            for reference in references {\n                do {\n                    images.append(try await ClientImage.get(reference: reference, containerSystemConfig: containerSystemConfig).description)\n                } catch {\n                    log.error(\"failed to get image for reference \\(reference): \\(error)\")\n                }\n            }\n\n            guard images.count == references.count else {\n                throw ContainerizationError(.invalidArgument, message: \"failed to save image(s)\")\n            }\n\n            if let p {\n                for (reference, description) in zip(references, images) {\n                    let image = ClientImage(description: description)\n                    do {\n                        _ = try await image.manifest(for: p)\n                    } catch {\n                        var available: [String] = []\n                        if let index = try? await image.index() {\n                            available = index.manifests\n                                .compactMap { $0.platform?.description }\n                                .filter { $0 != \"unknown/unknown\" }\n                        }\n                        let availableStr = available.isEmpty ? \"none\" : available.joined(separator: \", \")\n                        throw ContainerizationError(\n                            .invalidArgument,\n                            message: \"image \\(reference) has no content for platform \\(p.description); available platforms: \\(availableStr)\"\n                        )\n                    }\n                }\n            }\n\n            // Write to stdout; otherwise write to the output file\n            if let output {\n                try await ClientImage.save(references: references, out: output.string, platform: p, containerSystemConfig: containerSystemConfig)\n            } else {\n                let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(\"\\(UUID().uuidString).tar\")\n                defer {\n                    try? FileManager.default.removeItem(at: tempFile)\n                }\n\n                guard FileManager.default.createFile(atPath: tempFile.path(), contents: nil) else {\n                    throw ContainerizationError(.internalError, message: \"unable to create temporary file\")\n                }\n\n                try await ClientImage.save(references: references, out: tempFile.path(), platform: p, containerSystemConfig: containerSystemConfig)\n\n                guard let fileHandle = try? FileHandle(forReadingFrom: tempFile) else {\n                    throw ContainerizationError(.internalError, message: \"unable to open temporary file for reading\")\n                }\n\n                let bufferSize = 4096\n                while true {\n                    let chunk = fileHandle.readData(ofLength: bufferSize)\n                    if chunk.isEmpty { break }\n                    FileHandle.standardOutput.write(chunk)\n                }\n                try fileHandle.close()\n            }\n\n            progress.finish()\n            for reference in references {\n                print(reference)\n            }"
       },
-      "location_info" : {
-        "file_path" : "Sources/ContainerCommands/Image/ImageSave.swift",
-        "location" : {
-          "end_position" : 5877,
-          "start_position" : 2179
+      "location_info": {
+        "file_path": "Sources/ContainerCommands/Image/ImageSave.swift",
+        "location": {
+          "end_position": 5877,
+          "start_position": 2179,
+          "start_line": 64,
+          "end_line": 145
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "run",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "name": "run",
+      "parameters": [],
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 0,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 0,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/ContainerCommands/Image/ImageSave.swift"
   ]
 }

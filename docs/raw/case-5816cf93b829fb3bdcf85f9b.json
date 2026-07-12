@@ -1,107 +1,101 @@
 {
-  "caseID" : "case-5816cf93b829fb3bdcf85f9b",
-  "commitHash" : "9ec78dee16adf642cdcb23b8e304857e2e259758",
-  "commitMessage" : "More Atomic Locking (#3984)\n\n### Issue Link :link:\nAttempts to fix #3978 \n\n### Goals :soccer:\nThis PR is a speculative attempt to fix the continuation resumption\ncrash seen in #3978. However, I was unable to reproduce that issues,\neven with more complicated test cases and over 50 million test\niterations. So this PR makes a few parts of `Request`'s state management\nmore atomic, especially around response serializer handling. It also\nremoves `@dynamicMemberLookup` from `Protected`, which should encourage\nmore atomic usage.\n\n### Implementation Details :construction:\nThis PR attempts to unify what were separate lock access in the same\nflow into single accesses that accomplish the same thing. Behaviorally\nshould be the same but may prevent any intermediate accesses to state\nthat might cause this issue.\n\n### Testing Details :mag:\nNo new test scenarios, as no reproduction could be found.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9ec78dee16adf642cdcb23b8e304857e2e259758",
-  "durationSeconds" : 10.915109992027283,
-  "entityNames" : [
+  "caseID": "case-5816cf93b829fb3bdcf85f9b",
+  "commitHash": "9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "commitMessage": "More Atomic Locking (#3984)\n\n### Issue Link :link:\nAttempts to fix #3978 \n\n### Goals :soccer:\nThis PR is a speculative attempt to fix the continuation resumption\ncrash seen in #3978. However, I was unable to reproduce that issues,\neven with more complicated test cases and over 50 million test\niterations. So this PR makes a few parts of `Request`'s state management\nmore atomic, especially around response serializer handling. It also\nremoves `@dynamicMemberLookup` from `Protected`, which should encourage\nmore atomic usage.\n\n### Implementation Details :construction:\nThis PR attempts to unify what were separate lock access in the same\nflow into single accesses that accomplish the same thing. Behaviorally\nshould be the same but may prevent any intermediate accesses to state\nthat might cause this issue.\n\n### Testing Details :mag:\nNo new test scenarios, as no reproduction could be found.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9ec78dee16adf642cdcb23b8e304857e2e259758",
+  "durationSeconds": 10.915109992027283,
+  "entityNames": [
     "@escaping ([Int], [Int]) -> Void",
     "Int",
     "completion",
     "executeReadOperationsInParallel",
     "totalOperations"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "depth" : 0,
-      "description" : "for _ in 1...totalOperations {\n            queue1.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results1.append(result)\n\n                    if $0.results1.count == totalOperations {\n                        $0.queue1Complete = true\n\n                        if $0.queue2Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n\n            queue2.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results2.append(result)\n\n                    if $0.results2.count == totalOperations {\n                        $0.queue2Complete = true\n\n                        if $0.queue1Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n        }",
-      "index" : 2
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "depth": 0,
+      "description": "for _ in 1...totalOperations {\n            queue1.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results1.append(result)\n\n                    if $0.results1.count == totalOperations {\n                        $0.queue1Complete = true\n\n                        if $0.queue2Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n\n            queue2.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results2.append(result)\n\n                    if $0.results2.count == totalOperations {\n                        $0.queue2Complete = true\n\n                        if $0.queue1Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n        }",
+      "index": 2
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let queue1 = DispatchQueue(label: \"com.alamofire.testReaderQueue1\")\n        let queue2 = DispatchQueue(label: \"com.alamofire.testReaderQueue1\")\n\n        for _ in 1...totalOperations {\n            queue1.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results1.append(result)\n\n                    if $0.results1.count == totalOperations {\n                        $0.queue1Complete = true\n\n                        if $0.queue2Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n\n            queue2.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results2.append(result)\n\n                    if $0.results2.count == totalOperations {\n                        $0.queue2Complete = true\n\n                        if $0.queue1Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let queue1 = DispatchQueue(label: \"com.alamofire.testReaderQueue1\")\n        let queue2 = DispatchQueue(label: \"com.alamofire.testReaderQueue1\")\n\n        for _ in 1...totalOperations {\n            queue1.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results1.append(result)\n\n                    if $0.results1.count == totalOperations {\n                        $0.queue1Complete = true\n\n                        if $0.queue2Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n\n            queue2.async {\n                let result = self.stringContainer.read(\\.totalStrings)\n\n                self.stringContainerRead.write {\n                    $0.results2.append(result)\n\n                    if $0.results2.count == totalOperations {\n                        $0.queue2Complete = true\n\n                        if $0.queue1Complete {\n                            completion($0.results1, $0.results2)\n                        }\n                    }\n                }\n            }\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/ProtectedTests.swift",
-        "location" : {
-          "end_position" : 8887,
-          "start_position" : 7484
+      "location_info": {
+        "file_path": "Tests/ProtectedTests.swift",
+        "location": {
+          "end_position": 8887,
+          "start_position": 7484,
+          "start_line": 208,
+          "end_line": 248
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "executeReadOperationsInParallel",
-      "parameters" : [
+      "name": "executeReadOperationsInParallel",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Int"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Int"
           },
-          "is_variadic" : false,
-          "label" : "totalOperationsToExecute",
-          "location_info" : {
-            "file_path" : "Tests/ProtectedTests.swift",
-            "location" : {
-              "end_position" : 7581,
-              "start_position" : 7535
+          "is_variadic": false,
+          "label": "totalOperationsToExecute",
+          "location_info": {
+            "file_path": "Tests/ProtectedTests.swift",
+            "location": {
+              "end_position": 7581,
+              "start_position": 7535,
+              "start_line": 210,
+              "end_line": 210
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "totalOperations",
-          "order" : 0
+          "modifiers": [],
+          "name": "totalOperations",
+          "order": 0
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "escaping" : {
-
-                }
+              "annotation": {
+                "escaping": {}
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "@escaping ([Int], [Int]) -> Void"
+          "data_type": {
+            "is_optional": false,
+            "name": "@escaping ([Int], [Int]) -> Void"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Tests/ProtectedTests.swift",
-            "location" : {
-              "end_position" : 7675,
-              "start_position" : 7581
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Tests/ProtectedTests.swift",
+            "location": {
+              "end_position": 7675,
+              "start_position": 7581,
+              "start_line": 210,
+              "end_line": 211
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "completion",
-          "order" : 1
+          "modifiers": [],
+          "name": "completion",
+          "order": 1
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 104,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 104,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/ProtectedTests.swift"
   ]
 }

@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-61d8bffc022b0cc4d706b0b5",
-  "commitHash" : "061caec33de0fa9544a2e05918716b812f49bad7",
-  "commitMessage" : "feat: added ATA SMART reader to the Disk module (#3357)\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/061caec33de0fa9544a2e05918716b812f49bad7",
-  "durationSeconds" : 4.2244679927825928,
-  "entityNames" : [
+  "caseID": "case-61d8bffc022b0cc4d706b0b5",
+  "commitHash": "061caec33de0fa9544a2e05918716b812f49bad7",
+  "commitMessage": "feat: added ATA SMART reader to the Disk module (#3357)\n",
+  "commitURL": "https://github.com/exelban/stats/commit/061caec33de0fa9544a2e05918716b812f49bad7",
+  "durationSeconds": 4.224467992782593,
+  "entityNames": [
     "(UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)",
     "BSDName",
     "Bool",
@@ -14,591 +14,547 @@
     "Reader<Disks>",
     "SMART"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "[String: (read: Int64, written: Int64)]"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "[String: (read: Int64, written: Int64)]"
       },
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "other" : {
-            "_0" : "[:]"
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "other": {
+            "_0": "[:]"
           }
         }
       },
-      "is_constant" : false,
-      "location_info" : {
-        "file_path" : "Modules/Disk/readers.swift",
-        "location" : {
-          "end_position" : 2691,
-          "start_position" : 2633
+      "is_constant": false,
+      "location_info": {
+        "file_path": "Modules/Disk/readers.swift",
+        "location": {
+          "end_position": 2691,
+          "start_position": 2633,
+          "start_line": 56,
+          "end_line": 56
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "smartTotals"
+      "name": "smartTotals"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "Reader<Disks>"
+          "name": "Reader<Disks>"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let keys: [URLResourceKey] = [.volumeNameKey]\n        let removableState = Store.shared.bool(key: \"Disk_removable\", defaultValue: false)\n        guard let paths = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) else {\n            return\n        }\n        \n        guard let session = DASessionCreate(kCFAllocatorDefault) else {\n            error(\"cannot create main DASessionCreate()\", log: self.log)\n            return\n        }\n        \n        var active: [String] = []\n        for url in paths {\n            if url.pathComponents.count == 1 || (url.pathComponents.count > 1 && url.pathComponents[1] == \"Volumes\") {\n                if let disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, url as CFURL) {\n                    if let diskName = DADiskGetBSDName(disk) {\n                        let BSDName: String = String(cString: diskName)\n                        active.append(BSDName)\n                        \n                        if let d = self.list.first(where: { $0.BSDName == BSDName}), let idx = self.list.index(where: { $0.BSDName == BSDName}) {\n                            if d.removable && !removableState {\n                                self.list.remove(at: idx)\n                                continue\n                            }\n                            \n                            if let path = d.path {\n                                self.list.updateFreeSize(idx, newValue: self.freeDiskSpaceInBytes(path))\n                                self.list.updateSMARTData(idx, smart: self.getSMARTDetails(for: BSDName))\n                            }\n                            \n                            continue\n                        }\n                        \n                        if var d = driveDetails(disk, removableState: removableState) {\n                            if let path = d.path {\n                                d.free = self.freeDiskSpaceInBytes(path)\n                                d.size = self.totalDiskSpaceInBytes(path)\n                            }\n                            d.smart = self.getSMARTDetails(for: BSDName)\n                            guard d.size != 0 else { continue }\n                            self.list.append(d)\n                            self.list.sort()\n                        }\n                    }\n                }\n            }\n        }\n        \n        active.difference(from: self.list.map{ $0.BSDName }).forEach { (BSDName: String) in\n            if let idx = self.list.index(where: { $0.BSDName == BSDName }) {\n                self.list.remove(at: idx)\n            }\n        }\n        \n        self.callback(self.list)"
+          "attributes": [],
+          "body": {
+            "content": "let keys: [URLResourceKey] = [.volumeNameKey]\n        let removableState = Store.shared.bool(key: \"Disk_removable\", defaultValue: false)\n        guard let paths = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) else {\n            return\n        }\n        \n        guard let session = DASessionCreate(kCFAllocatorDefault) else {\n            error(\"cannot create main DASessionCreate()\", log: self.log)\n            return\n        }\n        \n        var active: [String] = []\n        for url in paths {\n            if url.pathComponents.count == 1 || (url.pathComponents.count > 1 && url.pathComponents[1] == \"Volumes\") {\n                if let disk = DADiskCreateFromVolumePath(kCFAllocatorDefault, session, url as CFURL) {\n                    if let diskName = DADiskGetBSDName(disk) {\n                        let BSDName: String = String(cString: diskName)\n                        active.append(BSDName)\n                        \n                        if let d = self.list.first(where: { $0.BSDName == BSDName}), let idx = self.list.index(where: { $0.BSDName == BSDName}) {\n                            if d.removable && !removableState {\n                                self.list.remove(at: idx)\n                                continue\n                            }\n                            \n                            if let path = d.path {\n                                self.list.updateFreeSize(idx, newValue: self.freeDiskSpaceInBytes(path))\n                                self.list.updateSMARTData(idx, smart: self.getSMARTDetails(for: BSDName))\n                            }\n                            \n                            continue\n                        }\n                        \n                        if var d = driveDetails(disk, removableState: removableState) {\n                            if let path = d.path {\n                                d.free = self.freeDiskSpaceInBytes(path)\n                                d.size = self.totalDiskSpaceInBytes(path)\n                            }\n                            d.smart = self.getSMARTDetails(for: BSDName)\n                            guard d.size != 0 else { continue }\n                            self.list.append(d)\n                            self.list.sort()\n                        }\n                    }\n                }\n            }\n        }\n        \n        active.difference(from: self.list.map{ $0.BSDName }).forEach { (BSDName: String) in\n            if let idx = self.list.index(where: { $0.BSDName == BSDName }) {\n                self.list.remove(at: idx)\n            }\n        }\n        \n        self.callback(self.list)"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 5440,
-              "start_position" : 2691
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 5440,
+              "start_position": 2691,
+              "start_line": 56,
+              "end_line": 115
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public",
             "override"
           ],
-          "name" : "read",
-          "parameters" : [
-
-          ]
+          "name": "read",
+          "parameters": []
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "var path = path\n        path.removeAllCachedResourceValues()\n        \n        var stat = statfs()\n        if statfs(path.path, &stat) == 0 {\n            var purgeable: Int64 = 0\n            if self.purgableSpace[path] == nil {\n                let value = CSDiskSpaceGetRecoveryEstimate(path as NSURL)\n                purgeable = Int64(value)\n                self.purgableSpace[path] = (Date(), purgeable)\n            } else if let pair = self.purgableSpace[path] {\n                let delta = Date().timeIntervalSince(pair.0)\n                if delta > 30 {\n                    let value = CSDiskSpaceGetRecoveryEstimate(path as NSURL)\n                    purgeable = Int64(value)\n                    self.purgableSpace[path] = (Date(), purgeable)\n                } else {\n                    purgeable = pair.1\n                }\n            }\n            return (Int64(stat.f_bfree) * Int64(stat.f_bsize)) + Int64(purgeable)\n        }\n        \n        do {\n            let values = try path.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])\n            if let capacity = values.volumeAvailableCapacityForImportantUsage, capacity != 0 {\n                return capacity\n            }\n        } catch let err {\n            error(\"error retrieving free space #1: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        do {\n            let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: path.path)\n            if let freeSpace = (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value {\n                return freeSpace\n            }\n        } catch let err {\n            error(\"error retrieving free space: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        return 0"
+          "attributes": [],
+          "body": {
+            "content": "var path = path\n        path.removeAllCachedResourceValues()\n        \n        var stat = statfs()\n        if statfs(path.path, &stat) == 0 {\n            var purgeable: Int64 = 0\n            if self.purgableSpace[path] == nil {\n                let value = CSDiskSpaceGetRecoveryEstimate(path as NSURL)\n                purgeable = Int64(value)\n                self.purgableSpace[path] = (Date(), purgeable)\n            } else if let pair = self.purgableSpace[path] {\n                let delta = Date().timeIntervalSince(pair.0)\n                if delta > 30 {\n                    let value = CSDiskSpaceGetRecoveryEstimate(path as NSURL)\n                    purgeable = Int64(value)\n                    self.purgableSpace[path] = (Date(), purgeable)\n                } else {\n                    purgeable = pair.1\n                }\n            }\n            return (Int64(stat.f_bfree) * Int64(stat.f_bsize)) + Int64(purgeable)\n        }\n        \n        do {\n            let values = try path.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])\n            if let capacity = values.volumeAvailableCapacityForImportantUsage, capacity != 0 {\n                return capacity\n            }\n        } catch let err {\n            error(\"error retrieving free space #1: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        do {\n            let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: path.path)\n            if let freeSpace = (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value {\n                return freeSpace\n            }\n        } catch let err {\n            error(\"error retrieving free space: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        return 0"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 7289,
-              "start_position" : 5440
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 7289,
+              "start_position": 5440,
+              "start_line": 115,
+              "end_line": 159
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "freeDiskSpaceInBytes",
-          "parameters" : [
+          "name": "freeDiskSpaceInBytes",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URL"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URL"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 5490,
-                  "start_position" : 5479
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 5490,
+                  "start_position": 5479,
+                  "start_line": 116,
+                  "end_line": 116
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "path",
-              "order" : 0
+              "modifiers": [],
+              "name": "path",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Int64"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Int64"
             },
-            "description" : "-> Int64"
+            "description": "-> Int64"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "do {\n            let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: path.path)\n            if let totalSpace = (systemAttributes[FileAttributeKey.systemSize] as? NSNumber)?.int64Value {\n                return totalSpace\n            }\n        } catch let err {\n            error(\"error retrieving total space: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        return 0"
+          "attributes": [],
+          "body": {
+            "content": "do {\n            let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: path.path)\n            if let totalSpace = (systemAttributes[FileAttributeKey.systemSize] as? NSNumber)?.int64Value {\n                return totalSpace\n            }\n        } catch let err {\n            error(\"error retrieving total space: \\(err.localizedDescription)\", log: self.log)\n        }\n        \n        return 0"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 7789,
-              "start_position" : 7289
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 7789,
+              "start_position": 7289,
+              "start_line": 159,
+              "end_line": 172
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "totalDiskSpaceInBytes",
-          "parameters" : [
+          "name": "totalDiskSpaceInBytes",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URL"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URL"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 7345,
-                  "start_position" : 7334
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 7345,
+                  "start_position": 7334,
+                  "start_line": 161,
+                  "end_line": 161
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "path",
-              "order" : 0
+              "modifiers": [],
+              "name": "path",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Int64"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Int64"
             },
-            "description" : "-> Int64"
+            "description": "-> Int64"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard self.SMART else { return nil }\n        \n        var disk = IOServiceGetMatchingService(kIOMainPortDefault, IOBSDNameMatching(kIOMainPortDefault, 0, BSDName.cString(using: .utf8)))\n        guard disk != kIOReturnSuccess else { return nil }\n        defer { IOObjectRelease(disk) }\n        \n        var parent = disk\n        while IOObjectConformsTo(disk, kIOBlockStorageDeviceClass) == 0 {\n            let error = IORegistryEntryGetParentEntry(disk, kIOServicePlane, &parent)\n            if error != kIOReturnSuccess || parent == kIOReturnSuccess { return nil }\n            disk = parent\n        }\n        \n        guard IOObjectConformsTo(disk, kIOBlockStorageDeviceClass) > 0 else { return nil }\n        \n        if let smart = self.getNVMeSMART(for: disk) { return smart }\n        if let smart = self.getATASMART(for: disk, BSDName: BSDName) { return smart }\n        return nil"
+          "attributes": [],
+          "body": {
+            "content": "guard self.SMART else { return nil }\n        \n        var disk = IOServiceGetMatchingService(kIOMainPortDefault, IOBSDNameMatching(kIOMainPortDefault, 0, BSDName.cString(using: .utf8)))\n        guard disk != kIOReturnSuccess else { return nil }\n        defer { IOObjectRelease(disk) }\n        \n        var parent = disk\n        while IOObjectConformsTo(disk, kIOBlockStorageDeviceClass) == 0 {\n            let error = IORegistryEntryGetParentEntry(disk, kIOServicePlane, &parent)\n            if error != kIOReturnSuccess || parent == kIOReturnSuccess { return nil }\n            disk = parent\n        }\n        \n        guard IOObjectConformsTo(disk, kIOBlockStorageDeviceClass) > 0 else { return nil }\n        \n        if let smart = self.getNVMeSMART(for: disk) { return smart }\n        if let smart = self.getATASMART(for: disk, BSDName: BSDName) { return smart }\n        return nil"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 8761,
-              "start_position" : 7789
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 8761,
+              "start_position": 7789,
+              "start_line": 172,
+              "end_line": 193
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "getSMARTDetails",
-          "parameters" : [
+          "name": "getSMARTDetails",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "String"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "String"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 7847,
-                  "start_position" : 7828
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 7847,
+                  "start_position": 7828,
+                  "start_line": 174,
+                  "end_line": 174
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "BSDName",
-              "order" : 0
+              "modifiers": [],
+              "name": "BSDName",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : true,
-              "name" : "smart_t?"
+          "return_clause": {
+            "data_type": {
+              "is_optional": true,
+              "name": "smart_t?"
             },
-            "description" : "-> smart_t?"
+            "description": "-> smart_t?"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard let raw = IORegistryEntryCreateCFProperty(disk, \"NVMe SMART Capable\" as CFString, kCFAllocatorDefault, 0),\n              let val = raw.takeRetainedValue() as? Bool, val else {\n            return nil\n        }\n        \n        var pluginInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?\n        var smartInterface: UnsafeMutablePointer<UnsafeMutablePointer<IONVMeSMARTInterface>?>?\n        var score: Int32  = 0\n        \n        var result = IOCreatePlugInInterfaceForService(disk, kIONVMeSMARTUserClientTypeID, kIOCFPlugInInterfaceID, &pluginInterface, &score)\n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if pluginInterface != nil {\n                IODestroyPlugInInterface(pluginInterface)\n            }\n        }\n        \n        result = withUnsafeMutablePointer(to: &smartInterface) {\n            $0.withMemoryRebound(to: Optional<LPVOID>.self, capacity: 1) {\n                pluginInterface?.pointee?.pointee.QueryInterface(pluginInterface, CFUUIDGetUUIDBytes(kIONVMeSMARTInterfaceID), $0) ?? KERN_NOT_FOUND\n            }\n        }\n        \n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if smartInterface != nil {\n                _ = pluginInterface?.pointee?.pointee.Release(smartInterface)\n            }\n        }\n        \n        guard let smart = smartInterface?.pointee else { return nil }\n        var smartData: nvme_smart_log = nvme_smart_log()\n        guard smart.pointee.SMARTReadData(smartInterface, &smartData) == kIOReturnSuccess else { return nil }\n        \n        let temperatures: [UInt8] = [UInt8(smartData.temperature.1), UInt8(smartData.temperature.0)]\n        var temperature: UInt16 = 0\n        let data = NSData(bytes: temperatures, length: 2)\n        data.getBytes(&temperature, length: 2)\n        \n        let dataUnitsRead = self.extractUInt128(smartData.data_units_read)\n        let dataUnitsWritten = self.extractUInt128(smartData.data_units_written)\n        let bytesPerDataUnit: Int64 = 512 * 1000\n        \n        let powerCycles = withUnsafeBytes(of: smartData.power_cycles) { $0.load(as: UInt32.self) }\n        let powerOnHours = withUnsafeBytes(of: smartData.power_on_hours) { $0.load(as: UInt32.self) }\n        \n        return smart_t(\n            temperature: Int(UInt16(bigEndian: temperature) - 273),\n            life: 100 - Int(smartData.percent_used),\n            totalRead: dataUnitsRead * bytesPerDataUnit,\n            totalWritten: dataUnitsWritten * bytesPerDataUnit,\n            powerCycles: Int(powerCycles),\n            powerOnHours: Int(powerOnHours)\n        )"
+          "attributes": [],
+          "body": {
+            "content": "guard let raw = IORegistryEntryCreateCFProperty(disk, \"NVMe SMART Capable\" as CFString, kCFAllocatorDefault, 0),\n              let val = raw.takeRetainedValue() as? Bool, val else {\n            return nil\n        }\n        \n        var pluginInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?\n        var smartInterface: UnsafeMutablePointer<UnsafeMutablePointer<IONVMeSMARTInterface>?>?\n        var score: Int32  = 0\n        \n        var result = IOCreatePlugInInterfaceForService(disk, kIONVMeSMARTUserClientTypeID, kIOCFPlugInInterfaceID, &pluginInterface, &score)\n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if pluginInterface != nil {\n                IODestroyPlugInInterface(pluginInterface)\n            }\n        }\n        \n        result = withUnsafeMutablePointer(to: &smartInterface) {\n            $0.withMemoryRebound(to: Optional<LPVOID>.self, capacity: 1) {\n                pluginInterface?.pointee?.pointee.QueryInterface(pluginInterface, CFUUIDGetUUIDBytes(kIONVMeSMARTInterfaceID), $0) ?? KERN_NOT_FOUND\n            }\n        }\n        \n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if smartInterface != nil {\n                _ = pluginInterface?.pointee?.pointee.Release(smartInterface)\n            }\n        }\n        \n        guard let smart = smartInterface?.pointee else { return nil }\n        var smartData: nvme_smart_log = nvme_smart_log()\n        guard smart.pointee.SMARTReadData(smartInterface, &smartData) == kIOReturnSuccess else { return nil }\n        \n        let temperatures: [UInt8] = [UInt8(smartData.temperature.1), UInt8(smartData.temperature.0)]\n        var temperature: UInt16 = 0\n        let data = NSData(bytes: temperatures, length: 2)\n        data.getBytes(&temperature, length: 2)\n        \n        let dataUnitsRead = self.extractUInt128(smartData.data_units_read)\n        let dataUnitsWritten = self.extractUInt128(smartData.data_units_written)\n        let bytesPerDataUnit: Int64 = 512 * 1000\n        \n        let powerCycles = withUnsafeBytes(of: smartData.power_cycles) { $0.load(as: UInt32.self) }\n        let powerOnHours = withUnsafeBytes(of: smartData.power_on_hours) { $0.load(as: UInt32.self) }\n        \n        return smart_t(\n            temperature: Int(UInt16(bigEndian: temperature) - 273),\n            life: 100 - Int(smartData.percent_used),\n            totalRead: dataUnitsRead * bytesPerDataUnit,\n            totalWritten: dataUnitsWritten * bytesPerDataUnit,\n            powerCycles: Int(powerCycles),\n            powerOnHours: Int(powerOnHours)\n        )"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 11481,
-              "start_position" : 8761
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 11481,
+              "start_position": 8761,
+              "start_line": 193,
+              "end_line": 250
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "getNVMeSMART",
-          "parameters" : [
+          "name": "getNVMeSMART",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "io_object_t"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "io_object_t"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 8818,
-                  "start_position" : 8797
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 8818,
+                  "start_position": 8797,
+                  "start_line": 195,
+                  "end_line": 195
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "disk",
-              "order" : 0
+              "modifiers": [],
+              "name": "disk",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : true,
-              "name" : "smart_t?"
+          "return_clause": {
+            "data_type": {
+              "is_optional": true,
+              "name": "smart_t?"
             },
-            "description" : "-> smart_t?"
+            "description": "-> smart_t?"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "guard let raw = IORegistryEntryCreateCFProperty(disk, \"SMART Capable\" as CFString, kCFAllocatorDefault, 0),\n              let val = raw.takeRetainedValue() as? Bool, val else {\n            return nil\n        }\n        \n        var pluginInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?\n        var smartInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOATASMARTInterface>?>?\n        var score: Int32 = 0\n        \n        var result = IOCreatePlugInInterfaceForService(disk, kIOATASMARTUserClientTypeID, kIOCFPlugInInterfaceID, &pluginInterface, &score)\n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if pluginInterface != nil {\n                IODestroyPlugInInterface(pluginInterface)\n            }\n        }\n        \n        result = withUnsafeMutablePointer(to: &smartInterface) {\n            $0.withMemoryRebound(to: Optional<LPVOID>.self, capacity: 1) {\n                pluginInterface?.pointee?.pointee.QueryInterface(pluginInterface, CFUUIDGetUUIDBytes(kIOATASMARTInterfaceID), $0) ?? KERN_NOT_FOUND\n            }\n        }\n        \n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if smartInterface != nil {\n                _ = pluginInterface?.pointee?.pointee.Release(smartInterface)\n            }\n        }\n        \n        guard let smart = smartInterface?.pointee else { return nil }\n        _ = smart.pointee.SMARTEnableDisableOperations(smartInterface, true)\n        \n        var smartData = ATASMARTData()\n        guard smart.pointee.SMARTReadData(smartInterface, &smartData) == kIOReturnSuccess else { return nil }\n        \n        var attributes: [Int: (current: Int, raw: [UInt8])] = [:]\n        withUnsafeBytes(of: &smartData) { buffer in\n            for i in 0..<30 {\n                let offset = 2 + i * 12\n                let id = Int(buffer[offset])\n                if id == 0 { continue }\n                let current = Int(buffer[offset + 3])\n                var rawBytes: [UInt8] = []\n                for j in 0..<6 {\n                    rawBytes.append(buffer[offset + 5 + j])\n                }\n                attributes[id] = (current, rawBytes)\n            }\n        }\n        \n        func rawValue(_ id: Int, bytes count: Int = 6) -> UInt64? {\n            guard let attribute = attributes[id] else { return nil }\n            var value: UInt64 = 0\n            for i in 0..<min(count, attribute.raw.count) {\n                value |= UInt64(attribute.raw[i]) << (8 * i)\n            }\n            return value\n        }\n        \n        var temperature = 0\n        if let temp = rawValue(194, bytes: 1) ?? rawValue(190, bytes: 1) {\n            temperature = Int(temp)\n        }\n        \n        var life = 100\n        for id in [231, 202, 177, 173, 169, 233] {\n            if let attribute = attributes[id] {\n                life = min(max(attribute.current, 0), 100)\n                break\n            }\n        }\n        \n        let bytesPerLBA: Int64 = 512\n        \n        var deviceRead: Int64?\n        var deviceWritten: Int64?\n        \n        let pageCount = 8\n        let logSize = 512 * pageCount\n        var logBuffer = [UInt8](repeating: 0, count: logSize)\n        let logResult = logBuffer.withUnsafeMutableBytes {\n            smart.pointee.SMARTReadLogAtAddress(smartInterface, 0x04, $0.baseAddress, UInt32(logSize))\n        }\n        if logResult == kIOReturnSuccess {\n            func deviceStatistic(page: Int, offset: Int) -> UInt64? {\n                let base = page * 512 + offset\n                guard base + 8 <= logBuffer.count else { return nil }\n                var value: UInt64 = 0\n                for i in 0..<8 {\n                    value |= UInt64(logBuffer[base + i]) << (8 * i)\n                }\n                guard (value & (UInt64(1) << 63)) != 0, (value & (UInt64(1) << 62)) != 0 else { return nil }\n                return value & 0x00FF_FFFF_FFFF_FFFF\n            }\n            \n            if let written = deviceStatistic(page: 1, offset: 0x18) {\n                deviceWritten = Int64(written) * bytesPerLBA\n            }\n            if let read = deviceStatistic(page: 1, offset: 0x28) {\n                deviceRead = Int64(read) * bytesPerLBA\n            }\n            if let used = deviceStatistic(page: 7, offset: 0x08) {\n                life = max(0, 100 - Int(used & 0xFF))\n            }\n        }\n        \n        if deviceRead != nil || deviceWritten != nil {\n            let cached = self.smartTotals[BSDName]\n            self.smartTotals[BSDName] = (\n                read: deviceRead ?? cached?.read ?? 0,\n                written: deviceWritten ?? cached?.written ?? 0\n            )\n        }\n        \n        let totalRead = deviceRead ?? self.smartTotals[BSDName]?.read ?? Int64(rawValue(242) ?? 0) * bytesPerLBA\n        let totalWritten = deviceWritten ?? self.smartTotals[BSDName]?.written ?? Int64(rawValue(241) ?? 0) * bytesPerLBA\n        \n        return smart_t(\n            temperature: temperature,\n            life: life,\n            totalRead: totalRead,\n            totalWritten: totalWritten,\n            powerCycles: Int(rawValue(12, bytes: 4) ?? 0),\n            powerOnHours: Int(rawValue(9, bytes: 4) ?? 0)\n        )"
+          "attributes": [],
+          "body": {
+            "content": "guard let raw = IORegistryEntryCreateCFProperty(disk, \"SMART Capable\" as CFString, kCFAllocatorDefault, 0),\n              let val = raw.takeRetainedValue() as? Bool, val else {\n            return nil\n        }\n        \n        var pluginInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOCFPlugInInterface>?>?\n        var smartInterface: UnsafeMutablePointer<UnsafeMutablePointer<IOATASMARTInterface>?>?\n        var score: Int32 = 0\n        \n        var result = IOCreatePlugInInterfaceForService(disk, kIOATASMARTUserClientTypeID, kIOCFPlugInInterfaceID, &pluginInterface, &score)\n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if pluginInterface != nil {\n                IODestroyPlugInInterface(pluginInterface)\n            }\n        }\n        \n        result = withUnsafeMutablePointer(to: &smartInterface) {\n            $0.withMemoryRebound(to: Optional<LPVOID>.self, capacity: 1) {\n                pluginInterface?.pointee?.pointee.QueryInterface(pluginInterface, CFUUIDGetUUIDBytes(kIOATASMARTInterfaceID), $0) ?? KERN_NOT_FOUND\n            }\n        }\n        \n        guard result == kIOReturnSuccess else { return nil }\n        defer {\n            if smartInterface != nil {\n                _ = pluginInterface?.pointee?.pointee.Release(smartInterface)\n            }\n        }\n        \n        guard let smart = smartInterface?.pointee else { return nil }\n        _ = smart.pointee.SMARTEnableDisableOperations(smartInterface, true)\n        \n        var smartData = ATASMARTData()\n        guard smart.pointee.SMARTReadData(smartInterface, &smartData) == kIOReturnSuccess else { return nil }\n        \n        var attributes: [Int: (current: Int, raw: [UInt8])] = [:]\n        withUnsafeBytes(of: &smartData) { buffer in\n            for i in 0..<30 {\n                let offset = 2 + i * 12\n                let id = Int(buffer[offset])\n                if id == 0 { continue }\n                let current = Int(buffer[offset + 3])\n                var rawBytes: [UInt8] = []\n                for j in 0..<6 {\n                    rawBytes.append(buffer[offset + 5 + j])\n                }\n                attributes[id] = (current, rawBytes)\n            }\n        }\n        \n        func rawValue(_ id: Int, bytes count: Int = 6) -> UInt64? {\n            guard let attribute = attributes[id] else { return nil }\n            var value: UInt64 = 0\n            for i in 0..<min(count, attribute.raw.count) {\n                value |= UInt64(attribute.raw[i]) << (8 * i)\n            }\n            return value\n        }\n        \n        var temperature = 0\n        if let temp = rawValue(194, bytes: 1) ?? rawValue(190, bytes: 1) {\n            temperature = Int(temp)\n        }\n        \n        var life = 100\n        for id in [231, 202, 177, 173, 169, 233] {\n            if let attribute = attributes[id] {\n                life = min(max(attribute.current, 0), 100)\n                break\n            }\n        }\n        \n        let bytesPerLBA: Int64 = 512\n        \n        var deviceRead: Int64?\n        var deviceWritten: Int64?\n        \n        let pageCount = 8\n        let logSize = 512 * pageCount\n        var logBuffer = [UInt8](repeating: 0, count: logSize)\n        let logResult = logBuffer.withUnsafeMutableBytes {\n            smart.pointee.SMARTReadLogAtAddress(smartInterface, 0x04, $0.baseAddress, UInt32(logSize))\n        }\n        if logResult == kIOReturnSuccess {\n            func deviceStatistic(page: Int, offset: Int) -> UInt64? {\n                let base = page * 512 + offset\n                guard base + 8 <= logBuffer.count else { return nil }\n                var value: UInt64 = 0\n                for i in 0..<8 {\n                    value |= UInt64(logBuffer[base + i]) << (8 * i)\n                }\n                guard (value & (UInt64(1) << 63)) != 0, (value & (UInt64(1) << 62)) != 0 else { return nil }\n                return value & 0x00FF_FFFF_FFFF_FFFF\n            }\n            \n            if let written = deviceStatistic(page: 1, offset: 0x18) {\n                deviceWritten = Int64(written) * bytesPerLBA\n            }\n            if let read = deviceStatistic(page: 1, offset: 0x28) {\n                deviceRead = Int64(read) * bytesPerLBA\n            }\n            if let used = deviceStatistic(page: 7, offset: 0x08) {\n                life = max(0, 100 - Int(used & 0xFF))\n            }\n        }\n        \n        if deviceRead != nil || deviceWritten != nil {\n            let cached = self.smartTotals[BSDName]\n            self.smartTotals[BSDName] = (\n                read: deviceRead ?? cached?.read ?? 0,\n                written: deviceWritten ?? cached?.written ?? 0\n            )\n        }\n        \n        let totalRead = deviceRead ?? self.smartTotals[BSDName]?.read ?? Int64(rawValue(242) ?? 0) * bytesPerLBA\n        let totalWritten = deviceWritten ?? self.smartTotals[BSDName]?.written ?? Int64(rawValue(241) ?? 0) * bytesPerLBA\n        \n        return smart_t(\n            temperature: temperature,\n            life: life,\n            totalRead: totalRead,\n            totalWritten: totalWritten,\n            powerCycles: Int(rawValue(12, bytes: 4) ?? 0),\n            powerOnHours: Int(rawValue(9, bytes: 4) ?? 0)\n        )"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 16808,
-              "start_position" : 11481
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 16808,
+              "start_position": 11481,
+              "start_line": 250,
+              "end_line": 379
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "getATASMART",
-          "parameters" : [
+          "name": "getATASMART",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "io_object_t"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "io_object_t"
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 11539,
-                  "start_position" : 11516
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 11539,
+                  "start_position": 11516,
+                  "start_line": 252,
+                  "end_line": 252
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "disk",
-              "order" : 0
+              "modifiers": [],
+              "name": "disk",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "String"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "String"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 11554,
-                  "start_position" : 11539
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 11554,
+                  "start_position": 11539,
+                  "start_line": 252,
+                  "end_line": 252
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "BSDName",
-              "order" : 1
+              "modifiers": [],
+              "name": "BSDName",
+              "order": 1
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : true,
-              "name" : "smart_t?"
+          "return_clause": {
+            "data_type": {
+              "is_optional": true,
+              "name": "smart_t?"
             },
-            "description" : "-> smart_t?"
+            "description": "-> smart_t?"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let byteArray: [UInt8] = [\n            tuple.0, tuple.1, tuple.2, tuple.3, tuple.4, tuple.5, tuple.6, tuple.7,\n            tuple.8, tuple.9, tuple.10, tuple.11, tuple.12, tuple.13, tuple.14, tuple.15\n        ]\n        \n        let uint64Value = byteArray.prefix(8).withUnsafeBytes { $0.load(as: UInt64.self) }\n        let hasHigherBytes = byteArray.suffix(8).contains(where: { $0 != 0 })\n        \n        if hasHigherBytes || uint64Value > UInt64(Int64.max) {\n            return Int64.max\n        }\n        \n        return Int64(uint64Value)"
+          "attributes": [],
+          "body": {
+            "content": "let byteArray: [UInt8] = [\n            tuple.0, tuple.1, tuple.2, tuple.3, tuple.4, tuple.5, tuple.6, tuple.7,\n            tuple.8, tuple.9, tuple.10, tuple.11, tuple.12, tuple.13, tuple.14, tuple.15\n        ]\n        \n        let uint64Value = byteArray.prefix(8).withUnsafeBytes { $0.load(as: UInt64.self) }\n        let hasHigherBytes = byteArray.suffix(8).contains(where: { $0 != 0 })\n        \n        if hasHigherBytes || uint64Value > UInt64(Int64.max) {\n            return Int64.max\n        }\n        \n        return Int64(uint64Value)"
           },
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 17535,
-              "start_position" : 16808
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 17535,
+              "start_position": 16808,
+              "start_line": 379,
+              "end_line": 395
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "extractUInt128",
-          "parameters" : [
+          "name": "extractUInt128",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "(UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "(UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8)"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Modules/Disk/readers.swift",
-                "location" : {
-                  "end_position" : 16967,
-                  "start_position" : 16846
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Modules/Disk/readers.swift",
+                "location": {
+                  "end_position": 16967,
+                  "start_position": 16846,
+                  "start_line": 381,
+                  "end_line": 381
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "tuple",
-              "order" : 0
+              "modifiers": [],
+              "name": "tuple",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Int64"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Int64"
             },
-            "description" : "-> Int64"
+            "description": "-> Int64"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Modules/Disk/readers.swift",
-        "location" : {
-          "end_position" : 17537,
-          "start_position" : 2334
+      "initializers": [],
+      "location_info": {
+        "file_path": "Modules/Disk/readers.swift",
+        "location": {
+          "end_position": 17537,
+          "start_position": 2334,
+          "start_line": 46,
+          "end_line": 396
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "internal"
       ],
-      "name" : "CapacityReader",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
+      "name": "CapacityReader",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Disks"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Disks"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "function_call" : {
-                "_0" : {
-                  "additional_trailing_closures" : [
-
-                  ],
-                  "arguments" : [
-
-                  ],
-                  "call" : "Disks",
-                  "has_self_reference" : false,
-                  "internal_inline_calls" : [
-
-                  ],
-                  "location_info" : {
-                    "file_path" : "Modules/Disk/readers.swift",
-                    "location" : {
-                      "end_position" : 2421,
-                      "start_position" : 2414
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "function_call": {
+                "_0": {
+                  "additional_trailing_closures": [],
+                  "arguments": [],
+                  "call": "Disks",
+                  "has_self_reference": false,
+                  "internal_inline_calls": [],
+                  "location_info": {
+                    "file_path": "Modules/Disk/readers.swift",
+                    "location": {
+                      "end_position": 2421,
+                      "start_position": 2414,
+                      "start_line": 49,
+                      "end_line": 49
                     }
                   }
                 }
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 2421,
-              "start_position" : 2400
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 2421,
+              "start_position": 2400,
+              "start_line": 49,
+              "end_line": 49
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "internal"
           ],
-          "name" : "list"
+          "name": "list"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "Store.shared.bool(key: \"\\(ModuleType.disk.stringValue)_SMART\", defaultValue: true)"
+          "getter_block": {
+            "body": {
+              "content": "Store.shared.bool(key: \"\\(ModuleType.disk.stringValue)_SMART\", defaultValue: true)"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 2553,
-              "start_position" : 2443
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 2553,
+              "start_position": 2443,
+              "start_line": 51,
+              "end_line": 53
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "SMART"
+          "name": "SMART"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[URL: (Date, Int64)]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[URL: (Date, Int64)]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[:]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[:]"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 2616,
-              "start_position" : 2575
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 2616,
+              "start_position": 2575,
+              "start_line": 55,
+              "end_line": 55
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "purgableSpace"
+          "name": "purgableSpace"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String: (read: Int64, written: Int64)]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String: (read: Int64, written: Int64)]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[:]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[:]"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Modules/Disk/readers.swift",
-            "location" : {
-              "end_position" : 2691,
-              "start_position" : 2633
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Modules/Disk/readers.swift",
+            "location": {
+              "end_position": 2691,
+              "start_position": 2633,
+              "start_line": 56,
+              "end_line": 56
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "smartTotals"
+          "name": "smartTotals"
         }
       ]
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 30,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 30,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Modules/Disk/readers.swift"
   ]
 }

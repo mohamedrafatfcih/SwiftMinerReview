@@ -1,83 +1,83 @@
 {
-  "caseID" : "case-f71d163482f23f9b07e5b68e",
-  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "durationSeconds" : 31.880328059196472,
-  "entityNames" : [
+  "caseID": "case-f71d163482f23f9b07e5b68e",
+  "commitHash": "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage": "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds": 31.880328059196472,
+  "entityNames": [
     "eventMonitor"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : "mutableState",
-    "current_parent" : {
-      "description" : "mutableState = Protected(MutableState(eventMonitor: eventMonitor,\n                                              interceptor: interceptor))",
-      "left_operand" : "mutableState",
-      "location_info" : {
-        "file_path" : "Source/Core/Request.swift",
-        "location" : {
-          "end_position" : 14926,
-          "start_position" : 14779
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": "mutableState",
+    "current_parent": {
+      "description": "mutableState = Protected(MutableState(eventMonitor: eventMonitor,\n                                              interceptor: interceptor))",
+      "left_operand": "mutableState",
+      "location_info": {
+        "file_path": "Source/Core/Request.swift",
+        "location": {
+          "end_position": 14926,
+          "start_position": 14779,
+          "start_line": 282,
+          "end_line": 284
         }
       },
-      "operator_value" : "=",
-      "right_operand" : {
-        "function_call" : {
-          "_0" : {
-            "additional_trailing_closures" : [
-
-            ],
-            "arguments" : [
+      "operator_value": "=",
+      "right_operand": {
+        "function_call": {
+          "_0": {
+            "additional_trailing_closures": [],
+            "arguments": [
               {
-                "value" : "MutableState(eventMonitor: eventMonitor,\n                                              interceptor: interceptor)"
+                "value": "MutableState(eventMonitor: eventMonitor,\n                                              interceptor: interceptor)"
               }
             ],
-            "call" : "Protected",
-            "has_self_reference" : false,
-            "internal_inline_calls" : [
-
-            ],
-            "location_info" : {
-              "file_path" : "Source/Core/Request.swift",
-              "location" : {
-                "end_position" : 14926,
-                "start_position" : 14803
+            "call": "Protected",
+            "has_self_reference": false,
+            "internal_inline_calls": [],
+            "location_info": {
+              "file_path": "Source/Core/Request.swift",
+              "location": {
+                "end_position": 14926,
+                "start_position": 14803,
+                "start_line": 283,
+                "end_line": 284
               }
             }
           }
         }
       }
     },
-    "old_content" : "self.eventMonitor",
-    "old_parent" : {
-      "description" : "self.eventMonitor = eventMonitor",
-      "left_operand" : "self.eventMonitor",
-      "location_info" : {
-        "file_path" : "Source/Core/Request.swift",
-        "location" : {
-          "end_position" : 13959,
-          "start_position" : 13918
+    "old_content": "self.eventMonitor",
+    "old_parent": {
+      "description": "self.eventMonitor = eventMonitor",
+      "left_operand": "self.eventMonitor",
+      "location_info": {
+        "file_path": "Source/Core/Request.swift",
+        "location": {
+          "end_position": 13959,
+          "start_position": 13918,
+          "start_line": 267,
+          "end_line": 268
         }
       },
-      "operator_value" : "=",
-      "right_operand" : {
-        "reference" : {
-          "arguments" : [
-
-          ],
-          "name" : "eventMonitor"
+      "operator_value": "=",
+      "right_operand": {
+        "reference": {
+          "arguments": [],
+          "name": "eventMonitor"
         }
       }
     },
-    "type" : "Infix left operand refactoring"
+    "type": "Infix left operand refactoring"
   },
-  "refactoringIndex" : 74,
-  "refactoringType" : "Infix left operand refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 74,
+  "refactoringType": "Infix left operand refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Core/Request.swift"
   ]
 }

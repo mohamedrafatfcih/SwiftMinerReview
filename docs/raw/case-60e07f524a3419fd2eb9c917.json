@@ -1,114 +1,90 @@
 {
-  "caseID" : "case-60e07f524a3419fd2eb9c917",
-  "commitHash" : "be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
-  "commitMessage" : "Migrate some container tests, remove concurrent demo tests. (#1840)\n\n- Part of #1833.\n- Tweaks `ContainerFixture.withContainer()` to support the legacy\n`longRun()` pattern without boilerplate.",
-  "commitURL" : "https://github.com/apple/container/commit/be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
-  "durationSeconds" : 1.9615820646286011,
-  "entityNames" : [
+  "caseID": "case-60e07f524a3419fd2eb9c917",
+  "commitHash": "be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
+  "commitMessage": "Migrate some container tests, remove concurrent demo tests. (#1840)\n\n- Part of #1833.\n- Tweaks `ContainerFixture.withContainer()` to support the legacy\n`longRun()` pattern without boilerplate.",
+  "commitURL": "https://github.com/apple/container/commit/be3b1f20c4ca25aedcc4cf1cb08a099ebb8a3a6c",
+  "durationSeconds": 1.961582064628601,
+  "entityNames": [
     "TestCLIExportCommand",
     "testExportCommand"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image, autoRemove: false) { name in\n                let mustBeInImage = \"must-be-in-image\"\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"echo \\(mustBeInImage) > /foo\"])\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"mkdir -p /parent/child\"])\n                let hardlinkMustRemain = \"hardlink-must-remain\"\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"echo \\(hardlinkMustRemain) > /parent/child/bar\"])\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"ln /parent/child/bar /bar\"])\n                let symlinkMustRemain = \"symlink-must-remain\"\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"echo \\(symlinkMustRemain) > /parent/child/baz\"])\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"ln /parent/child/baz /baz\"])\n\n                try f.doStop(name)\n\n                let exportPath = f.testDir.appending(\"export.tar\")\n                try f.doExport(name, to: exportPath)\n\n                let exportURL = URL(filePath: exportPath.string)\n                let attrs = try FileManager.default.attributesOfItem(atPath: exportPath.string)\n                let fileSize = attrs[.size] as! UInt64\n                #expect(fileSize > 0)\n\n                // TODO: verify foo bar baz are in tar file.\n                let reader = try ArchiveReader(file: exportURL)\n                let (foo, fooData) = try reader.extractFile(path: \"/foo\")\n                #expect(foo.fileType == .regular)\n                #expect(String(data: fooData, encoding: .utf8)?.starts(with: mustBeInImage) ?? false)\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            let image = try f.copyWarmupImage(ContainerFixture.warmupImages[0])\n            try await f.withContainer(image: image, autoRemove: false) { name in\n                let mustBeInImage = \"must-be-in-image\"\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"echo \\(mustBeInImage) > /foo\"])\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"mkdir -p /parent/child\"])\n                let hardlinkMustRemain = \"hardlink-must-remain\"\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"echo \\(hardlinkMustRemain) > /parent/child/bar\"])\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"ln /parent/child/bar /bar\"])\n                let symlinkMustRemain = \"symlink-must-remain\"\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"echo \\(symlinkMustRemain) > /parent/child/baz\"])\n                try f.doExec(name, cmd: [\"sh\", \"-c\", \"ln /parent/child/baz /baz\"])\n\n                try f.doStop(name)\n\n                let exportPath = f.testDir.appending(\"export.tar\")\n                try f.doExport(name, to: exportPath)\n\n                let exportURL = URL(filePath: exportPath.string)\n                let attrs = try FileManager.default.attributesOfItem(atPath: exportPath.string)\n                let fileSize = attrs[.size] as! UInt64\n                #expect(fileSize > 0)\n\n                // TODO: verify foo bar baz are in tar file.\n                let reader = try ArchiveReader(file: exportURL)\n                let (foo, fooData) = try reader.extractFile(path: \"/foo\")\n                #expect(foo.fileType == .regular)\n                #expect(String(data: fooData, encoding: .utf8)?.starts(with: mustBeInImage) ?? false)\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Containers/TestCLIExportCommand.swift",
-            "location" : {
-              "end_position" : 2660,
-              "start_position" : 888
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Containers/TestCLIExportCommand.swift",
+            "location": {
+              "end_position": 2660,
+              "start_position": 888,
+              "start_line": 22,
+              "end_line": 54
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testExportCommand",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testExportCommand",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Containers/TestCLIExportCommand.swift",
-        "location" : {
-          "end_position" : 2662,
-          "start_position" : 850
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Containers/TestCLIExportCommand.swift",
+        "location": {
+          "end_position": 2662,
+          "start_position": 850,
+          "start_line": 19,
+          "end_line": 55
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIExportCommand",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIExportCommand",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Add struct refactoring"
+    "type": "Add struct refactoring"
   },
-  "refactoringIndex" : 14,
-  "refactoringType" : "Add struct refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 14,
+  "refactoringType": "Add struct refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Containers/TestCLIExportCommand.swift"
   ]
 }

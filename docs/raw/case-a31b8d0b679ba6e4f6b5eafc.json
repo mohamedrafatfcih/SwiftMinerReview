@@ -1,90 +1,86 @@
 {
-  "caseID" : "case-a31b8d0b679ba6e4f6b5eafc",
-  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
-  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
-  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
-  "durationSeconds" : 7.7093260288238525,
-  "entityNames" : [
+  "caseID": "case-a31b8d0b679ba6e4f6b5eafc",
+  "commitHash": "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage": "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL": "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds": 7.7093260288238525,
+  "entityNames": [
     "XPCMessage",
     "bootstrap",
     "message"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "sendable" : {
-
-            }
+          "annotation": {
+            "sendable": {}
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        // Create the bundle if it doesn't exist yet\n        if !self.bundleExists(at: self.root) {\n            try self.createBundle()\n        }\n\n        return try await self.lock.withLock { _ in\n            guard await self.state == .created else {\n                throw ContainerizationError(\n                    .invalidState,\n                    message: \"container expected to be in created state, got: \\(await self.state)\"\n                )\n            }\n\n            let dynamicEnv = try message.dynamicEnv()\n\n            let bundle = ContainerResource.Bundle(path: self.root)\n            try bundle.createLogFile()\n\n            var config = try bundle.configuration\n\n            var kernel = try bundle.kernel\n            kernel.commandLine.kernelArgs.append(\"oops=panic\")\n            kernel.commandLine.kernelArgs.append(\"lsm=lockdown,capability,landlock,yama,apparmor\")\n            let vmm = VZVirtualMachineManager(\n                kernel: kernel,\n                initialFilesystem: bundle.initialFilesystem.asMount,\n                rosetta: config.rosetta,\n                logger: self.log\n            )\n\n            let networkBootstrapInfos = try message.networkBootstrapInfos()\n\n            var sessions: [XPCClientSession] = []\n            var attachments: [Attachment] = []\n            var interfaces: [Interface] = []\n            do {\n                for (index, info) in networkBootstrapInfos.enumerated() {\n                    let attachmentConfig = config.networks[index]\n                    let client = ContainerNetworkServiceClient.NetworkClient(id: attachmentConfig.network, plugin: info.pluginInfo.plugin)\n                    let session = client.connect()\n                    sessions.append(session)\n                    var (attachment, additionalData) = try await client.allocate(\n                        hostname: attachmentConfig.options.hostname,\n                        macAddress: attachmentConfig.options.macAddress,\n                        on: session\n                    )\n                    if let mtu = attachmentConfig.options.mtu {\n                        attachment = Attachment(\n                            network: attachment.network,\n                            hostname: attachment.hostname,\n                            ipv4Address: attachment.ipv4Address,\n                            ipv4Gateway: attachment.ipv4Gateway,\n                            ipv6Address: attachment.ipv6Address,\n                            macAddress: attachment.macAddress,\n                            mtu: mtu\n                        )\n                    }\n                    guard let iStrategy = self.interfaceStrategies[info.pluginInfo] else {\n                        throw ContainerizationError(\n                            .internalError, message: \"no available interface strategy for network \\(attachment.network), \\(info.pluginInfo)\")\n                    }\n                    let interface = try iStrategy.toInterface(\n                        attachment: attachment,\n                        interfaceIndex: index,\n                        additionalData: additionalData\n                    )\n                    attachments.append(attachment)\n                    interfaces.append(interface)\n                }\n            } catch {\n                for session in sessions { session.close() }\n                throw error\n            }\n\n            // Dynamically configure the DNS nameserver from a network if no explicit configuration\n            if let dns = config.dns, dns.nameservers.isEmpty {\n                let defaultNameservers = self.getDefaultNameservers(from: attachments)\n                if !defaultNameservers.isEmpty {\n                    config.dns = ContainerConfiguration.DNSConfiguration(\n                        nameservers: defaultNameservers,\n                        domain: dns.domain,\n                        searchDomains: dns.searchDomains,\n                        options: dns.options\n                    )\n                }\n            }\n\n            let stdio = message.stdio()\n            let containerLog = try FileHandle(forWritingTo: bundle.containerLog)\n            let stdout = {\n                if let h = stdio[1] {\n                    return MultiWriter(handles: [h, containerLog])\n                }\n                return MultiWriter(handles: [containerLog])\n            }()\n\n            let stderr: MultiWriter? = {\n                if !config.initProcess.terminal {\n                    if let h = stdio[2] {\n                        return MultiWriter(handles: [h, containerLog])\n                    }\n                    return MultiWriter(handles: [containerLog])\n                }\n                return nil\n            }()\n\n            let stdin = {\n                stdio[0] ?? nil\n            }()\n\n            let id = config.id\n            let rootfs = try bundle.containerRootfs.asMount\n            let container = try LinuxContainer(id, rootfs: rootfs, vmm: vmm, logger: self.log) { czConfig in\n                try Self.configureContainer(czConfig: &czConfig, config: config, dynamicEnv: dynamicEnv, log: self.log)\n                czConfig.interfaces = interfaces\n                czConfig.process.stdout = stdout\n                czConfig.process.stderr = stderr\n                czConfig.process.stdin = stdin\n                // NOTE: We can support a user providing new entries eventually, but for now craft\n                // a default /etc/hosts.\n                var hostsEntries = [Hosts.Entry.localHostIPV4()]\n                if !interfaces.isEmpty {\n                    let primaryIfaceAddr = interfaces[0].ipv4Address\n                    hostsEntries.append(\n                        Hosts.Entry(\n                            ipAddress: primaryIfaceAddr.address.description,\n                            hostnames: [czConfig.hostname ?? id],\n                        ))\n                }\n                czConfig.hosts = Hosts(entries: hostsEntries)\n                czConfig.bootLog = BootLog.file(path: bundle.bootlog, append: true)\n            }\n\n            let ctrInfo = ContainerInfo(\n                container: container,\n                config: config,\n                attachments: attachments,\n                bundle: bundle,\n                io: (in: stdin, out: stdout, err: stderr)\n            )\n            await self.setContainer(ctrInfo)\n            await self.setNetworkSessions(sessions)\n\n            do {\n                try await container.create()\n\n                try await self.initializeWaiters(for: id)\n                try await self.monitor.registerProcess(id: config.id, onExit: self.onContainerExit)\n                if !container.interfaces.isEmpty {\n                    try await self.startSocketForwarders(attachment: attachments[0], publishedPorts: config.publishedPorts)\n                }\n                await self.setState(.booted)\n            } catch {\n                do {\n                    try await self.cleanUpContainer(containerInfo: ctrInfo)\n                    await self.setState(.stopped)\n                } catch {\n                    self.log.error(\"failed to clean up container\", metadata: [\"error\": \"\\(error)\"])\n                }\n                throw error\n            }\n            return message.reply()\n        }"
+      "body": {
+        "content": "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        // Create the bundle if it doesn't exist yet\n        if !self.bundleExists(at: self.root) {\n            try self.createBundle()\n        }\n\n        return try await self.lock.withLock { _ in\n            guard await self.state == .created else {\n                throw ContainerizationError(\n                    .invalidState,\n                    message: \"container expected to be in created state, got: \\(await self.state)\"\n                )\n            }\n\n            let dynamicEnv = try message.dynamicEnv()\n\n            let bundle = ContainerResource.Bundle(path: self.root)\n            try bundle.createLogFile()\n\n            var config = try bundle.configuration\n\n            var kernel = try bundle.kernel\n            kernel.commandLine.kernelArgs.append(\"oops=panic\")\n            kernel.commandLine.kernelArgs.append(\"lsm=lockdown,capability,landlock,yama,apparmor\")\n            let vmm = VZVirtualMachineManager(\n                kernel: kernel,\n                initialFilesystem: bundle.initialFilesystem.asMount,\n                rosetta: config.rosetta,\n                logger: self.log\n            )\n\n            let networkBootstrapInfos = try message.networkBootstrapInfos()\n\n            var sessions: [XPCClientSession] = []\n            var attachments: [Attachment] = []\n            var interfaces: [Interface] = []\n            do {\n                for (index, info) in networkBootstrapInfos.enumerated() {\n                    let attachmentConfig = config.networks[index]\n                    let client = ContainerNetworkServiceClient.NetworkClient(id: attachmentConfig.network, plugin: info.pluginInfo.plugin)\n                    let session = client.connect()\n                    sessions.append(session)\n                    var (attachment, additionalData) = try await client.allocate(\n                        hostname: attachmentConfig.options.hostname,\n                        macAddress: attachmentConfig.options.macAddress,\n                        on: session\n                    )\n                    if let mtu = attachmentConfig.options.mtu {\n                        attachment = Attachment(\n                            network: attachment.network,\n                            hostname: attachment.hostname,\n                            ipv4Address: attachment.ipv4Address,\n                            ipv4Gateway: attachment.ipv4Gateway,\n                            ipv6Address: attachment.ipv6Address,\n                            macAddress: attachment.macAddress,\n                            mtu: mtu\n                        )\n                    }\n                    guard let iStrategy = self.interfaceStrategies[info.pluginInfo] else {\n                        throw ContainerizationError(\n                            .internalError, message: \"no available interface strategy for network \\(attachment.network), \\(info.pluginInfo)\")\n                    }\n                    let interface = try iStrategy.toInterface(\n                        attachment: attachment,\n                        interfaceIndex: index,\n                        additionalData: additionalData\n                    )\n                    attachments.append(attachment)\n                    interfaces.append(interface)\n                }\n            } catch {\n                for session in sessions { session.close() }\n                throw error\n            }\n\n            // Dynamically configure the DNS nameserver from a network if no explicit configuration\n            if let dns = config.dns, dns.nameservers.isEmpty {\n                let defaultNameservers = self.getDefaultNameservers(from: attachments)\n                if !defaultNameservers.isEmpty {\n                    config.dns = ContainerConfiguration.DNSConfiguration(\n                        nameservers: defaultNameservers,\n                        domain: dns.domain,\n                        searchDomains: dns.searchDomains,\n                        options: dns.options\n                    )\n                }\n            }\n\n            let stdio = message.stdio()\n            let containerLog = try FileHandle(forWritingTo: bundle.containerLog)\n            let stdout = {\n                if let h = stdio[1] {\n                    return MultiWriter(handles: [h, containerLog])\n                }\n                return MultiWriter(handles: [containerLog])\n            }()\n\n            let stderr: MultiWriter? = {\n                if !config.initProcess.terminal {\n                    if let h = stdio[2] {\n                        return MultiWriter(handles: [h, containerLog])\n                    }\n                    return MultiWriter(handles: [containerLog])\n                }\n                return nil\n            }()\n\n            let stdin = {\n                stdio[0] ?? nil\n            }()\n\n            let id = config.id\n            let rootfs = try bundle.containerRootfs.asMount\n            let container = try LinuxContainer(id, rootfs: rootfs, vmm: vmm, logger: self.log) { czConfig in\n                try Self.configureContainer(czConfig: &czConfig, config: config, dynamicEnv: dynamicEnv, log: self.log)\n                czConfig.interfaces = interfaces\n                czConfig.process.stdout = stdout\n                czConfig.process.stderr = stderr\n                czConfig.process.stdin = stdin\n                // NOTE: We can support a user providing new entries eventually, but for now craft\n                // a default /etc/hosts.\n                var hostsEntries = [Hosts.Entry.localHostIPV4()]\n                if !interfaces.isEmpty {\n                    let primaryIfaceAddr = interfaces[0].ipv4Address\n                    hostsEntries.append(\n                        Hosts.Entry(\n                            ipAddress: primaryIfaceAddr.address.description,\n                            hostnames: [czConfig.hostname ?? id],\n                        ))\n                }\n                czConfig.hosts = Hosts(entries: hostsEntries)\n                czConfig.bootLog = BootLog.file(path: bundle.bootlog, append: true)\n            }\n\n            let ctrInfo = ContainerInfo(\n                container: container,\n                config: config,\n                attachments: attachments,\n                bundle: bundle,\n                io: (in: stdin, out: stdout, err: stderr)\n            )\n            await self.setContainer(ctrInfo)\n            await self.setNetworkSessions(sessions)\n\n            do {\n                try await container.create()\n\n                try await self.initializeWaiters(for: id)\n                try await self.monitor.registerProcess(id: config.id, onExit: self.onContainerExit)\n                if !container.interfaces.isEmpty {\n                    try await self.startSocketForwarders(attachment: attachments[0], publishedPorts: config.publishedPorts)\n                }\n                await self.setState(.booted)\n            } catch {\n                do {\n                    try await self.cleanUpContainer(containerInfo: ctrInfo)\n                    await self.setState(.stopped)\n                } catch {\n                    self.log.error(\"failed to clean up container\", metadata: [\"error\": \"\\(error)\"])\n                }\n                throw error\n            }\n            return message.reply()\n        }"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-        "location" : {
-          "end_position" : 12303,
-          "start_position" : 4597
+      "location_info": {
+        "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location": {
+          "end_position": 12303,
+          "start_position": 4597,
+          "start_line": 129,
+          "end_line": 305
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "bootstrap",
-      "parameters" : [
+      "name": "bootstrap",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "XPCMessage"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "XPCMessage"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-            "location" : {
-              "end_position" : 4874,
-              "start_position" : 4853
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location": {
+              "end_position": 4874,
+              "start_position": 4853,
+              "start_line": 138,
+              "end_line": 138
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "message",
-          "order" : 0
+          "modifiers": [],
+          "name": "message",
+          "order": 0
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "XPCMessage"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "XPCMessage"
         },
-        "description" : "-> XPCMessage"
+        "description": "-> XPCMessage"
       },
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add function refactoring"
+    "type": "Add function refactoring"
   },
-  "refactoringIndex" : 179,
-  "refactoringType" : "Add function refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 179,
+  "refactoringType": "Add function refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
   ]
 }

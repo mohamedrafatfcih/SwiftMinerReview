@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-50789c79e17cf5c2493e955a",
-  "commitHash" : "c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "commitMessage" : "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
-  "durationSeconds" : 31.880328059196472,
-  "entityNames" : [
+  "caseID": "case-50789c79e17cf5c2493e955a",
+  "commitHash": "c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "commitMessage": "Lazy Requests, per-Request Features (#3996)\n\n### Issue Link :link:\nCloses #3992, other feature requests.\n\n### Goals :soccer:\nThis PR includes four major new features:\n\n1. By default, all `Request` set up is now fully lazy and does not start\nuntil the instance is resumed, whether automatically or manually.\nVirtually all users should be unimpacted by this change, aside from\nseeing fewer race conditions. For those that do see issues, the previous\nbehavior can be restored by passing `requestSetup: .eager` to the\n`Session.init`.\n2. Speaking of `resume()`, automatic resume is now controllable on a\nper-`Request` basis using the `shouldAutomaticallyResumeParameter`. By\ndefault this is `nil` an obeys the `Session` setting.\n3. You can now add a `RequestAdapter`, `RequestRetrier`, or\n`RequestInterceptor` after `Request.init`, like any other chained\nAlamofire API. This is what necessitated the lazy start change, as\nadapters added in this manner are racy with eager `Request`s and may\nmiss the appropriate lifetime events.\n4. In addition to the interceptors, you can now add a per-`Request`\n`EventMonitor` that is composed after the `Session`'s event monitor.\n\n```swift\n// shouldAutomaticallyResume defaults to nil, obeying the Session's setting, which \n// defaults to true.\nlet request = <session>.request(<urlRequest>, shouldAutomaticallyResume: true) \n  .adapt(using: <adapter>)\n  .retry(using: <retrier>)\n  .interceptor(<interceptor>)\n  .eventMonitor(<monitor>)\n\n// request is inert until resumed or a response handler (when automatic resume is enabled)\n// is added.\nlet response = await request.serializingDecoding(<Type>.self).response\n```\n\n### Implementation Details :construction:\nActual changes were rather minimal for the impact these features have.\n1. Simple stored interceptor and monitor are now stored in the mutable\nstate and new instance methods have been added to provide those values.\n2. Internally, the previous `perform` method has been split between\neager and lazy variants, and a new `RequestDelegate` method has been\nadded to start the request when needed (upon resume).\n3. Interceptors and EventMonitors are now composed `Session`-first, to\nguarantee that `Request`s can override `Session` interceptor behavior.\n\n### Testing Details :mag:\nTests against very specific `Request` lifetime timing were updated to\nuse an `eager` `Session`, to replicate the previous behavior. However,\nthese tests are almost always inherently racy, which made them flaky in\nCI, so this sort of breaking behavioral change is more of a bug fix.\nUsers could never really rely on these event orderings before, as\n`Request` start and the events themselves would race.\n\nAdditional tests added to cover the new APIs, and some tests have been\nconverted to Swift Testing for performance and ergonomics.\n\nAdditionally, the test target deployment targets have been bumped again,\nas the testing frameworks technically only deploy back to macOS 14, etc.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/c279eda711944b5fe0c1ce410f2d934353e7bf65",
+  "durationSeconds": 31.880328059196472,
+  "entityNames": [
     "RequestCompressionTests",
     "thatDeflateCompressorDoesNotCompressDataWhenClosureReturnsFalse",
     "thatDeflateCompressorReplacesHeaderWhenConfigured",
@@ -13,521 +13,465 @@
     "thatDeflateCompressorThrowsErrorWhenConfigured",
     "thatRequestsCanBeCompressed"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             },
             {
-              "annotation" : {
-                "available" : {
-
-                }
+              "annotation": {
+                "available": {}
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "label" : "macOS",
-                  "value" : "10.15"
+                  "label": "macOS",
+                  "value": "10.15"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "iOS",
-                  "value" : "13"
+                  "label": "iOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "tvOS",
-                  "value" : "13"
+                  "label": "tvOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "watchOS",
-                  "value" : "6"
+                  "label": "watchOS",
+                  "value": "6"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "value" : "*"
+                  "value": "*"
                 }
               ]
             }
           ],
-          "body" : {
-            "content" : "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      interceptor: .deflateCompressor)\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isSuccess)"
+          "body": {
+            "content": "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      interceptor: .deflateCompressor)\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isSuccess)"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestTests.swift",
-            "location" : {
-              "end_position" : 69474,
-              "start_position" : 68802
+          "location_info": {
+            "file_path": "Tests/RequestTests.swift",
+            "location": {
+              "end_position": 69474,
+              "start_position": 68802,
+              "start_line": 1763,
+              "end_line": 1782
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "thatRequestsCanBeCompressed",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async"
+          "modifiers": [],
+          "name": "thatRequestsCanBeCompressed",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             },
             {
-              "annotation" : {
-                "available" : {
-
-                }
+              "annotation": {
+                "available": {}
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "label" : "macOS",
-                  "value" : "10.15"
+                  "label": "macOS",
+                  "value": "10.15"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "iOS",
-                  "value" : "13"
+                  "label": "iOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "tvOS",
-                  "value" : "13"
+                  "label": "tvOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "watchOS",
-                  "value" : "6"
+                  "label": "watchOS",
+                  "value": "6"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "value" : "*"
+                  "value": "*"
                 }
               ]
             }
           ],
-          "body" : {
-            "content" : "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"value\")],\n                                      interceptor: .deflateCompressor)\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isFailure)\n        #expect(result.failure?.underlyingError as? DeflateRequestCompressor.DuplicateHeaderError != nil)"
+          "body": {
+            "content": "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"value\")],\n                                      interceptor: .deflateCompressor)\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isFailure)\n        #expect(result.failure?.underlyingError as? DeflateRequestCompressor.DuplicateHeaderError != nil)"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestTests.swift",
-            "location" : {
-              "end_position" : 70370,
-              "start_position" : 69474
+          "location_info": {
+            "file_path": "Tests/RequestTests.swift",
+            "location": {
+              "end_position": 70370,
+              "start_position": 69474,
+              "start_line": 1782,
+              "end_line": 1804
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "thatDeflateCompressorThrowsErrorByDefaultWhenRequestAlreadyHasHeader",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async"
+          "modifiers": [],
+          "name": "thatDeflateCompressorThrowsErrorByDefaultWhenRequestAlreadyHasHeader",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             },
             {
-              "annotation" : {
-                "available" : {
-
-                }
+              "annotation": {
+                "available": {}
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "label" : "macOS",
-                  "value" : "10.15"
+                  "label": "macOS",
+                  "value": "10.15"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "iOS",
-                  "value" : "13"
+                  "label": "iOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "tvOS",
-                  "value" : "13"
+                  "label": "tvOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "watchOS",
-                  "value" : "6"
+                  "label": "watchOS",
+                  "value": "6"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "value" : "*"
+                  "value": "*"
                 }
               ]
             }
           ],
-          "body" : {
-            "content" : "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"value\")],\n                                      interceptor: .deflateCompressor(duplicateHeaderBehavior: .error))\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isFailure)\n        #expect(result.failure?.underlyingError as? DeflateRequestCompressor.DuplicateHeaderError != nil)"
+          "body": {
+            "content": "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"value\")],\n                                      interceptor: .deflateCompressor(duplicateHeaderBehavior: .error))\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isFailure)\n        #expect(result.failure?.underlyingError as? DeflateRequestCompressor.DuplicateHeaderError != nil)"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestTests.swift",
-            "location" : {
-              "end_position" : 71277,
-              "start_position" : 70370
+          "location_info": {
+            "file_path": "Tests/RequestTests.swift",
+            "location": {
+              "end_position": 71277,
+              "start_position": 70370,
+              "start_line": 1804,
+              "end_line": 1826
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "thatDeflateCompressorThrowsErrorWhenConfigured",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async"
+          "modifiers": [],
+          "name": "thatDeflateCompressorThrowsErrorWhenConfigured",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             },
             {
-              "annotation" : {
-                "available" : {
-
-                }
+              "annotation": {
+                "available": {}
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "label" : "macOS",
-                  "value" : "10.15"
+                  "label": "macOS",
+                  "value": "10.15"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "iOS",
-                  "value" : "13"
+                  "label": "iOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "tvOS",
-                  "value" : "13"
+                  "label": "tvOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "watchOS",
-                  "value" : "6"
+                  "label": "watchOS",
+                  "value": "6"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "value" : "*"
+                  "value": "*"
                 }
               ]
             }
           ],
-          "body" : {
-            "content" : "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"value\")],\n                                      interceptor: .deflateCompressor(duplicateHeaderBehavior: .replace))\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isSuccess)"
+          "body": {
+            "content": "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"value\")],\n                                      interceptor: .deflateCompressor(duplicateHeaderBehavior: .replace))\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isSuccess)"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestTests.swift",
-            "location" : {
-              "end_position" : 72083,
-              "start_position" : 71277
+          "location_info": {
+            "file_path": "Tests/RequestTests.swift",
+            "location": {
+              "end_position": 72083,
+              "start_position": 71277,
+              "start_line": 1826,
+              "end_line": 1847
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "thatDeflateCompressorReplacesHeaderWhenConfigured",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async"
+          "modifiers": [],
+          "name": "thatDeflateCompressorReplacesHeaderWhenConfigured",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             },
             {
-              "annotation" : {
-                "available" : {
-
-                }
+              "annotation": {
+                "available": {}
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "label" : "macOS",
-                  "value" : "10.15"
+                  "label": "macOS",
+                  "value": "10.15"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "iOS",
-                  "value" : "13"
+                  "label": "iOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "tvOS",
-                  "value" : "13"
+                  "label": "tvOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "watchOS",
-                  "value" : "6"
+                  "label": "watchOS",
+                  "value": "6"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "value" : "*"
+                  "value": "*"
                 }
               ]
             }
           ],
-          "body" : {
-            "content" : "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"gzip\")],\n                                      interceptor: .deflateCompressor(duplicateHeaderBehavior: .skip))\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        // Request fails as the server expects gzip compression.\n        #expect(result.isFailure)"
+          "body": {
+            "content": "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      headers: [.contentEncoding(\"gzip\")],\n                                      interceptor: .deflateCompressor(duplicateHeaderBehavior: .skip))\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        // Request fails as the server expects gzip compression.\n        #expect(result.isFailure)"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestTests.swift",
-            "location" : {
-              "end_position" : 72952,
-              "start_position" : 72083
+          "location_info": {
+            "file_path": "Tests/RequestTests.swift",
+            "location": {
+              "end_position": 72952,
+              "start_position": 72083,
+              "start_line": 1847,
+              "end_line": 1869
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "thatDeflateCompressorSkipsCompressionWhenConfigured",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async"
+          "modifiers": [],
+          "name": "thatDeflateCompressorSkipsCompressionWhenConfigured",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             },
             {
-              "annotation" : {
-                "available" : {
-
-                }
+              "annotation": {
+                "available": {}
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "label" : "macOS",
-                  "value" : "10.15"
+                  "label": "macOS",
+                  "value": "10.15"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "iOS",
-                  "value" : "13"
+                  "label": "iOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "tvOS",
-                  "value" : "13"
+                  "label": "tvOS",
+                  "value": "13"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "label" : "watchOS",
-                  "value" : "6"
+                  "label": "watchOS",
+                  "value": "6"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "value" : "*"
+                  "value": "*"
                 }
               ]
             }
           ],
-          "body" : {
-            "content" : "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      interceptor: .deflateCompressor { _ in false })\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isSuccess)\n        // With no compression, request headers reflected from server should have no Content-Encoding.\n        #expect(result.success?.headers[\"Content-Encoding\"] == nil)"
+          "body": {
+            "content": "let url = Endpoint.method(.post).url\n        let parameters = TestParameters(property: \"compressed\")\n\n        // When\n        let result = await AF.request(url,\n                                      method: .post,\n                                      parameters: parameters,\n                                      encoder: .json,\n                                      interceptor: .deflateCompressor { _ in false })\n            .serializingDecodable(TestResponse.self)\n            .result\n\n        // Then\n        #expect(result.isSuccess)\n        // With no compression, request headers reflected from server should have no Content-Encoding.\n        #expect(result.success?.headers[\"Content-Encoding\"] == nil)"
           },
-          "location_info" : {
-            "file_path" : "Tests/RequestTests.swift",
-            "location" : {
-              "end_position" : 73847,
-              "start_position" : 72952
+          "location_info": {
+            "file_path": "Tests/RequestTests.swift",
+            "location": {
+              "end_position": 73847,
+              "start_position": 72952,
+              "start_line": 1869,
+              "end_line": 1891
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "thatDeflateCompressorDoesNotCompressDataWhenClosureReturnsFalse",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async"
+          "modifiers": [],
+          "name": "thatDeflateCompressorDoesNotCompressDataWhenClosureReturnsFalse",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/RequestTests.swift",
-        "location" : {
-          "end_position" : 73849,
-          "start_position" : 68762
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/RequestTests.swift",
+        "location": {
+          "end_position": 73849,
+          "start_position": 68762,
+          "start_line": 1761,
+          "end_line": 1892
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "RequestCompressionTests",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "RequestCompressionTests",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Add struct refactoring"
+    "type": "Add struct refactoring"
   },
-  "refactoringIndex" : 253,
-  "refactoringType" : "Add struct refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 253,
+  "refactoringType": "Add struct refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/RequestTests.swift"
   ]
 }

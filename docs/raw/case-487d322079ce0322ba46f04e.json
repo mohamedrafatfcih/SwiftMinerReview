@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-487d322079ce0322ba46f04e",
-  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
-  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
-  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
-  "durationSeconds" : 7.7093260288238525,
-  "entityNames" : [
+  "caseID": "case-487d322079ce0322ba46f04e",
+  "commitHash": "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage": "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL": "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds": 7.7093260288238525,
+  "entityNames": [
     "ContainerConfiguration",
     "LinuxProcessConfiguration",
     "ProcessConfiguration",
@@ -14,115 +14,109 @@
     "containerConfig",
     "stdio"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "var proc = LinuxProcessConfiguration()\n        proc.stdin = stdio[0]\n        proc.stdout = stdio[1]\n        proc.stderr = stdio[2]\n\n        proc.arguments = [config.executable] + config.arguments\n        proc.environmentVariables = config.environment\n\n        if containerConfig.ssh {\n            if !proc.environmentVariables.contains(where: { $0.starts(with: \"\\(Self.sshAuthSocketEnvVar)=\") }) {\n                proc.environmentVariables.append(\"\\(Self.sshAuthSocketEnvVar)=\\(Self.sshAuthSocketGuestPath)\")\n            }\n        }\n\n        proc.terminal = config.terminal\n        proc.workingDirectory = config.workingDirectory\n        try proc.rlimits = config.rlimits.map {\n            LinuxRLimit(\n                kind: try LinuxRLimit.Kind($0.limit),\n                hard: $0.hard,\n                soft: $0.soft\n            )\n        }\n        proc.capabilities = try Self.effectiveCapabilities(\n            capAdd: containerConfig.capAdd,\n            capDrop: containerConfig.capDrop\n        )\n        switch config.user {\n        case .raw(let name):\n            proc.user = .init(\n                uid: 0,\n                gid: 0,\n                umask: nil,\n                additionalGids: config.supplementalGroups,\n                username: name\n            )\n        case .id(let uid, let gid):\n            proc.user = .init(\n                uid: uid,\n                gid: gid,\n                umask: nil,\n                additionalGids: config.supplementalGroups,\n                username: \"\"\n            )\n        }\n\n        return proc"
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "attributes": [],
+      "body": {
+        "content": "var proc = LinuxProcessConfiguration()\n        proc.stdin = stdio[0]\n        proc.stdout = stdio[1]\n        proc.stderr = stdio[2]\n\n        proc.arguments = [config.executable] + config.arguments\n        proc.environmentVariables = config.environment\n\n        if containerConfig.ssh {\n            if !proc.environmentVariables.contains(where: { $0.starts(with: \"\\(Self.sshAuthSocketEnvVar)=\") }) {\n                proc.environmentVariables.append(\"\\(Self.sshAuthSocketEnvVar)=\\(Self.sshAuthSocketGuestPath)\")\n            }\n        }\n\n        proc.terminal = config.terminal\n        proc.workingDirectory = config.workingDirectory\n        try proc.rlimits = config.rlimits.map {\n            LinuxRLimit(\n                kind: try LinuxRLimit.Kind($0.limit),\n                hard: $0.hard,\n                soft: $0.soft\n            )\n        }\n        proc.capabilities = try Self.effectiveCapabilities(\n            capAdd: containerConfig.capAdd,\n            capDrop: containerConfig.capDrop\n        )\n        switch config.user {\n        case .raw(let name):\n            proc.user = .init(\n                uid: 0,\n                gid: 0,\n                umask: nil,\n                additionalGids: config.supplementalGroups,\n                username: name\n            )\n        case .id(let uid, let gid):\n            proc.user = .init(\n                uid: uid,\n                gid: gid,\n                umask: nil,\n                additionalGids: config.supplementalGroups,\n                username: \"\"\n            )\n        }\n\n        return proc"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
-        "location" : {
-          "end_position" : 44756,
-          "start_position" : 42996
+      "location_info": {
+        "file_path": "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+        "location": {
+          "end_position": 44756,
+          "start_position": 42996,
+          "start_line": 1095,
+          "end_line": 1147
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "configureProcessConfig",
-      "parameters" : [
+      "name": "configureProcessConfig",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "ProcessConfiguration"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "ProcessConfiguration"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
-            "location" : {
-              "end_position" : 43080,
-              "start_position" : 43050
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location": {
+              "end_position": 43080,
+              "start_position": 43050,
+              "start_line": 1097,
+              "end_line": 1097
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "config",
-          "order" : 0
+          "modifiers": [],
+          "name": "config",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[FileHandle?]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[FileHandle?]"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
-            "location" : {
-              "end_position" : 43102,
-              "start_position" : 43080
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location": {
+              "end_position": 43102,
+              "start_position": 43080,
+              "start_line": 1097,
+              "end_line": 1097
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "stdio",
-          "order" : 1
+          "modifiers": [],
+          "name": "stdio",
+          "order": 1
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "ContainerConfiguration"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "ContainerConfiguration"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
-            "location" : {
-              "end_position" : 43141,
-              "start_position" : 43102
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/ContainerSandboxService/Server/SandboxService.swift",
+            "location": {
+              "end_position": 43141,
+              "start_position": 43102,
+              "start_line": 1097,
+              "end_line": 1097
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "containerConfig",
-          "order" : 2
+          "modifiers": [],
+          "name": "containerConfig",
+          "order": 2
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "LinuxProcessConfiguration"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "LinuxProcessConfiguration"
         },
-        "description" : "-> LinuxProcessConfiguration"
+        "description": "-> LinuxProcessConfiguration"
       },
-      "specifiers_decl" : {
-        "description" : "throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "description": "throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove function refactoring"
+    "type": "Remove function refactoring"
   },
-  "refactoringIndex" : 100,
-  "refactoringType" : "Remove function refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 100,
+  "refactoringType": "Remove function refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/ContainerSandboxService/Server/SandboxService.swift"
   ]
 }

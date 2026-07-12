@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-07d935264a30f9dc87269b57",
-  "commitHash" : "b2994ac369a01bc29e99f1096dde58ff095ff613",
-  "commitMessage" : "Add `container machine` for managing persistent Linux VMs (#1662)\n\n## Type of Change\n- [ ] Bug fix\n- [x] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n`container` runs each workload in an ephemeral VM, so there's no\nbuilt-in way to keep a persistent Linux environment you can log into and\nwork in. `container machine` adds one.\n\nA container machine is a lightweight, persistent, and integrated Linux\nenvironments that feel like an extension of your Mac, created from\nstandard OCI images with a familiar UX. The login user matches your host\naccount with passwordless `sudo`, your home directory is mounted inside\nthe VM, and each machine keeps its filesystem and runs the image's own\ninit system (such as`systemd` or `openrc`).\n\n```bash\ncontainer machine create alpine:3.22 --name my-machine\ncontainer machine run -n my-machine # interactive shell\ncontainer machine set -n my-machine cpus=4 memory=8G\n```\n\nSubcommands: `create`, `run`, `list` (`ls`), `inspect`, `set`,\n`set-default`, `logs`, `stop`, `delete` (`rm`); `m` aliases `machine`.\nDocs added to `docs/command-reference.md` (Machine Management) and\n`docs/how-to.md` (\"Use container machines\").\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [x] Added/updated docs\n\nSigned-off-by: Raj Aryan Singh <rajaryan_singh@apple.com>\nCo-authored-by: Jaewon Hur <jaewon_hur@apple.com>\nCo-authored-by: John Logan <john_logan@apple.com>\nCo-authored-by: Michael Crosby <michael_crosby@apple.com>\nCo-authored-by: Eric Ernst <eric_ernst@apple.com>\nCo-authored-by: Danny Canter <danny_canter@apple.com>",
-  "commitURL" : "https://github.com/apple/container/commit/b2994ac369a01bc29e99f1096dde58ff095ff613",
-  "durationSeconds" : 18.474954962730408,
-  "entityNames" : [
+  "caseID": "case-07d935264a30f9dc87269b57",
+  "commitHash": "b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "commitMessage": "Add `container machine` for managing persistent Linux VMs (#1662)\n\n## Type of Change\n- [ ] Bug fix\n- [x] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n`container` runs each workload in an ephemeral VM, so there's no\nbuilt-in way to keep a persistent Linux environment you can log into and\nwork in. `container machine` adds one.\n\nA container machine is a lightweight, persistent, and integrated Linux\nenvironments that feel like an extension of your Mac, created from\nstandard OCI images with a familiar UX. The login user matches your host\naccount with passwordless `sudo`, your home directory is mounted inside\nthe VM, and each machine keeps its filesystem and runs the image's own\ninit system (such as`systemd` or `openrc`).\n\n```bash\ncontainer machine create alpine:3.22 --name my-machine\ncontainer machine run -n my-machine # interactive shell\ncontainer machine set -n my-machine cpus=4 memory=8G\n```\n\nSubcommands: `create`, `run`, `list` (`ls`), `inspect`, `set`,\n`set-default`, `logs`, `stop`, `delete` (`rm`); `m` aliases `machine`.\nDocs added to `docs/command-reference.md` (Machine Management) and\n`docs/how-to.md` (\"Use container machines\").\n\n## Testing\n- [x] Tested locally\n- [x] Added/updated tests\n- [x] Added/updated docs\n\nSigned-off-by: Raj Aryan Singh <rajaryan_singh@apple.com>\nCo-authored-by: Jaewon Hur <jaewon_hur@apple.com>\nCo-authored-by: John Logan <john_logan@apple.com>\nCo-authored-by: Michael Crosby <michael_crosby@apple.com>\nCo-authored-by: Eric Ernst <eric_ernst@apple.com>\nCo-authored-by: Danny Canter <danny_canter@apple.com>",
+  "commitURL": "https://github.com/apple/container/commit/b2994ac369a01bc29e99f1096dde58ff095ff613",
+  "durationSeconds": 18.474954962730408,
+  "entityNames": [
     "MachineSnapshot",
     "String?",
     "[String: String]",
@@ -12,102 +12,98 @@
     "dynamicEnv",
     "id"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "self.log.debug(\"\\(#function)\")\n\n        guard let id = id ?? self.default?.id else {\n            throw ContainerizationError(\n                .invalidArgument,\n                message: \"no container machine specified and no default set\"\n            )\n        }\n\n        return try await self.lock.withLock { context in\n            var state = try await self._getMachineState(id: id)\n\n            switch state.snapshot.status {\n            case .running:\n                return state.snapshot\n            case .stopped:\n                break\n            default:\n                throw ContainerizationError(.invalidState, message: \"container machine \\(id) is \\(state.snapshot.status)\")\n            }\n\n            let cid = \"\\(id)-\\(UUID().uuidString.prefix(MachineConfiguration.containerUUIDLength).lowercased())\"\n            guard try await self.client.list(filters: .init(ids: [cid])).isEmpty else {\n                throw ContainerizationError(.internalError, message: \"container \\(cid) already exists\")\n            }\n\n            let path = try self.bundlePath(id: id)\n            let bundle = MachineBundle(path: path)\n            let rootfs = try bundle.machineRootfs\n\n            let bootConfig = state.snapshot.bootConfig\n            var config = try await state.snapshot.configuration.toContainerConfig(\n                cid: cid,\n                sbin: path.appending(MachineBundle.sbinDirectory),\n                initializedFile: path.appending(MachineBundle.initializedFile),\n                homeMountOption: bootConfig.homeMount,\n            )\n\n            config.resources.cpus = bootConfig.cpus\n            config.resources.cpuOverhead = 0\n            config.resources.memoryInBytes = bootConfig.memory.toUInt64(unit: .bytes)\n\n            let kernel = try await ClientKernel.getDefaultKernel(for: .current)\n\n            var fhs: [FileHandle] = []\n            do {\n                try await self.client.create(\n                    configuration: config,\n                    options: ContainerCreateOptions(autoRemove: true, rootFsOverride: rootfs),\n                    kernel: kernel\n                )\n\n                let process = try await self.client.bootstrap(\n                    id: cid, stdio: [nil, nil, nil], dynamicEnv: dynamicEnv)\n                try await process.start()\n\n                try fhs.append(contentsOf: await self.client.logs(id: cid))\n\n                try bundle.createLogFiles()\n                let stdioLog = try FileHandle(forWritingTo: URL(filePath: bundle.stdioLog.string))\n                let bootLog = try FileHandle(forWritingTo: URL(filePath: bundle.bootLog.string))\n\n                state.logger = Task<Void, Never> { [log = self.log, id = state.id, fhs] in\n                    defer {\n                        try? fhs[0].close()\n                        try? fhs[1].close()\n\n                        try? stdioLog.close()\n                        try? bootLog.close()\n                    }\n\n                    await withTaskGroup(of: Result<Void, Error>.self) { group in\n                        for (from, to) in zip(fhs, [stdioLog, bootLog]) {\n                            group.addTask {\n                                do {\n                                    try await Self.pipeFile(from: from, to: to)\n                                    return .success(())\n                                } catch {\n                                    return .failure(error)\n                                }\n                            }\n                        }\n\n                        for await result in group {\n                            switch result {\n                            case .success():\n                                continue\n                            case .failure(let error):\n                                log.error(\n                                    \"log pipe failed\",\n                                    metadata: [\n                                        \"id\": \"\\(id)\",\n                                        \"error\": \"\\(error)\",\n                                    ])\n                            }\n                        }\n                    }\n                }\n\n                try await self.exitMonitor.registerProcess(\n                    id: id,\n                    onExit: self.handleMachineExit\n                )\n\n                state.snapshot.status = .running\n                state.snapshot.startedDate = Date()\n                state.snapshot.containerId = cid\n                state.snapshot.initialized = bundle.initialized\n                await self.setMachineState(id, state, context: context)\n\n                // Monitor container exit in the background so we can update container machine state\n                // when the backing container stops (e.g., VM crash, kill, etc.)\n                try await self.exitMonitor.track(id: id) {\n                    self.log.info(\"registering container machine with exit monitor\")\n                    let code = try await process.wait()\n                    self.log.info(\n                        \"container machine exited in exit monitor\",\n                        metadata: [\"id\": \"\\(id)\", \"rc\": \"\\(code)\"]\n                    )\n\n                    return ExitStatus(exitCode: code)\n                }\n\n                return state.snapshot\n            } catch {\n                await self.exitMonitor.stopTracking(id: id)\n\n                state.logger?.cancel()\n                await state.logger?.value\n                state.logger = nil\n\n                fhs.forEach { try? $0.close() }\n                try? await self.client.delete(id: cid, force: true)\n\n                state.snapshot.status = .stopped\n                state.snapshot.startedDate = nil\n                state.snapshot.containerId = nil\n                state.snapshot.ipAddress = nil\n                await self.setMachineState(id, state, context: context)\n\n                throw error\n            }\n        }"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [],
+      "body": {
+        "content": "self.log.debug(\"\\(#function)\")\n\n        guard let id = id ?? self.default?.id else {\n            throw ContainerizationError(\n                .invalidArgument,\n                message: \"no container machine specified and no default set\"\n            )\n        }\n\n        return try await self.lock.withLock { context in\n            var state = try await self._getMachineState(id: id)\n\n            switch state.snapshot.status {\n            case .running:\n                return state.snapshot\n            case .stopped:\n                break\n            default:\n                throw ContainerizationError(.invalidState, message: \"container machine \\(id) is \\(state.snapshot.status)\")\n            }\n\n            let cid = \"\\(id)-\\(UUID().uuidString.prefix(MachineConfiguration.containerUUIDLength).lowercased())\"\n            guard try await self.client.list(filters: .init(ids: [cid])).isEmpty else {\n                throw ContainerizationError(.internalError, message: \"container \\(cid) already exists\")\n            }\n\n            let path = try self.bundlePath(id: id)\n            let bundle = MachineBundle(path: path)\n            let rootfs = try bundle.machineRootfs\n\n            let bootConfig = state.snapshot.bootConfig\n            var config = try await state.snapshot.configuration.toContainerConfig(\n                cid: cid,\n                sbin: path.appending(MachineBundle.sbinDirectory),\n                initializedFile: path.appending(MachineBundle.initializedFile),\n                homeMountOption: bootConfig.homeMount,\n            )\n\n            config.resources.cpus = bootConfig.cpus\n            config.resources.cpuOverhead = 0\n            config.resources.memoryInBytes = bootConfig.memory.toUInt64(unit: .bytes)\n\n            let kernel = try await ClientKernel.getDefaultKernel(for: .current)\n\n            var fhs: [FileHandle] = []\n            do {\n                try await self.client.create(\n                    configuration: config,\n                    options: ContainerCreateOptions(autoRemove: true, rootFsOverride: rootfs),\n                    kernel: kernel\n                )\n\n                let process = try await self.client.bootstrap(\n                    id: cid, stdio: [nil, nil, nil], dynamicEnv: dynamicEnv)\n                try await process.start()\n\n                try fhs.append(contentsOf: await self.client.logs(id: cid))\n\n                try bundle.createLogFiles()\n                let stdioLog = try FileHandle(forWritingTo: URL(filePath: bundle.stdioLog.string))\n                let bootLog = try FileHandle(forWritingTo: URL(filePath: bundle.bootLog.string))\n\n                state.logger = Task<Void, Never> { [log = self.log, id = state.id, fhs] in\n                    defer {\n                        try? fhs[0].close()\n                        try? fhs[1].close()\n\n                        try? stdioLog.close()\n                        try? bootLog.close()\n                    }\n\n                    await withTaskGroup(of: Result<Void, Error>.self) { group in\n                        for (from, to) in zip(fhs, [stdioLog, bootLog]) {\n                            group.addTask {\n                                do {\n                                    try await Self.pipeFile(from: from, to: to)\n                                    return .success(())\n                                } catch {\n                                    return .failure(error)\n                                }\n                            }\n                        }\n\n                        for await result in group {\n                            switch result {\n                            case .success():\n                                continue\n                            case .failure(let error):\n                                log.error(\n                                    \"log pipe failed\",\n                                    metadata: [\n                                        \"id\": \"\\(id)\",\n                                        \"error\": \"\\(error)\",\n                                    ])\n                            }\n                        }\n                    }\n                }\n\n                try await self.exitMonitor.registerProcess(\n                    id: id,\n                    onExit: self.handleMachineExit\n                )\n\n                state.snapshot.status = .running\n                state.snapshot.startedDate = Date()\n                state.snapshot.containerId = cid\n                state.snapshot.initialized = bundle.initialized\n                await self.setMachineState(id, state, context: context)\n\n                // Monitor container exit in the background so we can update container machine state\n                // when the backing container stops (e.g., VM crash, kill, etc.)\n                try await self.exitMonitor.track(id: id) {\n                    self.log.info(\"registering container machine with exit monitor\")\n                    let code = try await process.wait()\n                    self.log.info(\n                        \"container machine exited in exit monitor\",\n                        metadata: [\"id\": \"\\(id)\", \"rc\": \"\\(code)\"]\n                    )\n\n                    return ExitStatus(exitCode: code)\n                }\n\n                return state.snapshot\n            } catch {\n                await self.exitMonitor.stopTracking(id: id)\n\n                state.logger?.cancel()\n                await state.logger?.value\n                state.logger = nil\n\n                fhs.forEach { try? $0.close() }\n                try? await self.client.delete(id: cid, force: true)\n\n                state.snapshot.status = .stopped\n                state.snapshot.startedDate = nil\n                state.snapshot.containerId = nil\n                state.snapshot.ipAddress = nil\n                await self.setMachineState(id, state, context: context)\n\n                throw error\n            }\n        }"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
-        "location" : {
-          "end_position" : 17782,
-          "start_position" : 11762
+      "location_info": {
+        "file_path": "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+        "location": {
+          "end_position": 17782,
+          "start_position": 11762,
+          "start_line": 327,
+          "end_line": 473
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "boot",
-      "parameters" : [
+      "name": "boot",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "String?"
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "String?"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
-            "location" : {
-              "end_position" : 11798,
-              "start_position" : 11785
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location": {
+              "end_position": 11798,
+              "start_position": 11785,
+              "start_line": 329,
+              "end_line": 329
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "id",
-          "order" : 0
+          "modifiers": [],
+          "name": "id",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[String: String]"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[String: String]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[:]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[:]"
               }
             }
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Sources/Services/MachineAPIService/Server/MachinesService.swift",
-            "location" : {
-              "end_position" : 11832,
-              "start_position" : 11798
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Sources/Services/MachineAPIService/Server/MachinesService.swift",
+            "location": {
+              "end_position": 11832,
+              "start_position": 11798,
+              "start_line": 329,
+              "end_line": 329
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "dynamicEnv",
-          "order" : 1
+          "modifiers": [],
+          "name": "dynamicEnv",
+          "order": 1
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "MachineSnapshot"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "MachineSnapshot"
         },
-        "description" : "-> MachineSnapshot"
+        "description": "-> MachineSnapshot"
       },
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add function refactoring"
+    "type": "Add function refactoring"
   },
-  "refactoringIndex" : 206,
-  "refactoringType" : "Add function refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 206,
+  "refactoringType": "Add function refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/MachineAPIService/Server/MachinesService.swift"
   ]
 }

@@ -1,91 +1,87 @@
 {
-  "caseID" : "case-49324dbd7897ef381761a424",
-  "commitHash" : "0c721a24c5bb113e73c65ff2d8a2ab5b4a80535f",
-  "commitMessage" : "feat: added Disk preview (disabled for now)\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/0c721a24c5bb113e73c65ff2d8a2ab5b4a80535f",
-  "durationSeconds" : 27.635610938072205,
-  "entityNames" : [
+  "caseID": "case-49324dbd7897ef381761a424",
+  "commitHash": "0c721a24c5bb113e73c65ff2d8a2ab5b4a80535f",
+  "commitMessage": "feat: added Disk preview (disabled for now)\n",
+  "commitURL": "https://github.com/exelban/stats/commit/0c721a24c5bb113e73c65ff2d8a2ab5b4a80535f",
+  "durationSeconds": 27.635610938072205,
+  "entityNames": [
     "Disks",
     "capacityCallback",
     "value"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "additional_trailing_closures" : [
-
-      ],
-      "arguments" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "additional_trailing_closures": [],
+      "arguments": [
         {
-          "value" : "value"
+          "value": "value"
         }
       ],
-      "call" : "capacityCallback",
-      "has_self_reference" : false,
-      "internal_inline_calls" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Modules/Disk/main.swift",
-        "location" : {
-          "end_position" : 8690,
-          "start_position" : 8637
+      "call": "capacityCallback",
+      "has_self_reference": false,
+      "internal_inline_calls": [],
+      "location_info": {
+        "file_path": "Modules/Disk/main.swift",
+        "location": {
+          "end_position": 8690,
+          "start_position": 8637,
+          "start_line": 293,
+          "end_line": 294
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard self.enabled else { return }\n        \n        DispatchQueue.main.async(execute: {\n            self.popupView.capacityCallback(value)\n            self.previewView.capacityCallback(value)\n        })\n        self.settingsView.setList(value)\n        \n        guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {\n            return\n        }\n        \n        self.portalView.utilizationCallback(d)\n        self.notificationsView.utilizationCallback(d.percentage)\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as Mini: widget.setValue(d.percentage)\n            case let widget as BarChart: widget.setValue([[ColorValue(d.percentage)]])\n            case let widget as MemoryWidget:\n                widget.setValue((DiskSize(d.free).getReadableMemory(), DiskSize(d.size - d.free).getReadableMemory()), usedPercentage: d.percentage)\n            case let widget as PieChart:\n                widget.setValue([\n                    ColorValue(d.percentage, color: NSColor.systemBlue)\n                ])\n            case let widget as TextWidget:\n                var text = \"\\(self.textValue)\"\n                let pairs = TextWidget.parseText(text)\n                pairs.forEach { pair in\n                    var replacement: String? = nil\n                    \n                    switch pair.key {\n                    case \"$capacity\":\n                        switch pair.value {\n                        case \"total\": replacement = DiskSize(d.size).getReadableMemory()\n                        case \"used\": replacement = DiskSize(d.size - d.free).getReadableMemory()\n                        case \"free\": replacement = DiskSize(d.free).getReadableMemory()\n                        default: return\n                        }\n                    case \"$percentage\":\n                        var percentage: Int\n                        if d.size == 0 {\n                            percentage = 0\n                        } else {\n                            switch pair.value {\n                            case \"used\": percentage = Int((Double(d.size - d.free) / Double(d.size)) * 100)\n                            case \"free\": percentage = Int((Double(d.free) / Double(d.size)) * 100)\n                            default: return\n                            }\n                        }\n                        replacement = \"\\(percentage < 0 ? 0 : percentage)%\"\n                    default: return\n                    }\n                    \n                    if let replacement {\n                        let key = pair.value.isEmpty ? pair.key : \"\\(pair.key).\\(pair.value)\"\n                        text = text.replacingOccurrences(of: key, with: replacement)\n                    }\n                }\n                widget.setValue(text)\n            default: break\n            }\n        }\n        \n        if self.systemWidgetsUpdatesState {\n            if isWidgetActive(self.userDefaults, [Disk_entry.kind, \"UnitedWidget\"]), let blobData = try? JSONEncoder().encode(d) {\n                self.userDefaults?.set(blobData, forKey: \"Disk@CapacityReader\")\n            }\n            WidgetCenter.shared.reloadTimelines(ofKind: Disk_entry.kind)\n            WidgetCenter.shared.reloadTimelines(ofKind: \"UnitedWidget\")\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard self.enabled else { return }\n        \n        DispatchQueue.main.async(execute: {\n            self.popupView.capacityCallback(value)\n            self.previewView.capacityCallback(value)\n        })\n        self.settingsView.setList(value)\n        \n        guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {\n            return\n        }\n        \n        self.portalView.utilizationCallback(d)\n        self.notificationsView.utilizationCallback(d.percentage)\n        \n        self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in\n            switch w.item {\n            case let widget as Mini: widget.setValue(d.percentage)\n            case let widget as BarChart: widget.setValue([[ColorValue(d.percentage)]])\n            case let widget as MemoryWidget:\n                widget.setValue((DiskSize(d.free).getReadableMemory(), DiskSize(d.size - d.free).getReadableMemory()), usedPercentage: d.percentage)\n            case let widget as PieChart:\n                widget.setValue([\n                    ColorValue(d.percentage, color: NSColor.systemBlue)\n                ])\n            case let widget as TextWidget:\n                var text = \"\\(self.textValue)\"\n                let pairs = TextWidget.parseText(text)\n                pairs.forEach { pair in\n                    var replacement: String? = nil\n                    \n                    switch pair.key {\n                    case \"$capacity\":\n                        switch pair.value {\n                        case \"total\": replacement = DiskSize(d.size).getReadableMemory()\n                        case \"used\": replacement = DiskSize(d.size - d.free).getReadableMemory()\n                        case \"free\": replacement = DiskSize(d.free).getReadableMemory()\n                        default: return\n                        }\n                    case \"$percentage\":\n                        var percentage: Int\n                        if d.size == 0 {\n                            percentage = 0\n                        } else {\n                            switch pair.value {\n                            case \"used\": percentage = Int((Double(d.size - d.free) / Double(d.size)) * 100)\n                            case \"free\": percentage = Int((Double(d.free) / Double(d.size)) * 100)\n                            default: return\n                            }\n                        }\n                        replacement = \"\\(percentage < 0 ? 0 : percentage)%\"\n                    default: return\n                    }\n                    \n                    if let replacement {\n                        let key = pair.value.isEmpty ? pair.key : \"\\(pair.key).\\(pair.value)\"\n                        text = text.replacingOccurrences(of: key, with: replacement)\n                    }\n                }\n                widget.setValue(text)\n            default: break\n            }\n        }\n        \n        if self.systemWidgetsUpdatesState {\n            if isWidgetActive(self.userDefaults, [Disk_entry.kind, \"UnitedWidget\"]), let blobData = try? JSONEncoder().encode(d) {\n                self.userDefaults?.set(blobData, forKey: \"Disk@CapacityReader\")\n            }\n            WidgetCenter.shared.reloadTimelines(ofKind: Disk_entry.kind)\n            WidgetCenter.shared.reloadTimelines(ofKind: \"UnitedWidget\")\n        }"
       },
-      "location_info" : {
-        "file_path" : "Modules/Disk/main.swift",
-        "location" : {
-          "end_position" : 11867,
-          "start_position" : 8433
+      "location_info": {
+        "file_path": "Modules/Disk/main.swift",
+        "location": {
+          "end_position": 11867,
+          "start_position": 8433,
+          "start_line": 287,
+          "end_line": 361
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "capacityCallback",
-      "parameters" : [
+      "name": "capacityCallback",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Disks"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Disks"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Modules/Disk/main.swift",
-            "location" : {
-              "end_position" : 8487,
-              "start_position" : 8473
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Modules/Disk/main.swift",
+            "location": {
+              "end_position": 8487,
+              "start_position": 8473,
+              "start_line": 289,
+              "end_line": 289
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "value",
-          "order" : 0
+          "modifiers": [],
+          "name": "value",
+          "order": 0
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 50,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 50,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Modules/Disk/main.swift"
   ]
 }

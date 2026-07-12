@@ -1,90 +1,86 @@
 {
-  "caseID" : "case-127c5a76001f56bb5c69f94c",
-  "commitHash" : "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
-  "commitMessage" : "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
-  "commitURL" : "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
-  "durationSeconds" : 7.7093260288238525,
-  "entityNames" : [
+  "caseID": "case-127c5a76001f56bb5c69f94c",
+  "commitHash": "afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "commitMessage": "Reorganize runtime targets for scalable plugin support (#1577)\n\n## Type of Change\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\nCloses #1569\n\nSeparates generic runtime infrastructure from Linux-specific\nimplementation into distinct SPM targets:\n\n- ContainerRuntimeClient — generic runtime plugin client API\n- ContainerRuntimeLinuxClient — Linux-specific types\n- ContainerRuntimeLinuxServer — Linux runtime service + interface\nstrategy implementations\n\nRenames types to reflect the runtime/sandbox distinction:\n- SandboxClient → RuntimeClient\n- SandboxService → RuntimeService\n- SandboxRoutes → RuntimeRoutes\n- SandboxKeys → RuntimeKeys\n\nBreaking for external consumers:\n- ContainerSandboxService removed, replaced by ContainerRuntimeClient +\nContainerRuntimeLinuxServer\n- Public types renamed\n\n## Testing\n- [x] Tested locally\n- [ ] Added/updated tests\n- [ ] Added/updated docs",
+  "commitURL": "https://github.com/apple/container/commit/afeceb05d4a36703b6f9e4887e564d7f40c5067a",
+  "durationSeconds": 7.7093260288238525,
+  "entityNames": [
     "XPCMessage",
     "message",
     "statistics"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "sendable" : {
-
-            }
+          "annotation": {
+            "sendable": {}
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        return try await self.lock.withLock { lock in\n            let containerInfo = try await self.getContainer()\n            let stats = try await containerInfo.container.statistics()\n\n            let containerStats = ContainerStats(\n                id: stats.id,\n                memoryUsageBytes: stats.memory?.usageBytes,\n                memoryLimitBytes: stats.memory?.limitBytes,\n                cpuUsageUsec: stats.cpu?.usageUsec,\n                networkRxBytes: stats.networks?.reduce(0) { $0 + $1.receivedBytes },\n                networkTxBytes: stats.networks?.reduce(0) { $0 + $1.transmittedBytes },\n                blockReadBytes: stats.blockIO?.devices.reduce(0) { $0 + $1.readBytes },\n                blockWriteBytes: stats.blockIO?.devices.reduce(0) { $0 + $1.writeBytes },\n                numProcesses: stats.process?.current\n            )\n\n            let reply = message.reply()\n            let data = try JSONEncoder().encode(containerStats)\n            reply.set(key: RuntimeKeys.statistics.rawValue, value: data)\n            return reply\n        }"
+      "body": {
+        "content": "self.log.debug(\"enter\", metadata: [\"func\": \"\\(#function)\"])\n        defer { self.log.debug(\"exit\", metadata: [\"func\": \"\\(#function)\"]) }\n\n        return try await self.lock.withLock { lock in\n            let containerInfo = try await self.getContainer()\n            let stats = try await containerInfo.container.statistics()\n\n            let containerStats = ContainerStats(\n                id: stats.id,\n                memoryUsageBytes: stats.memory?.usageBytes,\n                memoryLimitBytes: stats.memory?.limitBytes,\n                cpuUsageUsec: stats.cpu?.usageUsec,\n                networkRxBytes: stats.networks?.reduce(0) { $0 + $1.receivedBytes },\n                networkTxBytes: stats.networks?.reduce(0) { $0 + $1.transmittedBytes },\n                blockReadBytes: stats.blockIO?.devices.reduce(0) { $0 + $1.readBytes },\n                blockWriteBytes: stats.blockIO?.devices.reduce(0) { $0 + $1.writeBytes },\n                numProcesses: stats.process?.current\n            )\n\n            let reply = message.reply()\n            let data = try JSONEncoder().encode(containerStats)\n            reply.set(key: RuntimeKeys.statistics.rawValue, value: data)\n            return reply\n        }"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-        "location" : {
-          "end_position" : 15158,
-          "start_position" : 13422
+      "location_info": {
+        "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+        "location": {
+          "end_position": 15158,
+          "start_position": 13422,
+          "start_line": 332,
+          "end_line": 369
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "statistics",
-      "parameters" : [
+      "name": "statistics",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "XPCMessage"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "XPCMessage"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
-            "location" : {
-              "end_position" : 13906,
-              "start_position" : 13885
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Sources/Services/RuntimeLinux/Server/RuntimeService.swift",
+            "location": {
+              "end_position": 13906,
+              "start_position": 13885,
+              "start_line": 344,
+              "end_line": 344
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "message",
-          "order" : 0
+          "modifiers": [],
+          "name": "message",
+          "order": 0
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "XPCMessage"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "XPCMessage"
         },
-        "description" : "-> XPCMessage"
+        "description": "-> XPCMessage"
       },
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add function refactoring"
+    "type": "Add function refactoring"
   },
-  "refactoringIndex" : 181,
-  "refactoringType" : "Add function refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 181,
+  "refactoringType": "Add function refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/RuntimeLinux/Server/RuntimeService.swift"
   ]
 }

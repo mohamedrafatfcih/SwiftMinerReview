@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-92b078858e64f346c096d2ac",
-  "commitHash" : "55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
-  "commitMessage" : "feat: add Combined Display Mode (#1763)\n\n* feat: add Combined Display Mode\n\nAdd a setting to treat multiple monitors as a single virtual display,\nso window actions (half, center, maximize, corners, etc.) operate across\nall connected monitors at once.\n\nSettings window: \"Treat multiple monitors as one\" checkbox with description,\nseparated by a divider line from other options. Localized via NSLocalizedString\nwith Korean translation in Main.xcstrings.\n\nWhen enabled:\n- All window calculations receive a combined bounding frame of all monitors\n- BestEffortWindowMover uses the combined frame to avoid single-screen clamping\n- Left/Right half, Center, CenterProminently respect the combined frame\n- Next/Previous Display menu items are hidden\n\nImplementation:\n- Defaults.combinedDisplayMode (BoolDefault) persists the setting\n- WindowCalculationParameters carries combinedDisplayFrame: CGRect?\n- WindowManager computes the union of all screen visible frames when enabled\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically\nwithout threading a combinedDisplayFrame parameter through\nWindowCalculationParameters and each individual calculation file.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* fix: early return in combined display mode to skip per-screen adjustments\n\nWhen combined display mode is active, return the union immediately so\nstage strip, todo sidebar, and screen edge gap adjustments (all derived\nfrom self, a single NSScreen) are not incorrectly applied to the\nmulti-screen combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically.\nEarly return after the union to avoid incorrectly applying per-screen\nadjustments (stage strip, todo sidebar, edge gaps) to the combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* Remove whitespace changes\n\n* Switch to optional bool default & move checkbox logic into function\n\n* Accommodate todo mode\n\n---------\n\nCo-authored-by: mgrv-dooyeoung <dy.ryu@mgrv.company>\nCo-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>\nCo-authored-by: Ryan Hanson <ryan@ryanhanson.dev>",
-  "commitURL" : "https://github.com/rxhanson/Rectangle/commit/55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
-  "durationSeconds" : 9.0993349552154541,
-  "entityNames" : [
+  "caseID": "case-92b078858e64f346c096d2ac",
+  "commitHash": "55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
+  "commitMessage": "feat: add Combined Display Mode (#1763)\n\n* feat: add Combined Display Mode\n\nAdd a setting to treat multiple monitors as a single virtual display,\nso window actions (half, center, maximize, corners, etc.) operate across\nall connected monitors at once.\n\nSettings window: \"Treat multiple monitors as one\" checkbox with description,\nseparated by a divider line from other options. Localized via NSLocalizedString\nwith Korean translation in Main.xcstrings.\n\nWhen enabled:\n- All window calculations receive a combined bounding frame of all monitors\n- BestEffortWindowMover uses the combined frame to avoid single-screen clamping\n- Left/Right half, Center, CenterProminently respect the combined frame\n- Next/Previous Display menu items are hidden\n\nImplementation:\n- Defaults.combinedDisplayMode (BoolDefault) persists the setting\n- WindowCalculationParameters carries combinedDisplayFrame: CGRect?\n- WindowManager computes the union of all screen visible frames when enabled\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically\nwithout threading a combinedDisplayFrame parameter through\nWindowCalculationParameters and each individual calculation file.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* fix: early return in combined display mode to skip per-screen adjustments\n\nWhen combined display mode is active, return the union immediately so\nstage strip, todo sidebar, and screen edge gap adjustments (all derived\nfrom self, a single NSScreen) are not incorrectly applied to the\nmulti-screen combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* refactor: move combined display logic into adjustedVisibleFrame\n\nPer maintainer feedback, compute the union of all screens inside\nadjustedVisibleFrame so every calculation picks it up automatically.\nEarly return after the union to avoid incorrectly applying per-screen\nadjustments (stage strip, todo sidebar, edge gaps) to the combined frame.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>\n\n* Remove whitespace changes\n\n* Switch to optional bool default & move checkbox logic into function\n\n* Accommodate todo mode\n\n---------\n\nCo-authored-by: mgrv-dooyeoung <dy.ryu@mgrv.company>\nCo-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>\nCo-authored-by: Ryan Hanson <ryan@ryanhanson.dev>",
+  "commitURL": "https://github.com/rxhanson/Rectangle/commit/55d919dce054a52745ad1d3f4cfa7c7f0ce3cfc9",
+  "durationSeconds": 9.099334955215454,
+  "entityNames": [
     "Bool",
     "CGRect",
     "adjustedVisibleFrame",
@@ -12,155 +12,153 @@
     "ignoreTodo",
     "userEnabled"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "body" : {
-        "content" : "newFrame = NSScreen.screens.reduce(CGRect.null) { $0.union($1.visibleFrame) }"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "body": {
+        "content": "newFrame = NSScreen.screens.reduce(CGRect.null) { $0.union($1.visibleFrame) }"
       },
-      "conditions" : [
+      "conditions": [
         {
-          "condition_value" : {
-            "comparison" : {
-              "_0" : {
-                "description" : "!NSScreen.screensHaveSeparateSpaces && Defaults.combinedDisplayMode.userEnabled",
-                "left_operand" : "!NSScreen.screensHaveSeparateSpaces",
-                "location_info" : {
-                  "file_path" : "Rectangle/ScreenDetection.swift",
-                  "location" : {
-                    "end_position" : 6455,
-                    "start_position" : 6375
+          "condition_value": {
+            "comparison": {
+              "_0": {
+                "description": "!NSScreen.screensHaveSeparateSpaces && Defaults.combinedDisplayMode.userEnabled",
+                "left_operand": "!NSScreen.screensHaveSeparateSpaces",
+                "location_info": {
+                  "file_path": "Rectangle/ScreenDetection.swift",
+                  "location": {
+                    "end_position": 6455,
+                    "start_position": 6375,
+                    "start_line": 162,
+                    "end_line": 162
                   }
                 },
-                "operator_value" : "&&",
-                "right_operand" : {
-                  "reference" : {
-                    "arguments" : [
-
-                    ],
-                    "name" : "userEnabled"
+                "operator_value": "&&",
+                "right_operand": {
+                  "reference": {
+                    "arguments": [],
+                    "name": "userEnabled"
                   }
                 }
               }
             }
           },
-          "location_info" : {
-            "file_path" : "Rectangle/ScreenDetection.swift",
-            "location" : {
-              "end_position" : 6455,
-              "start_position" : 6375
+          "location_info": {
+            "file_path": "Rectangle/ScreenDetection.swift",
+            "location": {
+              "end_position": 6455,
+              "start_position": 6375,
+              "start_line": 162,
+              "end_line": 162
             }
           }
         }
       ],
-      "description" : "if",
-      "location_info" : {
-        "file_path" : "Rectangle/ScreenDetection.swift",
-        "location" : {
-          "end_position" : 6556,
-          "start_position" : 6362
+      "description": "if",
+      "location_info": {
+        "file_path": "Rectangle/ScreenDetection.swift",
+        "location": {
+          "end_position": 6556,
+          "start_position": 6362,
+          "start_line": 160,
+          "end_line": 164
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "var newFrame = visibleFrame\n\n        if !NSScreen.screensHaveSeparateSpaces && Defaults.combinedDisplayMode.userEnabled {\n            newFrame = NSScreen.screens.reduce(CGRect.null) { $0.union($1.visibleFrame) }\n        }\n\n        if !ignoreStage && Defaults.stageSize.value > 0 {\n            if StageUtil.stageCapable && StageUtil.stageEnabled && StageUtil.stageStripShow && StageUtil.isStageStripVisible(self) {\n                let stageSize = Defaults.stageSize.value < 1\n                    ? newFrame.size.width * Defaults.stageSize.cgFloat\n                    : Defaults.stageSize.cgFloat\n                \n                if StageUtil.stageStripPosition == .left {\n                    newFrame.origin.x += stageSize\n                }\n                newFrame.size.width -= stageSize\n            }\n        }\n        \n        if !ignoreTodo, Defaults.todo.userEnabled, Defaults.todoMode.enabled, TodoManager.todoScreen == self, TodoManager.hasTodoWindow() {\n            let sidebarWidth = TodoManager.getSidebarWidth(visibleFrameWidth: newFrame.width)\n            newFrame.size.width -= sidebarWidth\n            if Defaults.todoSidebarSide.value == .left {\n                newFrame.origin.x += sidebarWidth\n            }\n        }\n\n        if Defaults.screenEdgeGapsOnMainScreenOnly.enabled, self != NSScreen.screens.first {\n            return newFrame\n        }\n\n        newFrame.origin.x += Defaults.screenEdgeGapLeft.cgFloat\n        newFrame.origin.y += Defaults.screenEdgeGapBottom.cgFloat\n        newFrame.size.width -= (Defaults.screenEdgeGapLeft.cgFloat + Defaults.screenEdgeGapRight.cgFloat)\n        \n        if #available(macOS 12.0, *), self.safeAreaInsets.top != 0, Defaults.screenEdgeGapTopNotch.value != 0 {\n            newFrame.size.height -= (Defaults.screenEdgeGapTopNotch.cgFloat + Defaults.screenEdgeGapBottom.cgFloat)\n        } else {\n            newFrame.size.height -= (Defaults.screenEdgeGapTop.cgFloat + Defaults.screenEdgeGapBottom.cgFloat)\n        }\n        \n        return newFrame"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "var newFrame = visibleFrame\n\n        if !NSScreen.screensHaveSeparateSpaces && Defaults.combinedDisplayMode.userEnabled {\n            newFrame = NSScreen.screens.reduce(CGRect.null) { $0.union($1.visibleFrame) }\n        }\n\n        if !ignoreStage && Defaults.stageSize.value > 0 {\n            if StageUtil.stageCapable && StageUtil.stageEnabled && StageUtil.stageStripShow && StageUtil.isStageStripVisible(self) {\n                let stageSize = Defaults.stageSize.value < 1\n                    ? newFrame.size.width * Defaults.stageSize.cgFloat\n                    : Defaults.stageSize.cgFloat\n                \n                if StageUtil.stageStripPosition == .left {\n                    newFrame.origin.x += stageSize\n                }\n                newFrame.size.width -= stageSize\n            }\n        }\n        \n        if !ignoreTodo, Defaults.todo.userEnabled, Defaults.todoMode.enabled, TodoManager.todoScreen == self, TodoManager.hasTodoWindow() {\n            let sidebarWidth = TodoManager.getSidebarWidth(visibleFrameWidth: newFrame.width)\n            newFrame.size.width -= sidebarWidth\n            if Defaults.todoSidebarSide.value == .left {\n                newFrame.origin.x += sidebarWidth\n            }\n        }\n\n        if Defaults.screenEdgeGapsOnMainScreenOnly.enabled, self != NSScreen.screens.first {\n            return newFrame\n        }\n\n        newFrame.origin.x += Defaults.screenEdgeGapLeft.cgFloat\n        newFrame.origin.y += Defaults.screenEdgeGapBottom.cgFloat\n        newFrame.size.width -= (Defaults.screenEdgeGapLeft.cgFloat + Defaults.screenEdgeGapRight.cgFloat)\n        \n        if #available(macOS 12.0, *), self.safeAreaInsets.top != 0, Defaults.screenEdgeGapTopNotch.value != 0 {\n            newFrame.size.height -= (Defaults.screenEdgeGapTopNotch.cgFloat + Defaults.screenEdgeGapBottom.cgFloat)\n        } else {\n            newFrame.size.height -= (Defaults.screenEdgeGapTop.cgFloat + Defaults.screenEdgeGapBottom.cgFloat)\n        }\n        \n        return newFrame"
       },
-      "location_info" : {
-        "file_path" : "Rectangle/ScreenDetection.swift",
-        "location" : {
-          "end_position" : 8352,
-          "start_position" : 6226
+      "location_info": {
+        "file_path": "Rectangle/ScreenDetection.swift",
+        "location": {
+          "end_position": 8352,
+          "start_position": 6226,
+          "start_line": 157,
+          "end_line": 202
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "adjustedVisibleFrame",
-      "parameters" : [
+      "modifiers": [],
+      "name": "adjustedVisibleFrame",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Rectangle/ScreenDetection.swift",
-            "location" : {
-              "end_position" : 6286,
-              "start_position" : 6258
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Rectangle/ScreenDetection.swift",
+            "location": {
+              "end_position": 6286,
+              "start_position": 6258,
+              "start_line": 159,
+              "end_line": 159
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "ignoreTodo",
-          "order" : 0
+          "modifiers": [],
+          "name": "ignoreTodo",
+          "order": 0
         },
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "Rectangle/ScreenDetection.swift",
-            "location" : {
-              "end_position" : 6313,
-              "start_position" : 6286
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "Rectangle/ScreenDetection.swift",
+            "location": {
+              "end_position": 6313,
+              "start_position": 6286,
+              "start_line": 159,
+              "end_line": 159
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "ignoreStage",
-          "order" : 1
+          "modifiers": [],
+          "name": "ignoreStage",
+          "order": 1
         }
       ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "CGRect"
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "CGRect"
         },
-        "description" : "-> CGRect"
+        "description": "-> CGRect"
       }
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 9,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "rxhanson-rectangle",
-  "repoName" : "rxhanson/Rectangle",
-  "repoURL" : "https://github.com/rxhanson/Rectangle.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 9,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "rxhanson-rectangle",
+  "repoName": "rxhanson/Rectangle",
+  "repoURL": "https://github.com/rxhanson/Rectangle.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Rectangle/ScreenDetection.swift"
   ]
 }

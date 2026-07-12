@@ -1,153 +1,127 @@
 {
-  "caseID" : "case-fb1eed21bdfbd83c77347c99",
-  "commitHash" : "d29e6edd5e8af60819774b80c0dbe296c59f6a52",
-  "commitMessage" : "Migrates network integration tests. (#1858)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/d29e6edd5e8af60819774b80c0dbe296c59f6a52",
-  "durationSeconds" : 4.0807429552078247,
-  "entityNames" : [
+  "caseID": "case-fb1eed21bdfbd83c77347c99",
+  "commitHash": "d29e6edd5e8af60819774b80c0dbe296c59f6a52",
+  "commitMessage": "Migrates network integration tests. (#1858)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/d29e6edd5e8af60819774b80c0dbe296c59f6a52",
+  "durationSeconds": 4.080742955207825,
+  "entityNames": [
     "TestCLIBuilderLifecycleSerial",
     "testBuilderEnvironmentColors",
     "testBuilderStartStopCommand"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
+          "arguments": [
             {
-              "value" : ".serialized"
+              "value": ".serialized"
             }
           ]
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
-
-      ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "classes": [],
+      "conformed_types": [],
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilderLock {\n                f.addCleanup { try? f.builderDelete(force: true) }\n\n                try f.builderStart()\n                try await f.waitForBuilderRunning()\n                let status1 = try f.getContainerStatus(\"buildkit\")\n                #expect(status1 == \"running\", \"buildkit container should be running\")\n\n                try f.builderStop()\n                let status2 = try f.getContainerStatus(\"buildkit\")\n                #expect(status2 == \"stopped\", \"buildkit container should be stopped\")\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            try await f.withBuilderLock {\n                f.addCleanup { try? f.builderDelete(force: true) }\n\n                try f.builderStart()\n                try await f.waitForBuilderRunning()\n                let status1 = try f.getContainerStatus(\"buildkit\")\n                #expect(status1 == \"running\", \"buildkit container should be running\")\n\n                try f.builderStop()\n                let status2 = try f.getContainerStatus(\"buildkit\")\n                #expect(status2 == \"stopped\", \"buildkit container should be stopped\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderLifecycle.swift",
-            "location" : {
-              "end_position" : 1948,
-              "start_position" : 1269
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Build/TestCLIBuilderLifecycle.swift",
+            "location": {
+              "end_position": 1948,
+              "start_position": 1269,
+              "start_line": 28,
+              "end_line": 44
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testBuilderStartStopCommand",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testBuilderStartStopCommand",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try await ContainerFixture.with { f in\n            try await f.withBuilderLock {\n                let originalColors = ProcessInfo.processInfo.environment[\"BUILDKIT_COLORS\"]\n                let originalNoColor = ProcessInfo.processInfo.environment[\"NO_COLOR\"]\n                f.addCleanup {\n                    if let c = originalColors { setenv(\"BUILDKIT_COLORS\", c, 1) } else { unsetenv(\"BUILDKIT_COLORS\") }\n                    if let n = originalNoColor { setenv(\"NO_COLOR\", n, 1) } else { unsetenv(\"NO_COLOR\") }\n                    _ = try? f.builderDelete(force: true)\n                }\n\n                _ = try? f.builderDelete(force: true)\n                setenv(\"BUILDKIT_COLORS\", \"run=green:warning=yellow:error=red:cancel=cyan\", 1)\n                setenv(\"NO_COLOR\", \"true\", 1)\n\n                try f.run([\"builder\", \"start\"]).check()\n                try await f.waitForBuilderRunning()\n\n                let container = try f.inspectContainer(\"buildkit\")\n                let env = container.configuration.initProcess.environment\n                #expect(\n                    env.contains(\"BUILDKIT_COLORS=run=green:warning=yellow:error=red:cancel=cyan\"),\n                    \"BUILDKIT_COLORS should be forwarded to the buildkit container\")\n                #expect(\n                    env.contains(\"NO_COLOR=true\"),\n                    \"NO_COLOR should be forwarded to the buildkit container\")\n            }\n        }"
+          "body": {
+            "content": "try await ContainerFixture.with { f in\n            try await f.withBuilderLock {\n                let originalColors = ProcessInfo.processInfo.environment[\"BUILDKIT_COLORS\"]\n                let originalNoColor = ProcessInfo.processInfo.environment[\"NO_COLOR\"]\n                f.addCleanup {\n                    if let c = originalColors { setenv(\"BUILDKIT_COLORS\", c, 1) } else { unsetenv(\"BUILDKIT_COLORS\") }\n                    if let n = originalNoColor { setenv(\"NO_COLOR\", n, 1) } else { unsetenv(\"NO_COLOR\") }\n                    _ = try? f.builderDelete(force: true)\n                }\n\n                _ = try? f.builderDelete(force: true)\n                setenv(\"BUILDKIT_COLORS\", \"run=green:warning=yellow:error=red:cancel=cyan\", 1)\n                setenv(\"NO_COLOR\", \"true\", 1)\n\n                try f.run([\"builder\", \"start\"]).check()\n                try await f.waitForBuilderRunning()\n\n                let container = try f.inspectContainer(\"buildkit\")\n                let env = container.configuration.initProcess.environment\n                #expect(\n                    env.contains(\"BUILDKIT_COLORS=run=green:warning=yellow:error=red:cancel=cyan\"),\n                    \"BUILDKIT_COLORS should be forwarded to the buildkit container\")\n                #expect(\n                    env.contains(\"NO_COLOR=true\"),\n                    \"NO_COLOR should be forwarded to the buildkit container\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderLifecycle.swift",
-            "location" : {
-              "end_position" : 3450,
-              "start_position" : 1948
+          "location_info": {
+            "file_path": "Tests/IntegrationTests/Build/TestCLIBuilderLifecycle.swift",
+            "location": {
+              "end_position": 3450,
+              "start_position": 1948,
+              "start_line": 44,
+              "end_line": 74
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testBuilderEnvironmentColors",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testBuilderEnvironmentColors",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/IntegrationTests/Build/TestCLIBuilderLifecycle.swift",
-        "location" : {
-          "end_position" : 3452,
-          "start_position" : 833
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/IntegrationTests/Build/TestCLIBuilderLifecycle.swift",
+        "location": {
+          "end_position": 3452,
+          "start_position": 833,
+          "start_line": 19,
+          "end_line": 75
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIBuilderLifecycleSerial",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIBuilderLifecycleSerial",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Remove struct refactoring"
+    "type": "Remove struct refactoring"
   },
-  "refactoringIndex" : 21,
-  "refactoringType" : "Remove struct refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 21,
+  "refactoringType": "Remove struct refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/IntegrationTests/Build/TestCLIBuilderLifecycle.swift"
   ]
 }

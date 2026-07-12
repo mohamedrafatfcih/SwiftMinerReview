@@ -1,118 +1,118 @@
 {
-  "caseID" : "case-b6a2bbf10c0854cad512c90d",
-  "commitHash" : "7a09a9cf0cc8556d2c1eb8706252ba3786fcc212",
-  "commitMessage" : "Merge branch 'modular-window' into develop\n",
-  "commitURL" : "https://github.com/iina/iina/commit/7a09a9cf0cc8556d2c1eb8706252ba3786fcc212",
-  "durationSeconds" : 54.916455030441284,
-  "entityNames" : [
+  "caseID": "case-b6a2bbf10c0854cad512c90d",
+  "commitHash": "7a09a9cf0cc8556d2c1eb8706252ba3786fcc212",
+  "commitMessage": "Merge branch 'modular-window' into develop\n",
+  "commitURL": "https://github.com/iina/iina/commit/7a09a9cf0cc8556d2c1eb8706252ba3786fcc212",
+  "durationSeconds": 54.916455030441284,
+  "entityNames": [
     "Notification",
     "isIdle",
     "notification",
     "windowDidResize"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "body" : {
-        "content" : "forceDraw(\"window resized with aspect ratio unlocked and paused\")"
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "body": {
+        "content": "forceDraw(\"window resized with aspect ratio unlocked and paused\")"
       },
-      "conditions" : [
+      "conditions": [
         {
-          "condition_value" : {
-            "comparison" : {
-              "_0" : {
-                "description" : "Preference.bool(for: .unlockWindowAspectRatio) && videoView.isIdle",
-                "left_operand" : "Preference.bool(for: .unlockWindowAspectRatio)",
-                "location_info" : {
-                  "file_path" : "iina/MainWindowController.swift",
-                  "location" : {
-                    "end_position" : 74086,
-                    "start_position" : 74019
+          "condition_value": {
+            "comparison": {
+              "_0": {
+                "description": "Preference.bool(for: .unlockWindowAspectRatio) && videoView.isIdle",
+                "left_operand": "Preference.bool(for: .unlockWindowAspectRatio)",
+                "location_info": {
+                  "file_path": "iina/MainWindowController.swift",
+                  "location": {
+                    "end_position": 74086,
+                    "start_position": 74019,
+                    "start_line": 1822,
+                    "end_line": 1822
                   }
                 },
-                "operator_value" : "&&",
-                "right_operand" : {
-                  "reference" : {
-                    "arguments" : [
-
-                    ],
-                    "name" : "isIdle"
+                "operator_value": "&&",
+                "right_operand": {
+                  "reference": {
+                    "arguments": [],
+                    "name": "isIdle"
                   }
                 }
               }
             }
           },
-          "location_info" : {
-            "file_path" : "iina/MainWindowController.swift",
-            "location" : {
-              "end_position" : 74086,
-              "start_position" : 74019
+          "location_info": {
+            "file_path": "iina/MainWindowController.swift",
+            "location": {
+              "end_position": 74086,
+              "start_position": 74019,
+              "start_line": 1822,
+              "end_line": 1822
             }
           }
         }
       ],
-      "description" : "if",
-      "location_info" : {
-        "file_path" : "iina/MainWindowController.swift",
-        "location" : {
-          "end_position" : 74165,
-          "start_position" : 74010
+      "description": "if",
+      "location_info": {
+        "file_path": "iina/MainWindowController.swift",
+        "location": {
+          "end_position": 74165,
+          "start_position": 74010,
+          "start_line": 1820,
+          "end_line": 1824
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard let window = window else { return }\n\n    if case .animating(_, _, _) = fsState {\n      forceDraw(\"window resized during animated enter or exit full screen\")\n    } else if !videoView.videoLayer.inLiveResize {\n      forceDraw(\"window resized\")\n    }\n\n    if Preference.bool(for: .unlockWindowAspectRatio) && videoView.isIdle {\n      forceDraw(\"window resized with aspect ratio unlocked and paused\")\n    }\n\n    // update control bar position\n    if oscPosition == .floating {\n      let cph = Preference.float(for: .controlBarPositionHorizontal)\n      let cpv = Preference.float(for: .controlBarPositionVertical)\n\n      let windowWidth = window.frame.width\n      let margin: CGFloat = 10\n      let minWindowWidth: CGFloat = 480 // 460 + 20 margin\n      var xPos: CGFloat\n\n      if windowWidth < minWindowWidth {\n        // osc is compressed\n        xPos = windowWidth / 2\n      } else {\n        // osc has full width\n        let oscHalfWidth: CGFloat = 230\n        xPos = windowWidth * CGFloat(cph)\n        if xPos - oscHalfWidth < margin {\n          xPos = oscHalfWidth + margin\n        } else if xPos + oscHalfWidth + margin > windowWidth {\n          xPos = windowWidth - oscHalfWidth - margin\n        }\n      }\n\n      let windowHeight = window.frame.height\n      var yPos = windowHeight * CGFloat(cpv)\n      let oscHeight: CGFloat = 67\n      let yMargin: CGFloat = 25\n\n      if yPos < 0 {\n        yPos = 0\n      } else if yPos + oscHeight + yMargin > windowHeight {\n        yPos = windowHeight - oscHeight - yMargin\n      }\n\n      controlBarFloating.xConstraint.constant = xPos\n      controlBarFloating.yConstraint.constant = yPos\n    }\n\n    // Detach the views in oscFloatingTopView manually on macOS 11 only; as it will cause freeze\n    if isMacOS11 && oscPosition == .floating {\n      guard let maxWidth = [fragVolumeView, fragToolbarView].compactMap({ $0?.frame.width }).max() else {\n        return\n      }\n\n      // window - 10 - controlBarFloating\n      // controlBarFloating - 12 - oscFloatingTopView\n      let margin: CGFloat = (10 + 12) * 2\n      let hide = (window.frame.width\n                    - fragControlView.frame.width\n                    - maxWidth*2\n                    - margin) < 0\n\n      let views = oscFloatingTopView.views\n      if hide {\n        if views.contains(fragVolumeView)\n            && views.contains(fragToolbarView) {\n          oscFloatingTopView.removeView(fragVolumeView)\n          oscFloatingTopView.removeView(fragToolbarView)\n        }\n      } else {\n        if !views.contains(fragVolumeView)\n            && !views.contains(fragToolbarView) {\n          oscFloatingTopView.addView(fragVolumeView, in: .leading)\n          oscFloatingTopView.addView(fragToolbarView, in: .trailing)\n        }\n      }\n    }\n\n    player.events.emit(.windowResized, data: window.frame)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard let window = window else { return }\n\n    if case .animating(_, _, _) = fsState {\n      forceDraw(\"window resized during animated enter or exit full screen\")\n    } else if !videoView.videoLayer.inLiveResize {\n      forceDraw(\"window resized\")\n    }\n\n    if Preference.bool(for: .unlockWindowAspectRatio) && videoView.isIdle {\n      forceDraw(\"window resized with aspect ratio unlocked and paused\")\n    }\n\n    // update control bar position\n    if oscPosition == .floating {\n      let cph = Preference.float(for: .controlBarPositionHorizontal)\n      let cpv = Preference.float(for: .controlBarPositionVertical)\n\n      let windowWidth = window.frame.width\n      let margin: CGFloat = 10\n      let minWindowWidth: CGFloat = 480 // 460 + 20 margin\n      var xPos: CGFloat\n\n      if windowWidth < minWindowWidth {\n        // osc is compressed\n        xPos = windowWidth / 2\n      } else {\n        // osc has full width\n        let oscHalfWidth: CGFloat = 230\n        xPos = windowWidth * CGFloat(cph)\n        if xPos - oscHalfWidth < margin {\n          xPos = oscHalfWidth + margin\n        } else if xPos + oscHalfWidth + margin > windowWidth {\n          xPos = windowWidth - oscHalfWidth - margin\n        }\n      }\n\n      let windowHeight = window.frame.height\n      var yPos = windowHeight * CGFloat(cpv)\n      let oscHeight: CGFloat = 67\n      let yMargin: CGFloat = 25\n\n      if yPos < 0 {\n        yPos = 0\n      } else if yPos + oscHeight + yMargin > windowHeight {\n        yPos = windowHeight - oscHeight - yMargin\n      }\n\n      controlBarFloating.xConstraint.constant = xPos\n      controlBarFloating.yConstraint.constant = yPos\n    }\n\n    // Detach the views in oscFloatingTopView manually on macOS 11 only; as it will cause freeze\n    if isMacOS11 && oscPosition == .floating {\n      guard let maxWidth = [fragVolumeView, fragToolbarView].compactMap({ $0?.frame.width }).max() else {\n        return\n      }\n\n      // window - 10 - controlBarFloating\n      // controlBarFloating - 12 - oscFloatingTopView\n      let margin: CGFloat = (10 + 12) * 2\n      let hide = (window.frame.width\n                    - fragControlView.frame.width\n                    - maxWidth*2\n                    - margin) < 0\n\n      let views = oscFloatingTopView.views\n      if hide {\n        if views.contains(fragVolumeView)\n            && views.contains(fragToolbarView) {\n          oscFloatingTopView.removeView(fragVolumeView)\n          oscFloatingTopView.removeView(fragToolbarView)\n        }\n      } else {\n        if !views.contains(fragVolumeView)\n            && !views.contains(fragToolbarView) {\n          oscFloatingTopView.addView(fragVolumeView, in: .leading)\n          oscFloatingTopView.addView(fragToolbarView, in: .trailing)\n        }\n      }\n    }\n\n    player.events.emit(.windowResized, data: window.frame)"
       },
-      "location_info" : {
-        "file_path" : "iina/MainWindowController.swift",
-        "location" : {
-          "end_position" : 76571,
-          "start_position" : 73696
+      "location_info": {
+        "file_path": "iina/MainWindowController.swift",
+        "location": {
+          "end_position": 76571,
+          "start_position": 73696,
+          "start_line": 1811,
+          "end_line": 1896
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "windowDidResize",
-      "parameters" : [
+      "modifiers": [],
+      "name": "windowDidResize",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Notification"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Notification"
           },
-          "is_variadic" : false,
-          "label" : "_",
-          "location_info" : {
-            "file_path" : "iina/MainWindowController.swift",
-            "location" : {
-              "end_position" : 73749,
-              "start_position" : 73721
+          "is_variadic": false,
+          "label": "_",
+          "location_info": {
+            "file_path": "iina/MainWindowController.swift",
+            "location": {
+              "end_position": 73749,
+              "start_position": 73721,
+              "start_line": 1813,
+              "end_line": 1813
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "notification",
-          "order" : 0
+          "modifiers": [],
+          "name": "notification",
+          "order": 0
         }
       ]
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 337,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "iina-iina",
-  "repoName" : "iina/iina",
-  "repoURL" : "https://github.com/iina/iina.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 337,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "iina-iina",
+  "repoName": "iina/iina",
+  "repoURL": "https://github.com/iina/iina.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "iina/MainWindowController.swift"
   ]
 }

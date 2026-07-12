@@ -1,58 +1,54 @@
 {
-  "caseID" : "case-ee1f03ea9e63b6a9bd4d62c7",
-  "commitHash" : "09489cba45e8ff4b08e0a8b04e0522fbb763be8a",
-  "commitMessage" : "fix(cp): resolve relative host paths against current directory (#1741)\n\nFixes #1738\n\n`container cp` fails when the host source path is relative (e.g.\n`container cp file foo:/root/`), because `NSString.standardizingPath`\nonly canonicalizes paths but does not make them absolute. The unchanged\nrelative path is then interpreted as `/file` (root-absolute) by\n`URL(fileURLWithPath:)` on the runtime side.\n\nFixed by resolving relative paths against the current working directory\nbefore use, matching the pattern already used by `container export`,\n`container image save`, and `container image load`.\n\nThe same fix was also applied to the copy-out destination path (line\n68), which had the same issue.\n\n## Type of Change\n\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n\n`container cp file foo:/root/` fails with `\"copyIn: source not found\n'/file'\"` because the relative path `file` is never expanded to an\nabsolute path. Using `$PWD/file` works, but relative paths should work\ntoo — every other command in the codebase handles this correctly.\n\n## Testing\n\n- [x] Tested locally — builds and all existing tests pass\n- [ ] Added/updated tests\n- [ ] Added/updated docs\n\n---------\n\nCo-authored-by: jwhur <57657645+JaewonHur@users.noreply.github.com>",
-  "commitURL" : "https://github.com/apple/container/commit/09489cba45e8ff4b08e0a8b04e0522fbb763be8a",
-  "durationSeconds" : 3.6319429874420166,
-  "entityNames" : [
+  "caseID": "case-ee1f03ea9e63b6a9bd4d62c7",
+  "commitHash": "09489cba45e8ff4b08e0a8b04e0522fbb763be8a",
+  "commitMessage": "fix(cp): resolve relative host paths against current directory (#1741)\n\nFixes #1738\n\n`container cp` fails when the host source path is relative (e.g.\n`container cp file foo:/root/`), because `NSString.standardizingPath`\nonly canonicalizes paths but does not make them absolute. The unchanged\nrelative path is then interpreted as `/file` (root-absolute) by\n`URL(fileURLWithPath:)` on the runtime side.\n\nFixed by resolving relative paths against the current working directory\nbefore use, matching the pattern already used by `container export`,\n`container image save`, and `container image load`.\n\nThe same fix was also applied to the copy-out destination path (line\n68), which had the same issue.\n\n## Type of Change\n\n- [x] Bug fix\n- [ ] New feature  \n- [ ] Breaking change\n- [ ] Documentation update\n\n## Motivation and Context\n\n`container cp file foo:/root/` fails with `\"copyIn: source not found\n'/file'\"` because the relative path `file` is never expanded to an\nabsolute path. Using `$PWD/file` works, but relative paths should work\ntoo — every other command in the codebase handles this correctly.\n\n## Testing\n\n- [x] Tested locally — builds and all existing tests pass\n- [ ] Added/updated tests\n- [ ] Added/updated docs\n\n---------\n\nCo-authored-by: jwhur <57657645+JaewonHur@users.noreply.github.com>",
+  "commitURL": "https://github.com/apple/container/commit/09489cba45e8ff4b08e0a8b04e0522fbb763be8a",
+  "durationSeconds": 3.6319429874420166,
+  "entityNames": [
     "testCopyOutRelativeDestinationPath"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Test"
+          "annotation": {
+            "unsupported": {
+              "_0": "Test"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"relative dest\"\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n '\\(content)' > /tmp/relfile.txt\"])\n\n            let (_, _, error, status) = try run(\n                arguments: [\"copy\", \"\\(name):/tmp/relfile.txt\", \"./\"],\n                currentDirectory: testDir)\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: testDir.appendingPathComponent(\"relfile.txt\").path, encoding: .utf8)\n            #expect(result == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutRelativeDestinationPath failed: \\(error)\")\n        }"
+      "body": {
+        "content": "do {\n            let name = getTestName()\n            try doCreate(name: name)\n            defer { try? doStop(name: name) }\n            try doStart(name: name)\n            try waitForContainerRunning(name)\n\n            let content = \"relative dest\"\n            _ = try doExec(name: name, cmd: [\"sh\", \"-c\", \"echo -n '\\(content)' > /tmp/relfile.txt\"])\n\n            let (_, _, error, status) = try run(\n                arguments: [\"copy\", \"\\(name):/tmp/relfile.txt\", \"./\"],\n                currentDirectory: testDir)\n            if status != 0 { throw CLIError.executionFailed(\"copy failed: \\(error)\") }\n\n            let result = try String(contentsOfFile: testDir.appendingPathComponent(\"relfile.txt\").path, encoding: .utf8)\n            #expect(result == content)\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"testCopyOutRelativeDestinationPath failed: \\(error)\")\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
-        "location" : {
-          "end_position" : 41114,
-          "start_position" : 40132
+      "location_info": {
+        "file_path": "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift",
+        "location": {
+          "end_position": 41114,
+          "start_position": 40132,
+          "start_line": 933,
+          "end_line": 957
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testCopyOutRelativeDestinationPath",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "description" : "throws",
-        "throws_specifier" : "throws"
+      "modifiers": [],
+      "name": "testCopyOutRelativeDestinationPath",
+      "parameters": [],
+      "specifiers_decl": {
+        "description": "throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Add function refactoring"
+    "type": "Add function refactoring"
   },
-  "refactoringIndex" : 1,
-  "refactoringType" : "Add function refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 1,
+  "refactoringType": "Add function refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/CLITests/Subcommands/Containers/TestCLICopy.swift"
   ]
 }

@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-b5d99fc6685f77cfc1d37b2f",
-  "commitHash" : "4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
-  "commitMessage" : "Merge pull request #1311 from dev4u/develop\n\nrevert fast-open option",
-  "commitURL" : "https://github.com/shadowsocks/ShadowsocksX-NG/commit/4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
-  "durationSeconds" : 63.590353965759277,
-  "entityNames" : [
+  "caseID": "case-b5d99fc6685f77cfc1d37b2f",
+  "commitHash": "4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
+  "commitMessage": "Merge pull request #1311 from dev4u/develop\n\nrevert fast-open option",
+  "commitURL": "https://github.com/shadowsocks/ShadowsocksX-NG/commit/4957f2b45ed77966bb7d3e28ee9bcea79f236bd0",
+  "durationSeconds": 63.59035396575928,
+  "entityNames": [
     "Cancelable",
     "Disposable",
     "Element",
@@ -14,324 +14,288 @@
     "Observer.Element",
     "ObserverType"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "name" : "Sink<Observer>"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "name": "Sink<Observer>"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "Sink<Observer>"
+          "name": "Sink<Observer>"
         },
         {
-          "name" : "ObserverType"
+          "name": "ObserverType"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let subscription = self.parent.source.subscribe(self)\n        self.parent.lock.lock(); defer { self.parent.lock.unlock() }\n\n        self.connectionIdSnapshot = self.parent.connectionId\n\n        if self.isDisposed {\n            return Disposables.create()\n        }\n\n        if self.parent.count == 0 {\n            self.parent.count = 1\n            self.parent.connectableSubscription = self.parent.source.connect()\n        }\n        else {\n            self.parent.count += 1\n        }\n\n        return Disposables.create {\n            subscription.dispose()\n            self.parent.lock.lock(); defer { self.parent.lock.unlock() }\n            if self.parent.connectionId != self.connectionIdSnapshot {\n                return\n            }\n            if self.parent.count == 1 {\n                self.parent.count = 0\n                guard let connectableSubscription = self.parent.connectableSubscription else {\n                    return\n                }\n\n                connectableSubscription.dispose()\n                self.parent.connectableSubscription = nil\n            }\n            else if self.parent.count > 1 {\n                self.parent.count -= 1\n            }\n            else {\n                rxFatalError(\"Something went wrong with RefCount disposing mechanism\")\n            }\n        }"
+          "attributes": [],
+          "body": {
+            "content": "let subscription = self.parent.source.subscribe(self)\n        self.parent.lock.lock(); defer { self.parent.lock.unlock() }\n\n        self.connectionIdSnapshot = self.parent.connectionId\n\n        if self.isDisposed {\n            return Disposables.create()\n        }\n\n        if self.parent.count == 0 {\n            self.parent.count = 1\n            self.parent.connectableSubscription = self.parent.source.connect()\n        }\n        else {\n            self.parent.count += 1\n        }\n\n        return Disposables.create {\n            subscription.dispose()\n            self.parent.lock.lock(); defer { self.parent.lock.unlock() }\n            if self.parent.connectionId != self.connectionIdSnapshot {\n                return\n            }\n            if self.parent.count == 1 {\n                self.parent.count = 0\n                guard let connectableSubscription = self.parent.connectableSubscription else {\n                    return\n                }\n\n                connectableSubscription.dispose()\n                self.parent.connectableSubscription = nil\n            }\n            else if self.parent.count > 1 {\n                self.parent.count -= 1\n            }\n            else {\n                rxFatalError(\"Something went wrong with RefCount disposing mechanism\")\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-            "location" : {
-              "end_position" : 11648,
-              "start_position" : 10296
+          "location_info": {
+            "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+            "location": {
+              "end_position": 11648,
+              "start_position": 10296,
+              "start_line": 259,
+              "end_line": 301
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "run",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Disposable"
+          "modifiers": [],
+          "name": "run",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Disposable"
             },
-            "description" : "-> Disposable"
+            "description": "-> Disposable"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "switch event {\n        case .next:\n            self.forwardOn(event)\n        case .error, .completed:\n            self.parent.lock.lock()\n            if self.parent.connectionId == self.connectionIdSnapshot {\n                let connection = self.parent.connectableSubscription\n                defer { connection?.dispose() }\n                self.parent.count = 0\n                self.parent.connectionId = self.parent.connectionId &+ 1\n                self.parent.connectableSubscription = nil\n            }\n            self.parent.lock.unlock()\n            self.forwardOn(event)\n            self.dispose()\n        }"
+          "attributes": [],
+          "body": {
+            "content": "switch event {\n        case .next:\n            self.forwardOn(event)\n        case .error, .completed:\n            self.parent.lock.lock()\n            if self.parent.connectionId == self.connectionIdSnapshot {\n                let connection = self.parent.connectableSubscription\n                defer { connection?.dispose() }\n                self.parent.count = 0\n                self.parent.connectionId = self.parent.connectionId &+ 1\n                self.parent.connectableSubscription = nil\n            }\n            self.parent.lock.unlock()\n            self.forwardOn(event)\n            self.dispose()\n        }"
           },
-          "location_info" : {
-            "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-            "location" : {
-              "end_position" : 12320,
-              "start_position" : 11648
+          "location_info": {
+            "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+            "location": {
+              "end_position": 12320,
+              "start_position": 11648,
+              "start_line": 301,
+              "end_line": 320
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "on",
-          "parameters" : [
+          "modifiers": [],
+          "name": "on",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Event<Element>"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Event<Element>"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-                "location" : {
-                  "end_position" : 11685,
-                  "start_position" : 11662
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+                "location": {
+                  "end_position": 11685,
+                  "start_position": 11662,
+                  "start_line": 303,
+                  "end_line": 303
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "event",
-              "order" : 0
+              "modifiers": [],
+              "name": "event",
+              "order": 0
             }
           ]
         }
       ],
-      "initializers" : [
+      "initializers": [
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-            "location" : {
-              "end_position" : 10296,
-              "start_position" : 10138
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+            "location": {
+              "end_position": 10296,
+              "start_position": 10138,
+              "start_line": 254,
+              "end_line": 259
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "init",
-          "parameters" : [
+          "modifiers": [],
+          "name": "init",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Parent"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Parent"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-                "location" : {
-                  "end_position" : 10165,
-                  "start_position" : 10149
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+                "location": {
+                  "end_position": 10165,
+                  "start_position": 10149,
+                  "start_line": 256,
+                  "end_line": 256
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "parent",
-              "order" : 0
+              "modifiers": [],
+              "name": "parent",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Observer"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Observer"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-                "location" : {
-                  "end_position" : 10185,
-                  "start_position" : 10165
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+                "location": {
+                  "end_position": 10185,
+                  "start_position": 10165,
+                  "start_line": 256,
+                  "end_line": 256
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "observer",
-              "order" : 1
+              "modifiers": [],
+              "name": "observer",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Cancelable"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Cancelable"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-                "location" : {
-                  "end_position" : 10203,
-                  "start_position" : 10185
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+                "location": {
+                  "end_position": 10203,
+                  "start_position": 10185,
+                  "start_line": 256,
+                  "end_line": 256
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "cancel",
-              "order" : 2
+              "modifiers": [],
+              "name": "cancel",
+              "order": 2
             }
           ]
         }
       ],
-      "location_info" : {
-        "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-        "location" : {
-          "end_position" : 12322,
-          "start_position" : 9765
+      "location_info": {
+        "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+        "location": {
+          "end_position": 12322,
+          "start_position": 9765,
+          "start_line": 244,
+          "end_line": 321
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "final",
         "private"
       ],
-      "name" : "RefCountSink",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
+      "name": "RefCountSink",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [
         {
-          "assigned_type" : {
-            "is_optional" : false,
-            "name" : "Observer.Element"
+          "assigned_type": {
+            "is_optional": false,
+            "name": "Observer.Element"
           },
-          "attributes" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-            "location" : {
-              "end_position" : 10005,
-              "start_position" : 9963
+          "attributes": [],
+          "location_info": {
+            "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+            "location": {
+              "end_position": 10005,
+              "start_position": 9963,
+              "start_line": 248,
+              "end_line": 249
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "Element"
+          "modifiers": [],
+          "name": "Element"
         },
         {
-          "assigned_type" : {
-            "is_optional" : false,
-            "name" : "RefCount<ConnectableSource>"
+          "assigned_type": {
+            "is_optional": false,
+            "name": "RefCount<ConnectableSource>"
           },
-          "attributes" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-            "location" : {
-              "end_position" : 10056,
-              "start_position" : 10005
+          "attributes": [],
+          "location_info": {
+            "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+            "location": {
+              "end_position": 10056,
+              "start_position": 10005,
+              "start_line": 249,
+              "end_line": 250
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "Parent"
+          "modifiers": [],
+          "name": "Parent"
         }
       ],
-      "variables" : [
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Parent"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Parent"
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-            "location" : {
-              "end_position" : 10088,
-              "start_position" : 10074
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+            "location": {
+              "end_position": 10088,
+              "start_position": 10074,
+              "start_line": 252,
+              "end_line": 252
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "parent"
+          "name": "parent"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Int64"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Int64"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "-1"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "-1"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
-            "location" : {
-              "end_position" : 10138,
-              "start_position" : 10106
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Pods/RxSwift/RxSwift/Observables/Multicast.swift",
+            "location": {
+              "end_position": 10138,
+              "start_position": 10106,
+              "start_line": 254,
+              "end_line": 254
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "connectionIdSnapshot"
+          "name": "connectionIdSnapshot"
         }
       ]
     },
-    "type" : "Add Confromed Type Refactoring"
+    "type": "Add Confromed Type Refactoring"
   },
-  "refactoringIndex" : 4479,
-  "refactoringType" : "Add Confromed Type Refactoring",
-  "repoID" : "shadowsocks-shadowsocksx-ng",
-  "repoName" : "shadowsocks/ShadowsocksX-NG",
-  "repoURL" : "https://github.com/shadowsocks/ShadowsocksX-NG.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 4479,
+  "refactoringType": "Add Confromed Type Refactoring",
+  "repoID": "shadowsocks-shadowsocksx-ng",
+  "repoName": "shadowsocks/ShadowsocksX-NG",
+  "repoURL": "https://github.com/shadowsocks/ShadowsocksX-NG.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Pods/RxSwift/RxSwift/Observables/Multicast.swift"
   ]
 }

@@ -1,125 +1,125 @@
 {
-  "caseID" : "case-cfab9d83a0756b9b10b769a9",
-  "commitHash" : "37595a734c4ec109bdfa072469c2a725b8de4f59",
-  "commitMessage" : "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
-  "commitURL" : "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
-  "durationSeconds" : 16.732138991355896,
-  "entityNames" : [
+  "caseID": "case-cfab9d83a0756b9b10b769a9",
+  "commitHash": "37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "commitMessage": "Remove XPC compatibility code, simplify network model. (#1616)\n\n- Refactor network model types: replace `NetworkState` enum and\nphase-based NetworkStatus with a flat `NetworkStatus` struct.\n- Simplify API server ↔ plugin protocol: plugin `status()` returns\nruntime status only, API server owns configuration.\n- `NetworksService` `list()`/`create()` now return `NetworkResource`\ndirectly.\n- Remove lifecycle phase checks and state machine guards throughout CLI\nand API server.\n- `variant` is plugin-specific, it's not a required property. This PR\nreplaces `NetworkPluginInfo` with a `plugin` name property on\n`NetworkConfiguration` and an `options` list similar to that for\nvolumes.\n- Moved `variant` to the option list.",
+  "commitURL": "https://github.com/apple/container/commit/37595a734c4ec109bdfa072469c2a725b8de4f59",
+  "durationSeconds": 16.732138991355896,
+  "entityNames": [
     "[NetworkResource]",
     "list",
     "resourceData"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "body" : {
-        "content" : "return try JSONDecoder().decode([NetworkResource].self, from: resourceData)"
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "body": {
+        "content": "return try JSONDecoder().decode([NetworkResource].self, from: resourceData)"
       },
-      "conditions" : [
+      "conditions": [
         {
-          "condition_value" : {
-            "optional_binding" : {
-              "_0" : {
-                "description" : "let resourceData = response.dataNoCopy(key: .networkResources)",
-                "initializer_clause" : {
-                  "has_self_reference" : false,
-                  "value" : {
-                    "function_call" : {
-                      "_0" : {
-                        "additional_trailing_closures" : [
-
-                        ],
-                        "arguments" : [
+          "condition_value": {
+            "optional_binding": {
+              "_0": {
+                "description": "let resourceData = response.dataNoCopy(key: .networkResources)",
+                "initializer_clause": {
+                  "has_self_reference": false,
+                  "value": {
+                    "function_call": {
+                      "_0": {
+                        "additional_trailing_closures": [],
+                        "arguments": [
                           {
-                            "label" : "key",
-                            "value" : ".networkResources"
+                            "label": "key",
+                            "value": ".networkResources"
                           }
                         ],
-                        "call" : "dataNoCopy",
-                        "has_self_reference" : false,
-                        "internal_inline_calls" : [
-
-                        ],
-                        "location_info" : {
-                          "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
-                          "location" : {
-                            "end_position" : 4893,
-                            "start_position" : 4849
+                        "call": "dataNoCopy",
+                        "has_self_reference": false,
+                        "internal_inline_calls": [],
+                        "location_info": {
+                          "file_path": "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+                          "location": {
+                            "end_position": 4893,
+                            "start_position": 4849,
+                            "start_line": 110,
+                            "end_line": 110
                           }
                         }
                       }
                     }
                   }
                 },
-                "is_binding_self" : false,
-                "is_in_out" : false,
-                "is_let" : true,
-                "is_var" : false,
-                "name" : "resourceData"
+                "is_binding_self": false,
+                "is_in_out": false,
+                "is_let": true,
+                "is_var": false,
+                "name": "resourceData"
               }
             }
           },
-          "location_info" : {
-            "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
-            "location" : {
-              "end_position" : 4893,
-              "start_position" : 4830
+          "location_info": {
+            "file_path": "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+            "location": {
+              "end_position": 4893,
+              "start_position": 4830,
+              "start_line": 110,
+              "end_line": 110
             }
           }
         }
       ],
-      "description" : "if",
-      "location_info" : {
-        "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
-        "location" : {
-          "end_position" : 4992,
-          "start_position" : 4761
+      "description": "if",
+      "location_info": {
+        "file_path": "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+        "location": {
+          "end_position": 4992,
+          "start_position": 4761,
+          "start_line": 107,
+          "end_line": 112
         }
       }
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let request = XPCMessage(route: .networkList)\n\n        let response = try await xpcSend(message: request, timeout: .seconds(1))\n\n        // Prefer current encoding (≥ 0.12.0 server).\n        if let resourceData = response.dataNoCopy(key: .networkResources) {\n            return try JSONDecoder().decode([NetworkResource].self, from: resourceData)\n        }\n\n        // Fall back to pre-0.12.0 server: decode NetworkState and convert.\n        if let stateData = response.dataNoCopy(key: .networkStates) {\n            return try JSONDecoder().decode([NetworkState].self, from: stateData).map(NetworkResource.init)\n        }\n\n        return []"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "let request = XPCMessage(route: .networkList)\n\n        let response = try await xpcSend(message: request, timeout: .seconds(1))\n\n        // Prefer current encoding (≥ 0.12.0 server).\n        if let resourceData = response.dataNoCopy(key: .networkResources) {\n            return try JSONDecoder().decode([NetworkResource].self, from: resourceData)\n        }\n\n        // Fall back to pre-0.12.0 server: decode NetworkState and convert.\n        if let stateData = response.dataNoCopy(key: .networkStates) {\n            return try JSONDecoder().decode([NetworkState].self, from: stateData).map(NetworkResource.init)\n        }\n\n        return []"
       },
-      "location_info" : {
-        "file_path" : "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
-        "location" : {
-          "end_position" : 5282,
-          "start_position" : 4265
+      "location_info": {
+        "file_path": "Sources/Services/ContainerAPIService/Client/NetworkClient.swift",
+        "location": {
+          "end_position": 5282,
+          "start_position": 4265,
+          "start_line": 97,
+          "end_line": 120
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "list",
-      "parameters" : [
-
-      ],
-      "return_clause" : {
-        "data_type" : {
-          "is_optional" : false,
-          "name" : "[NetworkResource]"
+      "name": "list",
+      "parameters": [],
+      "return_clause": {
+        "data_type": {
+          "is_optional": false,
+          "name": "[NetworkResource]"
         },
-        "description" : "-> [NetworkResource]"
+        "description": "-> [NetworkResource]"
       },
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async throws",
-        "throws_specifier" : "throws"
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async throws",
+        "throws_specifier": "throws"
       }
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 86,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 86,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Sources/Services/ContainerAPIService/Client/NetworkClient.swift"
   ]
 }

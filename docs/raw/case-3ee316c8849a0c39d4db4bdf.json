@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-3ee316c8849a0c39d4db4bdf",
-  "commitHash" : "272062981d220d47bb7e21b9b888f857bd904196",
-  "commitMessage" : "feat: removed custom icons and moved to the SF Symbols\nfeat: adjusted the radius in the popups\nfeat: small adjustments in all popups\nfeat: redesigned the sections title in the popups\nfeat: redesigned ColumnChartView\nfeat: redesigned GPU popup view, dropped multi GPU view, only selected GPU will be visible in the popup\nfeat: small redesign in the RAM popup\nfeat: redesigned Battery popup\nfeat: moved to macOS 12 as a minimum required version\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/272062981d220d47bb7e21b9b888f857bd904196",
-  "durationSeconds" : 43.821922898292542,
-  "entityNames" : [
+  "caseID": "case-3ee316c8849a0c39d4db4bdf",
+  "commitHash": "272062981d220d47bb7e21b9b888f857bd904196",
+  "commitMessage": "feat: removed custom icons and moved to the SF Symbols\nfeat: adjusted the radius in the popups\nfeat: small adjustments in all popups\nfeat: redesigned the sections title in the popups\nfeat: redesigned ColumnChartView\nfeat: redesigned GPU popup view, dropped multi GPU view, only selected GPU will be visible in the popup\nfeat: small redesign in the RAM popup\nfeat: redesigned Battery popup\nfeat: moved to macOS 12 as a minimum required version\n",
+  "commitURL": "https://github.com/exelban/stats/commit/272062981d220d47bb7e21b9b888f857bd904196",
+  "durationSeconds": 43.82192289829254,
+  "entityNames": [
     "Bool",
     "CGRect",
     "ChartView",
@@ -14,794 +14,732 @@
     "NSColor",
     "NSRect"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "Double"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "Double"
       },
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "other" : {
-            "_0" : "1"
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "other": {
+            "_0": "1"
           }
         }
       },
-      "is_constant" : false,
-      "location_info" : {
-        "file_path" : "Kit/plugins/Charts.swift",
-        "location" : {
-          "end_position" : 32323,
-          "start_position" : 32303
+      "is_constant": false,
+      "location_info": {
+        "file_path": "Kit/plugins/Charts.swift",
+        "location": {
+          "end_position": 32323,
+          "start_position": 32303,
+          "start_line": 879,
+          "end_line": 879
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "private"
       ],
-      "name" : "maxValue"
+      "name": "maxValue"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "ChartView"
+          "name": "ChartView"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "var filled: Bool = false\n        var drawValue: Bool = false\n        var nonActiveSegmentColor: NSColor = NSColor.lightGray\n        var value: Double? = nil\n        var text: String? = nil\n        var segments: [ColorValue] = []\n        var color: NSColor = NSColor.systemBlue\n        self.read {\n            filled = self.filled\n            drawValue = self.drawValue\n            nonActiveSegmentColor = self.nonActiveSegmentColor\n            value = self.value\n            text = self.text\n            segments = self.segments\n            color = self.color\n        }\n        \n        let arcWidth: CGFloat = filled ? min(self.frame.width, self.frame.height) / 2 : 7\n        let fullCircle: CGFloat = 2 * CGFloat.pi\n        if segments.isEmpty {\n            segments = [ColorValue(value ?? 0, color: color)]\n        }\n        \n        let totalAmount = segments.reduce(0) { $0 + $1.value }\n        if totalAmount < 1 {\n            segments.append(ColorValue(Double(1-totalAmount), color: nonActiveSegmentColor.withAlphaComponent(0.5)))\n        }\n        \n        let centerPoint = CGPoint(x: self.frame.width/2, y: self.frame.height/2)\n        let radius = (min(self.frame.width, self.frame.height) - arcWidth) / 2\n        \n        guard let context = NSGraphicsContext.current?.cgContext else { return }\n        context.setShouldAntialias(true)\n        \n        context.setLineWidth(arcWidth)\n        context.setLineCap(.butt)\n        \n        let startAngle: CGFloat = CGFloat.pi/2\n        var previousAngle = startAngle\n        \n        for segment in segments.reversed() {\n            let currentAngle: CGFloat = previousAngle + (CGFloat(segment.value) * fullCircle)\n            \n            if let color = segment.color {\n                context.setStrokeColor(color.cgColor)\n            }\n            context.addArc(center: centerPoint, radius: radius, startAngle: previousAngle, endAngle: currentAngle, clockwise: false)\n            context.strokePath()\n            \n            previousAngle = currentAngle\n        }\n        \n        if let text = text {\n            let style = NSMutableParagraphStyle()\n            style.alignment = .center\n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 10, weight: .regular),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: style\n            ]\n            \n            let width: CGFloat = text.widthOfString(usingFont: NSFont.systemFont(ofSize: 10))\n            let rect = CGRect(x: ((self.frame.width-width)/2)-0.5, y: (self.frame.height-6)/2, width: width, height: 13)\n            let str = NSAttributedString.init(string: text, attributes: stringAttributes)\n            str.draw(with: rect)\n        } else if let value = value, drawValue {\n            let fontSize: CGFloat = min(15, 15 * pow(min(self.frame.width, self.frame.height) / 60, 1.7))\n            let font = NSFont.systemFont(ofSize: fontSize, weight: .regular)\n            let stringAttributes = [\n                NSAttributedString.Key.font: font,\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: NSMutableParagraphStyle()\n            ]\n            \n            let percentage = \"\\(Int(value.rounded(toPlaces: 2) * 100))%\"\n            let width: CGFloat = percentage.widthOfString(usingFont: font)\n            let rect = CGRect(x: (self.frame.width-width)/2, y: (self.frame.height-fontSize*11/15)/2, width: width, height: fontSize*12/15)\n            let str = NSAttributedString.init(string: percentage, attributes: stringAttributes)\n            str.draw(with: rect)\n        }"
+          "attributes": [],
+          "body": {
+            "content": "var filled: Bool = false\n        var drawValue: Bool = false\n        var nonActiveSegmentColor: NSColor = NSColor.lightGray\n        var value: Double? = nil\n        var text: String? = nil\n        var segments: [ColorValue] = []\n        var color: NSColor = NSColor.systemBlue\n        self.read {\n            filled = self.filled\n            drawValue = self.drawValue\n            nonActiveSegmentColor = self.nonActiveSegmentColor\n            value = self.value\n            text = self.text\n            segments = self.segments\n            color = self.color\n        }\n        \n        let arcWidth: CGFloat = filled ? min(self.frame.width, self.frame.height) / 2 : 7\n        let fullCircle: CGFloat = 2 * CGFloat.pi\n        if segments.isEmpty {\n            segments = [ColorValue(value ?? 0, color: color)]\n        }\n        \n        let totalAmount = segments.reduce(0) { $0 + $1.value }\n        if totalAmount < 1 {\n            segments.append(ColorValue(Double(1-totalAmount), color: nonActiveSegmentColor.withAlphaComponent(0.5)))\n        }\n        \n        let centerPoint = CGPoint(x: self.frame.width/2, y: self.frame.height/2)\n        let radius = (min(self.frame.width, self.frame.height) - arcWidth) / 2\n        \n        guard let context = NSGraphicsContext.current?.cgContext else { return }\n        context.setShouldAntialias(true)\n        \n        context.setLineWidth(arcWidth)\n        context.setLineCap(.butt)\n        \n        let startAngle: CGFloat = CGFloat.pi/2\n        var previousAngle = startAngle\n        \n        for segment in segments.reversed() {\n            let currentAngle: CGFloat = previousAngle + (CGFloat(segment.value) * fullCircle)\n            \n            if let color = segment.color {\n                context.setStrokeColor(color.cgColor)\n            }\n            context.addArc(center: centerPoint, radius: radius, startAngle: previousAngle, endAngle: currentAngle, clockwise: false)\n            context.strokePath()\n            \n            previousAngle = currentAngle\n        }\n        \n        if let text = text {\n            let style = NSMutableParagraphStyle()\n            style.alignment = .center\n            let stringAttributes = [\n                NSAttributedString.Key.font: NSFont.systemFont(ofSize: 10, weight: .regular),\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: style\n            ]\n            \n            let width: CGFloat = text.widthOfString(usingFont: NSFont.systemFont(ofSize: 10))\n            let rect = CGRect(x: ((self.frame.width-width)/2)-0.5, y: (self.frame.height-6)/2, width: width, height: 13)\n            let str = NSAttributedString.init(string: text, attributes: stringAttributes)\n            str.draw(with: rect)\n        } else if let value = value, drawValue {\n            let fontSize: CGFloat = min(15, 15 * pow(min(self.frame.width, self.frame.height) / 60, 1.7))\n            let font = NSFont.systemFont(ofSize: fontSize, weight: .regular)\n            let stringAttributes = [\n                NSAttributedString.Key.font: font,\n                NSAttributedString.Key.foregroundColor: isDarkMode ? NSColor.white : NSColor.textColor,\n                NSAttributedString.Key.paragraphStyle: NSMutableParagraphStyle()\n            ]\n            \n            let percentage = \"\\(Int(value.rounded(toPlaces: 2) * 100))%\"\n            let width: CGFloat = percentage.widthOfString(usingFont: font)\n            let rect = CGRect(x: (self.frame.width-width)/2, y: (self.frame.height-fontSize*11/15)/2, width: width, height: fontSize*12/15)\n            let str = NSAttributedString.init(string: percentage, attributes: stringAttributes)\n            str.draw(with: rect)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 36877,
-              "start_position" : 33037
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 36877,
+              "start_position": 33037,
+              "start_line": 903,
+              "end_line": 986
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public",
             "override"
           ],
-          "name" : "draw",
-          "parameters" : [
+          "name": "draw",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "CGRect"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "CGRect"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 33087,
-                  "start_position" : 33073
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 33087,
+                  "start_position": 33073,
+                  "start_line": 905,
+                  "end_line": 905
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "rect",
-              "order" : 0
+              "modifiers": [],
+              "name": "rect",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let sanitized = value.isFinite ? value : 0\n        self.write {\n            if sanitized > 1 {\n                if sanitized > self.maxValue {\n                    self.maxValue = sanitized\n                }\n                self.value = sanitized / self.maxValue\n            } else {\n                self.value = sanitized\n            }\n        }\n        self.fadeOrDisplay()"
+          "attributes": [],
+          "body": {
+            "content": "let sanitized = value.isFinite ? value : 0\n        self.write {\n            if sanitized > 1 {\n                if sanitized > self.maxValue {\n                    self.maxValue = sanitized\n                }\n                self.value = sanitized / self.maxValue\n            } else {\n                self.value = sanitized\n            }\n        }\n        self.fadeOrDisplay()"
           },
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 37314,
-              "start_position" : 36877
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 37314,
+              "start_position": 36877,
+              "start_line": 986,
+              "end_line": 1001
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "setValue",
-          "parameters" : [
+          "name": "setValue",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Double"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Double"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 36923,
-                  "start_position" : 36908
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 36923,
+                  "start_position": 36908,
+                  "start_line": 988,
+                  "end_line": 988
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "value",
-              "order" : 0
+              "modifiers": [],
+              "name": "value",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "self.write { self.text = value }\n        self.displayIfVisible()"
+          "attributes": [],
+          "body": {
+            "content": "self.write { self.text = value }\n        self.displayIfVisible()"
           },
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 37441,
-              "start_position" : 37314
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 37441,
+              "start_position": 37314,
+              "start_line": 1001,
+              "end_line": 1006
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "setText",
-          "parameters" : [
+          "name": "setText",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "String"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "String"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 37359,
-                  "start_position" : 37344
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 37359,
+                  "start_position": 37344,
+                  "start_line": 1003,
+                  "end_line": 1003
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "value",
-              "order" : 0
+              "modifiers": [],
+              "name": "value",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "self.write { self.segments = segments }\n        self.fadeOrDisplay()"
+          "attributes": [],
+          "body": {
+            "content": "self.write { self.segments = segments }\n        self.fadeOrDisplay()"
           },
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 37585,
-              "start_position" : 37441
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 37585,
+              "start_position": 37441,
+              "start_line": 1006,
+              "end_line": 1011
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "setSegments",
-          "parameters" : [
+          "name": "setSegments",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "[ColorValue]"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "[ColorValue]"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 37499,
-                  "start_position" : 37475
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 37499,
+                  "start_position": 37475,
+                  "start_line": 1008,
+                  "end_line": 1008
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "segments",
-              "order" : 0
+              "modifiers": [],
+              "name": "segments",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "self.write {\n            guard self.nonActiveSegmentColor != newColor else { return }\n            self.nonActiveSegmentColor = newColor\n        }\n        self.displayIfVisible()"
+          "attributes": [],
+          "body": {
+            "content": "self.write {\n            guard self.nonActiveSegmentColor != newColor else { return }\n            self.nonActiveSegmentColor = newColor\n        }\n        self.displayIfVisible()"
           },
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 37846,
-              "start_position" : 37585
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 37846,
+              "start_position": 37585,
+              "start_line": 1011,
+              "end_line": 1019
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "setNonActiveSegmentColor",
-          "parameters" : [
+          "name": "setNonActiveSegmentColor",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "NSColor"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "NSColor"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 37651,
-                  "start_position" : 37632
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 37651,
+                  "start_position": 37632,
+                  "start_line": 1013,
+                  "end_line": 1013
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "newColor",
-              "order" : 0
+              "modifiers": [],
+              "name": "newColor",
+              "order": 0
             }
           ]
         }
       ],
-      "initializers" : [
+      "initializers": [
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32929,
-              "start_position" : 32455
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32929,
+              "start_position": 32455,
+              "start_line": 882,
+              "end_line": 899
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "public"
           ],
-          "name" : "init",
-          "parameters" : [
+          "name": "init",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "NSRect"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "NSRect"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "reference" : {
-                    "arguments" : [
-
-                    ],
-                    "name" : "zero"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "reference": {
+                    "arguments": [],
+                    "name": "zero"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 32508,
-                  "start_position" : 32477
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 32508,
+                  "start_position": 32477,
+                  "start_line": 884,
+                  "end_line": 885
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "frame",
-              "order" : 0
+              "modifiers": [],
+              "name": "frame",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "[ColorValue]"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "[ColorValue]"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "[]"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "[]"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 32545,
-                  "start_position" : 32508
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 32545,
+                  "start_position": 32508,
+                  "start_line": 885,
+                  "end_line": 886
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "segments",
-              "order" : 1
+              "modifiers": [],
+              "name": "segments",
+              "order": 1
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 32575,
-                  "start_position" : 32545
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 32575,
+                  "start_position": 32545,
+                  "start_line": 886,
+                  "end_line": 887
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "filled",
-              "order" : 2
+              "modifiers": [],
+              "name": "filled",
+              "order": 2
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "false"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "false"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 32608,
-                  "start_position" : 32575
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 32608,
+                  "start_position": 32575,
+                  "start_line": 887,
+                  "end_line": 888
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "drawValue",
-              "order" : 3
+              "modifiers": [],
+              "name": "drawValue",
+              "order": 3
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "other" : {
-                    "_0" : "true"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "other": {
+                    "_0": "true"
                   }
                 }
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 32639,
-                  "start_position" : 32608
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 32639,
+                  "start_position": 32608,
+                  "start_line": 888,
+                  "end_line": 889
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "animation",
-              "order" : 4
+              "modifiers": [],
+              "name": "animation",
+              "order": 4
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 33037,
-              "start_position" : 32929
+          "attributes": [],
+          "functions": [],
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 33037,
+              "start_position": 32929,
+              "start_line": 899,
+              "end_line": 903
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "required"
           ],
-          "name" : "init",
-          "parameters" : [
+          "name": "init",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "NSCoder"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "NSCoder"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Kit/plugins/Charts.swift",
-                "location" : {
-                  "end_position" : 32968,
-                  "start_position" : 32954
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Kit/plugins/Charts.swift",
+                "location": {
+                  "end_position": 32968,
+                  "start_position": 32954,
+                  "start_line": 901,
+                  "end_line": 901
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "coder",
-              "order" : 0
+              "modifiers": [],
+              "name": "coder",
+              "order": 0
             }
           ]
         }
       ],
-      "location_info" : {
-        "file_path" : "Kit/plugins/Charts.swift",
-        "location" : {
-          "end_position" : 37848,
-          "start_position" : 32060
+      "location_info": {
+        "file_path": "Kit/plugins/Charts.swift",
+        "location": {
+          "end_position": 37848,
+          "start_position": 32060,
+          "start_line": 871,
+          "end_line": 1020
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public"
       ],
-      "name" : "PieChartView",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
+      "name": "PieChartView",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32137,
-              "start_position" : 32117
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32137,
+              "start_position": 32117,
+              "start_line": 874,
+              "end_line": 874
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "filled"
+          "name": "filled"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Bool"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Bool"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "false"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "false"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32177,
-              "start_position" : 32154
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32177,
+              "start_position": 32154,
+              "start_line": 875,
+              "end_line": 875
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "drawValue"
+          "name": "drawValue"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "NSColor"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "NSColor"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "reference" : {
-                "arguments" : [
-
-                ],
-                "name" : "lightGray"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "reference": {
+                "arguments": [],
+                "name": "lightGray"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32244,
-              "start_position" : 32194
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32244,
+              "start_position": 32194,
+              "start_line": 876,
+              "end_line": 876
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "nonActiveSegmentColor"
+          "name": "nonActiveSegmentColor"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "Double?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "Double?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32286,
-              "start_position" : 32266
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32286,
+              "start_position": 32266,
+              "start_line": 878,
+              "end_line": 878
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "value"
+          "name": "value"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Double"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Double"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "1"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "1"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32323,
-              "start_position" : 32303
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32323,
+              "start_position": 32303,
+              "start_line": 879,
+              "end_line": 879
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "maxValue"
+          "name": "maxValue"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "String?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "String?"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "nil"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "nil"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32359,
-              "start_position" : 32340
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32359,
+              "start_position": 32340,
+              "start_line": 880,
+              "end_line": 880
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "text"
+          "name": "text"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "[ColorValue]"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "[ColorValue]"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "[]"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "[]"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32403,
-              "start_position" : 32376
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32403,
+              "start_position": 32376,
+              "start_line": 881,
+              "end_line": 881
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "segments"
+          "name": "segments"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "NSColor"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "NSColor"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "reference" : {
-                "arguments" : [
-
-                ],
-                "name" : "systemBlue"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "reference": {
+                "arguments": [],
+                "name": "systemBlue"
               }
             }
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Kit/plugins/Charts.swift",
-            "location" : {
-              "end_position" : 32455,
-              "start_position" : 32420
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Kit/plugins/Charts.swift",
+            "location": {
+              "end_position": 32455,
+              "start_position": 32420,
+              "start_line": 882,
+              "end_line": 882
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "color"
+          "name": "color"
         }
       ]
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 116,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 116,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Kit/plugins/Charts.swift"
   ]
 }

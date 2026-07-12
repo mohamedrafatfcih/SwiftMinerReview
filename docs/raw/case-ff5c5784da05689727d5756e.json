@@ -1,76 +1,68 @@
 {
-  "caseID" : "case-ff5c5784da05689727d5756e",
-  "commitHash" : "d732bc9edfca92bba7a063c2feee9120c195bf52",
-  "commitMessage" : "Allow Automatic Cancellation By Default (#3757)\n\n### Issue Link :link:\r\n#3727\r\n\r\n### Goals :soccer:\r\nThis PR changes Alamofire's default behavior to better follow user\r\nexpectations around automatically cancellation when the enclosing async\r\ncontext is cancelled.\r\n\r\nThis PR also updates some other async behaviors for more reliable tests\r\nand behaviors.\r\n\r\n### Implementation Details :construction:\r\nPreviously, Alamofire defaulted `shouldAutomaticallyCancel` to `true` in\r\norder to follow what was then anticipated user expectations as well as\r\ncorrect behavior for async APIs. However, many of the Swift Concurrency\r\ncancellation behaviors that prompted this default turned out to be bugs.\r\nNow that the correct behavior has been around for a while it's important\r\nfor Alamofire to fix its own behavior to match.\r\n\r\n### Testing Details :mag:\r\nUpdated tests for new default and added tests when it's turned off.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/d732bc9edfca92bba7a063c2feee9120c195bf52",
-  "durationSeconds" : 7.4033889770507812,
-  "entityNames" : [
+  "caseID": "case-ff5c5784da05689727d5756e",
+  "commitHash": "d732bc9edfca92bba7a063c2feee9120c195bf52",
+  "commitMessage": "Allow Automatic Cancellation By Default (#3757)\n\n### Issue Link :link:\r\n#3727\r\n\r\n### Goals :soccer:\r\nThis PR changes Alamofire's default behavior to better follow user\r\nexpectations around automatically cancellation when the enclosing async\r\ncontext is cancelled.\r\n\r\nThis PR also updates some other async behaviors for more reliable tests\r\nand behaviors.\r\n\r\n### Implementation Details :construction:\r\nPreviously, Alamofire defaulted `shouldAutomaticallyCancel` to `true` in\r\norder to follow what was then anticipated user expectations as well as\r\ncorrect behavior for async APIs. However, many of the Swift Concurrency\r\ncancellation behaviors that prompted this default turned out to be bugs.\r\nNow that the correct behavior has been around for a while it's important\r\nfor Alamofire to fix its own behavior to match.\r\n\r\n### Testing Details :mag:\r\nUpdated tests for new default and added tests when it's turned off.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/d732bc9edfca92bba7a063c2feee9120c195bf52",
+  "durationSeconds": 7.403388977050781,
+  "entityNames": [
     "testThatDownloadTaskIsAutomaticallyCancelledInTaskGroupWhenEnabled",
     "testThatDownloadTaskIsNotAutomaticallyCancelledInTaskWhenDisabled"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let session = stored(Session())\n        let request = session.download(.get)\n\n        // When\n        let task = Task {\n            await request.serializingDecodable(TestResponse.self, automaticallyCancelling: false).result\n        }\n\n        task.cancel()\n        let result = await task.value\n\n        // Then\n        XCTAssertTrue(task.isCancelled, \"Task should be cancelled.\")\n        XCTAssertFalse(request.isCancelled, \"Underlying DownloadRequest should not be cancelled.\")\n        XCTAssertTrue(result.isSuccess, \"DownloadRequest should succeed.\")"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "attributes": [],
+      "body": {
+        "content": "let session = stored(Session())\n        let request = session.download(.get)\n\n        // When\n        let task = Task {\n            await request.serializingDecodable(TestResponse.self, automaticallyCancelling: false).result\n        }\n\n        task.cancel()\n        let result = await task.value\n\n        // Then\n        XCTAssertTrue(task.isCancelled, \"Task should be cancelled.\")\n        XCTAssertFalse(request.isCancelled, \"Underlying DownloadRequest should not be cancelled.\")\n        XCTAssertTrue(result.isSuccess, \"DownloadRequest should succeed.\")"
       },
-      "location_info" : {
-        "file_path" : "Tests/ConcurrencyTests.swift",
-        "location" : {
-          "end_position" : 11728,
-          "start_position" : 11055
+      "location_info": {
+        "file_path": "Tests/ConcurrencyTests.swift",
+        "location": {
+          "end_position": 11728,
+          "start_position": 11055,
+          "start_line": 346,
+          "end_line": 365
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatDownloadTaskIsNotAutomaticallyCancelledInTaskWhenDisabled",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async"
+      "modifiers": [],
+      "name": "testThatDownloadTaskIsNotAutomaticallyCancelledInTaskWhenDisabled",
+      "parameters": [],
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async"
       }
     },
-    "old_content" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "let session = stored(Session())\n        let request = session.download(.get)\n\n        // When\n        let task = Task {\n            await withTaskGroup(of: Result<TestResponse, AFError>.self) { group -> Result<TestResponse, AFError> in\n                group.addTask {\n                    await request.serializingDecodable(TestResponse.self, automaticallyCancelling: true).result\n                }\n\n                return await group.first(where: { _ in true })!\n            }\n        }\n\n        task.cancel()\n        let result = await task.value\n\n        // Then\n        XCTAssertTrue(result.failure?.isExplicitlyCancelledError == true)\n        XCTAssertTrue(task.isCancelled, \"Task should be cancelled.\")\n        XCTAssertTrue(request.isCancelled, \"Underlying DownloadRequest should be cancelled.\")"
+    "old_content": {
+      "attributes": [],
+      "body": {
+        "content": "let session = stored(Session())\n        let request = session.download(.get)\n\n        // When\n        let task = Task {\n            await withTaskGroup(of: Result<TestResponse, AFError>.self) { group -> Result<TestResponse, AFError> in\n                group.addTask {\n                    await request.serializingDecodable(TestResponse.self, automaticallyCancelling: true).result\n                }\n\n                return await group.first(where: { _ in true })!\n            }\n        }\n\n        task.cancel()\n        let result = await task.value\n\n        // Then\n        XCTAssertTrue(result.failure?.isExplicitlyCancelledError == true)\n        XCTAssertTrue(task.isCancelled, \"Task should be cancelled.\")\n        XCTAssertTrue(request.isCancelled, \"Underlying DownloadRequest should be cancelled.\")"
       },
-      "location_info" : {
-        "file_path" : "Tests/ConcurrencyTests.swift",
-        "location" : {
-          "end_position" : 10523,
-          "start_position" : 9603
+      "location_info": {
+        "file_path": "Tests/ConcurrencyTests.swift",
+        "location": {
+          "end_position": 10523,
+          "start_position": 9603,
+          "start_line": 302,
+          "end_line": 327
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatDownloadTaskIsAutomaticallyCancelledInTaskGroupWhenEnabled",
-      "parameters" : [
-
-      ],
-      "specifiers_decl" : {
-        "async_specifier" : "async",
-        "description" : "async"
+      "modifiers": [],
+      "name": "testThatDownloadTaskIsAutomaticallyCancelledInTaskGroupWhenEnabled",
+      "parameters": [],
+      "specifiers_decl": {
+        "async_specifier": "async",
+        "description": "async"
       }
     },
-    "type" : "Rename Function Refactoring"
+    "type": "Rename Function Refactoring"
   },
-  "refactoringIndex" : 28,
-  "refactoringType" : "Rename Function Refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 28,
+  "refactoringType": "Rename Function Refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/ConcurrencyTests.swift"
   ]
 }

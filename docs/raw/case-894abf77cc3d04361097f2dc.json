@@ -1,73 +1,69 @@
 {
-  "caseID" : "case-894abf77cc3d04361097f2dc",
-  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
-  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
-  "durationSeconds" : 52.782080054283142,
-  "entityNames" : [
+  "caseID": "case-894abf77cc3d04361097f2dc",
+  "commitHash": "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage": "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds": 52.78208005428314,
+  "entityNames": [
     "Data",
     "data",
     "didReceive"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "depth" : 0,
-      "description" : "#if !canImport(FoundationNetworking) // If we not using swift-corelibs-foundation.\n            if let stream = state.outputStream {\n                underlyingQueue.async {\n                    // Ensure we can write, as the stream may have been closed while this was enqueued.\n                    guard stream.hasSpaceAvailable else { return }\n                    var bytes = Array(data)\n                    stream.write(&bytes, maxLength: bytes.count)\n                }\n            }\n            #endif",
-      "index" : 0
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "depth": 0,
+      "description": "#if !canImport(FoundationNetworking) // If we not using swift-corelibs-foundation.\n            if let stream = state.outputStream {\n                underlyingQueue.async {\n                    // Ensure we can write, as the stream may have been closed while this was enqueued.\n                    guard stream.hasSpaceAvailable else { return }\n                    var bytes = Array(data)\n                    stream.write(&bytes, maxLength: bytes.count)\n                }\n            }\n            #endif",
+      "index": 0
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "streamMutableState.write { state in\n            #if !canImport(FoundationNetworking) // If we not using swift-corelibs-foundation.\n            if let stream = state.outputStream {\n                underlyingQueue.async {\n                    // Ensure we can write, as the stream may have been closed while this was enqueued.\n                    guard stream.hasSpaceAvailable else { return }\n                    var bytes = Array(data)\n                    stream.write(&bytes, maxLength: bytes.count)\n                }\n            }\n            #endif\n            state.numberOfExecutingStreams += state.streams.count\n            underlyingQueue.async { [streams = state.streams] in streams.forEach { $0(data) } }\n        }"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "streamMutableState.write { state in\n            #if !canImport(FoundationNetworking) // If we not using swift-corelibs-foundation.\n            if let stream = state.outputStream {\n                underlyingQueue.async {\n                    // Ensure we can write, as the stream may have been closed while this was enqueued.\n                    guard stream.hasSpaceAvailable else { return }\n                    var bytes = Array(data)\n                    stream.write(&bytes, maxLength: bytes.count)\n                }\n            }\n            #endif\n            state.numberOfExecutingStreams += state.streams.count\n            underlyingQueue.async { [streams = state.streams] in streams.forEach { $0(data) } }\n        }"
       },
-      "location_info" : {
-        "file_path" : "Source/Core/DataStreamRequest.swift",
-        "location" : {
-          "end_position" : 8777,
-          "start_position" : 8005
+      "location_info": {
+        "file_path": "Source/Core/DataStreamRequest.swift",
+        "location": {
+          "end_position": 8777,
+          "start_position": 8005,
+          "start_line": 157,
+          "end_line": 174
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "didReceive",
-      "parameters" : [
+      "modifiers": [],
+      "name": "didReceive",
+      "parameters": [
         {
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "Data"
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "Data"
           },
-          "is_variadic" : false,
-          "location_info" : {
-            "file_path" : "Source/Core/DataStreamRequest.swift",
-            "location" : {
-              "end_position" : 8037,
-              "start_position" : 8027
+          "is_variadic": false,
+          "location_info": {
+            "file_path": "Source/Core/DataStreamRequest.swift",
+            "location": {
+              "end_position": 8037,
+              "start_position": 8027,
+              "start_line": 159,
+              "end_line": 159
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "data",
-          "order" : 0
+          "modifiers": [],
+          "name": "data",
+          "order": 0
         }
       ]
     },
-    "type" : "Add statement refactoring"
+    "type": "Add statement refactoring"
   },
-  "refactoringIndex" : 8,
-  "refactoringType" : "Add statement refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 8,
+  "refactoringType": "Add statement refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Source/Core/DataStreamRequest.swift"
   ]
 }

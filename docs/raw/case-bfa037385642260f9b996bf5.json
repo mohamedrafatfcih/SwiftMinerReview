@@ -1,51 +1,49 @@
 {
-  "caseID" : "case-bfa037385642260f9b996bf5",
-  "commitHash" : "685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
-  "commitMessage" : "feat: moved ANE utilization from read to calculation from power usage\n",
-  "commitURL" : "https://github.com/exelban/stats/commit/685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
-  "durationSeconds" : 0.67345595359802246,
-  "entityNames" : [
+  "caseID": "case-bfa037385642260f9b996bf5",
+  "commitHash": "685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "commitMessage": "feat: moved ANE utilization from read to calculation from power usage\n",
+  "commitURL": "https://github.com/exelban/stats/commit/685c7ab9fcfb5f0aeb2f8226c1bf0ac1de86c8f6",
+  "durationSeconds": 0.6734559535980225,
+  "entityNames": [
     "read"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "depth" : 0,
-      "description" : "#if arch(arm64)\n        let aneValue = self.readANEUtilization()\n        let fpsValue = self.readFrames()\n        for i in self.gpus.list.indices where self.gpus.list[i].IOClass.lowercased().contains(\"agx\") {\n            self.gpus.list[i].aneUtilization = aneValue ?? 0\n            self.gpus.list[i].fps = fpsValue\n        }\n        #endif",
-      "index" : 3
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "depth": 0,
+      "description": "#if arch(arm64)\n        let aneValue = self.readANEUtilization()\n        let fpsValue = self.readFrames()\n        for i in self.gpus.list.indices where self.gpus.list[i].IOClass.lowercased().contains(\"agx\") {\n            self.gpus.list[i].aneUtilization = aneValue ?? 0\n            self.gpus.list[i].fps = fpsValue\n        }\n        #endif",
+      "index": 3
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "body" : {
-        "content" : "guard let accelerators = fetchIOService(kIOAcceleratorClassName) else {\n            return\n        }\n        var devices = self.devices\n        \n        for (index, accelerator) in accelerators.enumerated() {\n            guard let IOClass = accelerator.object(forKey: \"IOClass\") as? String else {\n                error(\"IOClass not found\", log: self.log)\n                return\n            }\n            \n            guard let stats = accelerator[\"PerformanceStatistics\"] as? [String: Any] else {\n                error(\"PerformanceStatistics not found\", log: self.log)\n                return\n            }\n            \n            var id: String = \"\"\n            var vendor: String? = nil\n            var model: String = \"\"\n            var cores: Int? = nil\n            let accMatch = (accelerator[\"IOPCIMatch\"] as? String ?? accelerator[\"IOPCIPrimaryMatch\"] as? String ?? \"\").lowercased()\n            \n            for (i, device) in devices.enumerated() {\n                if accMatch.range(of: device.pci) != nil && !device.used {\n                    model = device.model\n                    vendor = device.vendor\n                    id = \"\\(model) #\\(index)\"\n                    devices[i].used = true\n                    break\n                }\n            }\n            \n            let ioClass = IOClass.lowercased()\n            var predictModel = \"\"\n            var type: GPU_types = .unknown\n            \n            let utilization: Int? = stats[\"Device Utilization %\"] as? Int ?? stats[\"GPU Activity(%)\"] as? Int ?? nil\n            let renderUtilization: Int? = stats[\"Renderer Utilization %\"] as? Int ?? nil\n            let tilerUtilization: Int? = stats[\"Tiler Utilization %\"] as? Int ?? nil\n            var temperature: Int? = stats[\"Temperature(C)\"] as? Int ?? nil\n            let fanSpeed: Int? = stats[\"Fan Speed(%)\"] as? Int ?? nil\n            let coreClock: Int? = stats[\"Core Clock(MHz)\"] as? Int ?? nil\n            let memoryClock: Int? = stats[\"Memory Clock(MHz)\"] as? Int ?? nil\n            \n            if ioClass == \"nvaccelerator\" || ioClass.contains(\"nvidia\") { // nvidia\n                predictModel = \"Nvidia Graphics\"\n                type = .discrete\n            } else if ioClass.contains(\"amd\") { // amd\n                predictModel = \"AMD Graphics\"\n                type = .discrete\n                \n                if temperature == nil || temperature == 0 {\n                    if let tmp = SMC.shared.getValue(\"TGDD\"), tmp != 128 {\n                        temperature = Int(tmp)\n                    }\n                }\n            } else if ioClass.contains(\"intel\") { // intel\n                predictModel = \"Intel Graphics\"\n                type = .integrated\n                \n                if temperature == nil || temperature == 0 {\n                    if let tmp = SMC.shared.getValue(\"TCGC\"), tmp != 128 {\n                        temperature = Int(tmp)\n                    }\n                }\n            } else if ioClass.contains(\"agx\") { // apple\n                predictModel = stats[\"model\"] as? String ?? \"Apple Graphics\"\n                if let display = self.displays.first(where: { $0.vendor == \"sppci_vendor_Apple\" }) {\n                    if let name = display.name {\n                        predictModel = name\n                    }\n                    if let num = display.cores {\n                        cores = num\n                    }\n                }\n                type = .integrated\n            } else {\n                predictModel = \"Unknown\"\n                type = .unknown\n            }\n            \n            if model == \"\" {\n                model = predictModel\n            }\n            if let v = vendor {\n                model = model.removedRegexMatches(pattern: v, replaceWith: \"\").trimmingCharacters(in: .whitespacesAndNewlines)\n            }\n            \n            if self.gpus.list.first(where: { $0.id == id }) == nil {\n                self.gpus.list.append(GPU_Info(\n                    id: id,\n                    type: type.rawValue,\n                    IOClass: IOClass,\n                    vendor: vendor,\n                    model: model,\n                    cores: cores\n                ))\n            }\n            guard let idx = self.gpus.list.firstIndex(where: { $0.id == id }) else {\n                return\n            }\n            \n            if let agcInfo = accelerator[\"AGCInfo\"] as? [String: Int], let state = agcInfo[\"poweredOffByAGC\"] {\n                self.gpus.list[idx].state = state == 0\n            }\n            \n            if var value = utilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].utilization = Double(value)/100\n            }\n            if var value = renderUtilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].renderUtilization = Double(value)/100\n            }\n            if var value = tilerUtilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].tilerUtilization = Double(value)/100\n            }\n            if let value = temperature {\n                self.gpus.list[idx].temperature = Double(value)\n            }\n            if let value = fanSpeed {\n                self.gpus.list[idx].fanSpeed = value\n            }\n            if let value = coreClock {\n                self.gpus.list[idx].coreClock = value\n            }\n            if let value = memoryClock {\n                self.gpus.list[idx].memoryClock = value\n            }\n        }\n        \n        #if arch(arm64)\n        let aneValue = self.readANEUtilization()\n        let fpsValue = self.readFrames()\n        for i in self.gpus.list.indices where self.gpus.list[i].IOClass.lowercased().contains(\"agx\") {\n            self.gpus.list[i].aneUtilization = aneValue ?? 0\n            self.gpus.list[i].fps = fpsValue\n        }\n        #endif\n        \n        self.gpus.list.sort{ !$0.state && $1.state }\n        self.callback(self.gpus)"
+    "parent": {
+      "attributes": [],
+      "body": {
+        "content": "guard let accelerators = fetchIOService(kIOAcceleratorClassName) else {\n            return\n        }\n        var devices = self.devices\n        \n        for (index, accelerator) in accelerators.enumerated() {\n            guard let IOClass = accelerator.object(forKey: \"IOClass\") as? String else {\n                error(\"IOClass not found\", log: self.log)\n                return\n            }\n            \n            guard let stats = accelerator[\"PerformanceStatistics\"] as? [String: Any] else {\n                error(\"PerformanceStatistics not found\", log: self.log)\n                return\n            }\n            \n            var id: String = \"\"\n            var vendor: String? = nil\n            var model: String = \"\"\n            var cores: Int? = nil\n            let accMatch = (accelerator[\"IOPCIMatch\"] as? String ?? accelerator[\"IOPCIPrimaryMatch\"] as? String ?? \"\").lowercased()\n            \n            for (i, device) in devices.enumerated() {\n                if accMatch.range(of: device.pci) != nil && !device.used {\n                    model = device.model\n                    vendor = device.vendor\n                    id = \"\\(model) #\\(index)\"\n                    devices[i].used = true\n                    break\n                }\n            }\n            \n            let ioClass = IOClass.lowercased()\n            var predictModel = \"\"\n            var type: GPU_types = .unknown\n            \n            let utilization: Int? = stats[\"Device Utilization %\"] as? Int ?? stats[\"GPU Activity(%)\"] as? Int ?? nil\n            let renderUtilization: Int? = stats[\"Renderer Utilization %\"] as? Int ?? nil\n            let tilerUtilization: Int? = stats[\"Tiler Utilization %\"] as? Int ?? nil\n            var temperature: Int? = stats[\"Temperature(C)\"] as? Int ?? nil\n            let fanSpeed: Int? = stats[\"Fan Speed(%)\"] as? Int ?? nil\n            let coreClock: Int? = stats[\"Core Clock(MHz)\"] as? Int ?? nil\n            let memoryClock: Int? = stats[\"Memory Clock(MHz)\"] as? Int ?? nil\n            \n            if ioClass == \"nvaccelerator\" || ioClass.contains(\"nvidia\") { // nvidia\n                predictModel = \"Nvidia Graphics\"\n                type = .discrete\n            } else if ioClass.contains(\"amd\") { // amd\n                predictModel = \"AMD Graphics\"\n                type = .discrete\n                \n                if temperature == nil || temperature == 0 {\n                    if let tmp = SMC.shared.getValue(\"TGDD\"), tmp != 128 {\n                        temperature = Int(tmp)\n                    }\n                }\n            } else if ioClass.contains(\"intel\") { // intel\n                predictModel = \"Intel Graphics\"\n                type = .integrated\n                \n                if temperature == nil || temperature == 0 {\n                    if let tmp = SMC.shared.getValue(\"TCGC\"), tmp != 128 {\n                        temperature = Int(tmp)\n                    }\n                }\n            } else if ioClass.contains(\"agx\") { // apple\n                predictModel = stats[\"model\"] as? String ?? \"Apple Graphics\"\n                if let display = self.displays.first(where: { $0.vendor == \"sppci_vendor_Apple\" }) {\n                    if let name = display.name {\n                        predictModel = name\n                    }\n                    if let num = display.cores {\n                        cores = num\n                    }\n                }\n                type = .integrated\n            } else {\n                predictModel = \"Unknown\"\n                type = .unknown\n            }\n            \n            if model == \"\" {\n                model = predictModel\n            }\n            if let v = vendor {\n                model = model.removedRegexMatches(pattern: v, replaceWith: \"\").trimmingCharacters(in: .whitespacesAndNewlines)\n            }\n            \n            if self.gpus.list.first(where: { $0.id == id }) == nil {\n                self.gpus.list.append(GPU_Info(\n                    id: id,\n                    type: type.rawValue,\n                    IOClass: IOClass,\n                    vendor: vendor,\n                    model: model,\n                    cores: cores\n                ))\n            }\n            guard let idx = self.gpus.list.firstIndex(where: { $0.id == id }) else {\n                return\n            }\n            \n            if let agcInfo = accelerator[\"AGCInfo\"] as? [String: Int], let state = agcInfo[\"poweredOffByAGC\"] {\n                self.gpus.list[idx].state = state == 0\n            }\n            \n            if var value = utilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].utilization = Double(value)/100\n            }\n            if var value = renderUtilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].renderUtilization = Double(value)/100\n            }\n            if var value = tilerUtilization {\n                if value > 100 {\n                    value = 100\n                }\n                self.gpus.list[idx].tilerUtilization = Double(value)/100\n            }\n            if let value = temperature {\n                self.gpus.list[idx].temperature = Double(value)\n            }\n            if let value = fanSpeed {\n                self.gpus.list[idx].fanSpeed = value\n            }\n            if let value = coreClock {\n                self.gpus.list[idx].coreClock = value\n            }\n            if let value = memoryClock {\n                self.gpus.list[idx].memoryClock = value\n            }\n        }\n        \n        #if arch(arm64)\n        let aneValue = self.readANEUtilization()\n        let fpsValue = self.readFrames()\n        for i in self.gpus.list.indices where self.gpus.list[i].IOClass.lowercased().contains(\"agx\") {\n            self.gpus.list[i].aneUtilization = aneValue ?? 0\n            self.gpus.list[i].fps = fpsValue\n        }\n        #endif\n        \n        self.gpus.list.sort{ !$0.state && $1.state }\n        self.callback(self.gpus)"
       },
-      "location_info" : {
-        "file_path" : "Modules/GPU/reader.swift",
-        "location" : {
-          "end_position" : 8722,
-          "start_position" : 2605
+      "location_info": {
+        "file_path": "Modules/GPU/reader.swift",
+        "location": {
+          "end_position": 8722,
+          "start_position": 2605,
+          "start_line": 81,
+          "end_line": 233
         }
       },
-      "modifiers" : [
+      "modifiers": [
         "public",
         "override"
       ],
-      "name" : "read",
-      "parameters" : [
-
-      ]
+      "name": "read",
+      "parameters": []
     },
-    "type" : "Remove statement refactoring"
+    "type": "Remove statement refactoring"
   },
-  "refactoringIndex" : 2,
-  "refactoringType" : "Remove statement refactoring",
-  "repoID" : "exelban-stats",
-  "repoName" : "exelban/stats",
-  "repoURL" : "https://github.com/exelban/stats.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 2,
+  "refactoringType": "Remove statement refactoring",
+  "repoID": "exelban-stats",
+  "repoName": "exelban/stats",
+  "repoURL": "https://github.com/exelban/stats.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Modules/GPU/reader.swift"
   ]
 }

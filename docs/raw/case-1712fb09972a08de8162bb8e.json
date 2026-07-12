@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-1712fb09972a08de8162bb8e",
-  "commitHash" : "e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
-  "commitMessage" : "Add WebSocketRequest Under @_spi(WebSocket) (#3455)\n\n### Goals :soccer:\r\nThis PR adds `WebSocketRequest`, an Alamofire wrapper around\r\n`URLSessionWebSocketTask`, as well as assorted functionality for dealing\r\nwith WebSockets. This includes:\r\n\r\n- Automatic listening: no more manual `listen` calls on the task.\r\n- Automatic ping support: ping the server automatically given an\r\ninterval.\r\n- Response serialization support: parse messages into objects, including\r\nusing `Decodable`.\r\n- Concurrency support: full streams of events and messages.\r\n\r\n### Implementation Details :construction:\r\n`WebSocketRequest` follows most of Alamofire's existing patterns. There\r\nare a few differences:\r\n\r\n- Closure vs. cancellation: web sockets can close expectedly, yet this\r\nclosure produces an error from `URLSession`. This had to be customized\r\nin order to ignore the error and allow the user to close a connection\r\nwith no additional issue.\r\n- Like `DataStreamRequest`, `WebSocketRequest` deals with incoming\r\nstreams of data. However, that data is already framed and then partially\r\ndecoded into `Message`s by `URLSession`, so serialization had to be\r\nbuilt at that level.\r\n- Unlike `DataStreamRequest`, `WebSocketRequest` can send `Message` back\r\nup the connection. This requires some queuing on the request side to\r\nensure messages sent before the connection is established are properly\r\nstored for sending.\r\n\r\n### Testing Details :mag:\r\nFull suite of `WebSocketTests` added, as well as the concurrency\r\nversions. Firewalk was updated with several new `websocket` cases to\r\nsupport scenarios like an echo server or expected ping count.\r\n\r\nP.S. This feature was delayed so long due to the many hours of\r\nfrustration I had to deal with when Apple shipped a message dropping bug\r\nin iOS 14.5 - 14.7. In trying to test the socket connections I would\r\nconnect to the test server, have it reply with a message, and then close\r\nthe connection. Shockingly that meant that *sometimes* the messages\r\nwouldn't come through. But sometimes they would. Investigating other web\r\nsocket clients and inspecting network traffic with Wireshark revealed\r\nthat the messages were being sent by the server but the client just\r\nwasn't receiving them. Further investigation showed that delaying the\r\nclose of the connection by 60ms or so let the client receive the message\r\nreliably. After many hours I finally had reliable tests! Only to then\r\ntest on the iOS 15 betas and see that I didn't need the delay at all,\r\nthe tests were reliable without it! Turns out it was just a bug in iOS\r\n14.5 - 14.7. I was so disgusted by this fact that I gave up on the\r\nfeature for years. I'll call out this bug in the documentation.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
-  "durationSeconds" : 15.012655973434448,
-  "entityNames" : [
+  "caseID": "case-1712fb09972a08de8162bb8e",
+  "commitHash": "e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "commitMessage": "Add WebSocketRequest Under @_spi(WebSocket) (#3455)\n\n### Goals :soccer:\r\nThis PR adds `WebSocketRequest`, an Alamofire wrapper around\r\n`URLSessionWebSocketTask`, as well as assorted functionality for dealing\r\nwith WebSockets. This includes:\r\n\r\n- Automatic listening: no more manual `listen` calls on the task.\r\n- Automatic ping support: ping the server automatically given an\r\ninterval.\r\n- Response serialization support: parse messages into objects, including\r\nusing `Decodable`.\r\n- Concurrency support: full streams of events and messages.\r\n\r\n### Implementation Details :construction:\r\n`WebSocketRequest` follows most of Alamofire's existing patterns. There\r\nare a few differences:\r\n\r\n- Closure vs. cancellation: web sockets can close expectedly, yet this\r\nclosure produces an error from `URLSession`. This had to be customized\r\nin order to ignore the error and allow the user to close a connection\r\nwith no additional issue.\r\n- Like `DataStreamRequest`, `WebSocketRequest` deals with incoming\r\nstreams of data. However, that data is already framed and then partially\r\ndecoded into `Message`s by `URLSession`, so serialization had to be\r\nbuilt at that level.\r\n- Unlike `DataStreamRequest`, `WebSocketRequest` can send `Message` back\r\nup the connection. This requires some queuing on the request side to\r\nensure messages sent before the connection is established are properly\r\nstored for sending.\r\n\r\n### Testing Details :mag:\r\nFull suite of `WebSocketTests` added, as well as the concurrency\r\nversions. Firewalk was updated with several new `websocket` cases to\r\nsupport scenarios like an echo server or expected ping count.\r\n\r\nP.S. This feature was delayed so long due to the many hours of\r\nfrustration I had to deal with when Apple shipped a message dropping bug\r\nin iOS 14.5 - 14.7. In trying to test the socket connections I would\r\nconnect to the test server, have it reply with a message, and then close\r\nthe connection. Shockingly that meant that *sometimes* the messages\r\nwouldn't come through. But sometimes they would. Investigating other web\r\nsocket clients and inspecting network traffic with Wireshark revealed\r\nthat the messages were being sent by the server but the client just\r\nwasn't receiving them. Further investigation showed that delaying the\r\nclose of the connection by 60ms or so let the client receive the message\r\nreliably. After many hours I finally had reliable tests! Only to then\r\ntest on the iOS 15 betas and see that I didn't need the delay at all,\r\nthe tests were reliable without it! Turns out it was just a bug in iOS\r\n14.5 - 14.7. I was so disgusted by this fact that I gave up on the\r\nfeature for years. I'll call out this bug in the documentation.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/e7d8c0d0d0c8085e02eda369e74ec613bc5d8d53",
+  "durationSeconds": 15.012655973434448,
+  "entityNames": [
     "@escaping () -> Void",
     "BaseTestCase",
     "Bool",
@@ -14,763 +14,655 @@
     "Session?",
     "SkipVersion"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "data_type" : {
-        "is_optional" : false,
-        "name" : "SkipVersion"
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "data_type": {
+        "is_optional": false,
+        "name": "SkipVersion"
       },
-      "getter_block" : {
-        "body" : {
-          "content" : ".none"
+      "getter_block": {
+        "body": {
+          "content": ".none"
         },
-        "modifier" : "get"
+        "modifier": "get"
       },
-      "is_constant" : false,
-      "location_info" : {
-        "file_path" : "Tests/BaseTestCase.swift",
-        "location" : {
-          "end_position" : 2017,
-          "start_position" : 1983
+      "is_constant": false,
+      "location_info": {
+        "file_path": "Tests/BaseTestCase.swift",
+        "location": {
+          "end_position": 2017,
+          "start_position": 1983,
+          "start_line": 59,
+          "end_line": 59
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "skipVersion"
+      "modifiers": [],
+      "name": "skipVersion"
     },
-    "parent" : {
-      "attributes" : [
-
-      ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+    "parent": {
+      "attributes": [],
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "XCTestCase"
+          "name": "XCTestCase"
         }
       ],
-      "enums" : [
+      "enums": [
         {
-          "attributes" : [
-
-          ],
-          "cases" : [
+          "attributes": [],
+          "cases": [
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 1330,
-                  "start_position" : 1310
+              "attributes": [],
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 1330,
+                  "start_position": 1310,
+                  "start_line": 30,
+                  "end_line": 31
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "twenty",
-              "parameters" : [
-
-              ]
+              "modifiers": [],
+              "name": "twenty",
+              "parameters": []
             },
             {
-              "attributes" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 1348,
-                  "start_position" : 1330
+              "attributes": [],
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 1348,
+                  "start_position": 1330,
+                  "start_line": 31,
+                  "end_line": 32
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "none",
-              "parameters" : [
-
-              ]
+              "modifiers": [],
+              "name": "none",
+              "parameters": []
             }
           ],
-          "classes" : [
-
-          ],
-          "conformed_types" : [
-
-          ],
-          "enums" : [
-
-          ],
-          "functions" : [
-
-          ],
-          "initializers" : [
-
-          ],
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 1938,
-              "start_position" : 1287
+          "classes": [],
+          "conformed_types": [],
+          "enums": [],
+          "functions": [],
+          "initializers": [],
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 1938,
+              "start_position": 1287,
+              "start_line": 29,
+              "end_line": 55
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "SkipVersion",
-          "protocols" : [
-
-          ],
-          "structs" : [
-
-          ],
-          "subscripts" : [
-
-          ],
-          "type_aliases" : [
-
-          ],
-          "variables" : [
+          "modifiers": [],
+          "name": "SkipVersion",
+          "protocols": [],
+          "structs": [],
+          "subscripts": [],
+          "type_aliases": [],
+          "variables": [
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Bool"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Bool"
               },
-              "getter_block" : {
-                "body" : {
-                  "content" : "switch self {\n            case .twenty:\n                if #available(macOS 11, iOS 14, tvOS 14, watchOS 7, *) {\n                    return false\n                } else {\n                    return true\n                }\n            case .none:\n                return false\n            }"
+              "getter_block": {
+                "body": {
+                  "content": "switch self {\n            case .twenty:\n                if #available(macOS 11, iOS 14, tvOS 14, watchOS 7, *) {\n                    return false\n                } else {\n                    return true\n                }\n            case .none:\n                return false\n            }"
                 },
-                "modifier" : "get"
+                "modifier": "get"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 1690,
-                  "start_position" : 1362
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 1690,
+                  "start_position": 1362,
+                  "start_line": 34,
+                  "end_line": 45
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "shouldSkip"
+              "modifiers": [],
+              "name": "shouldSkip"
             },
             {
-              "accessors" : [
-
-              ],
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "String"
+              "accessors": [],
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "String"
               },
-              "getter_block" : {
-                "body" : {
-                  "content" : "switch self {\n            case .twenty:\n                return \"Skipped due to being iOS 13 or below.\"\n            case .none:\n                return \"This should never skip.\"\n            }"
+              "getter_block": {
+                "body": {
+                  "content": "switch self {\n            case .twenty:\n                return \"Skipped due to being iOS 13 or below.\"\n            case .none:\n                return \"This should never skip.\"\n            }"
                 },
-                "modifier" : "get"
+                "modifier": "get"
               },
-              "is_constant" : false,
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 1932,
-                  "start_position" : 1704
+              "is_constant": false,
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 1932,
+                  "start_position": 1704,
+                  "start_line": 47,
+                  "end_line": 54
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "reason"
+              "modifiers": [],
+              "name": "reason"
             }
           ]
         }
       ],
-      "functions" : [
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "FileManager.createDirectory(at: testDirectoryURL)\n\n        super.setUp()"
+          "attributes": [],
+          "body": {
+            "content": "FileManager.createDirectory(at: testDirectoryURL)\n\n        super.setUp()"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2401,
-              "start_position" : 2285
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2401,
+              "start_position": 2285,
+              "start_line": 69,
+              "end_line": 75
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "setUp",
-          "parameters" : [
-
-          ]
+          "name": "setUp",
+          "parameters": []
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "try XCTSkipIf(skipVersion.shouldSkip, skipVersion.reason)\n\n        try super.setUpWithError()"
+          "attributes": [],
+          "body": {
+            "content": "try XCTSkipIf(skipVersion.shouldSkip, skipVersion.reason)\n\n        try super.setUpWithError()"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2554,
-              "start_position" : 2401
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2554,
+              "start_position": 2401,
+              "start_line": 75,
+              "end_line": 81
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "setUpWithError",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "name": "setUpWithError",
+          "parameters": [],
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "session = nil\n        FileManager.removeAllItemsInsideDirectory(at: testDirectoryURL)\n        clearCredentials()\n        clearCookies()\n\n        super.tearDown()"
+          "attributes": [],
+          "body": {
+            "content": "session = nil\n        FileManager.removeAllItemsInsideDirectory(at: testDirectoryURL)\n        clearCredentials()\n        clearCookies()\n\n        super.tearDown()"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2762,
-              "start_position" : 2554
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2762,
+              "start_position": 2554,
+              "start_line": 81,
+              "end_line": 90
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "override"
           ],
-          "name" : "tearDown",
-          "parameters" : [
-
-          ]
+          "name": "tearDown",
+          "parameters": []
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "storage.cookies?.forEach { storage.deleteCookie($0) }"
+          "attributes": [],
+          "body": {
+            "content": "storage.cookies?.forEach { storage.deleteCookie($0) }"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2897,
-              "start_position" : 2762
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2897,
+              "start_position": 2762,
+              "start_line": 90,
+              "end_line": 94
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "clearCookies",
-          "parameters" : [
+          "modifiers": [],
+          "name": "clearCookies",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "HTTPCookieStorage"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "HTTPCookieStorage"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "reference" : {
-                    "arguments" : [
-
-                    ],
-                    "name" : "shared"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "reference": {
+                    "arguments": [],
+                    "name": "shared"
                   }
                 }
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 2826,
-                  "start_position" : 2786
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 2826,
+                  "start_position": 2786,
+                  "start_line": 92,
+                  "end_line": 92
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "storage",
-              "order" : 0
+              "modifiers": [],
+              "name": "storage",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "for (protectionSpace, credentials) in storage.allCredentials {\n            for (_, credential) in credentials {\n                storage.remove(credential, for: protectionSpace)\n            }\n        }"
+          "attributes": [],
+          "body": {
+            "content": "for (protectionSpace, credentials) in storage.allCredentials {\n            for (_, credential) in credentials {\n                storage.remove(credential, for: protectionSpace)\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 3186,
-              "start_position" : 2897
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 3186,
+              "start_position": 2897,
+              "start_line": 94,
+              "end_line": 102
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "clearCredentials",
-          "parameters" : [
+          "modifiers": [],
+          "name": "clearCredentials",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "URLCredentialStorage"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "URLCredentialStorage"
               },
-              "initializer_clause" : {
-                "has_self_reference" : false,
-                "value" : {
-                  "reference" : {
-                    "arguments" : [
-
-                    ],
-                    "name" : "shared"
+              "initializer_clause": {
+                "has_self_reference": false,
+                "value": {
+                  "reference": {
+                    "arguments": [],
+                    "name": "shared"
                   }
                 }
               },
-              "is_variadic" : false,
-              "label" : "for",
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 2968,
-                  "start_position" : 2925
+              "is_variadic": false,
+              "label": "for",
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 2968,
+                  "start_position": 2925,
+                  "start_line": 96,
+                  "end_line": 96
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "storage",
-              "order" : 0
+              "modifiers": [],
+              "name": "storage",
+              "order": 0
             }
           ]
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "Bundle.test.url(forResource: fileName, withExtension: ext)!"
+          "attributes": [],
+          "body": {
+            "content": "Bundle.test.url(forResource: fileName, withExtension: ext)!"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 3340,
-              "start_position" : 3186
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 3340,
+              "start_position": 3186,
+              "start_line": 102,
+              "end_line": 106
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "url",
-          "parameters" : [
+          "modifiers": [],
+          "name": "url",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "String"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "String"
               },
-              "is_variadic" : false,
-              "label" : "forResource",
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 3231,
-                  "start_position" : 3201
+              "is_variadic": false,
+              "label": "forResource",
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 3231,
+                  "start_position": 3201,
+                  "start_line": 104,
+                  "end_line": 104
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "fileName",
-              "order" : 0
+              "modifiers": [],
+              "name": "fileName",
+              "order": 0
             },
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "String"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "String"
               },
-              "is_variadic" : false,
-              "label" : "withExtension",
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 3256,
-                  "start_position" : 3231
+              "is_variadic": false,
+              "label": "withExtension",
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 3256,
+                  "start_position": 3231,
+                  "start_line": 104,
+                  "end_line": 104
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "ext",
-              "order" : 1
+              "modifiers": [],
+              "name": "ext",
+              "order": 1
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "URL"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "URL"
             },
-            "description" : "-> URL"
+            "description": "-> URL"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "self.session = session\n\n        return session"
+          "attributes": [],
+          "body": {
+            "content": "self.session = session\n\n        return session"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 3451,
-              "start_position" : 3340
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 3451,
+              "start_position": 3340,
+              "start_line": 106,
+              "end_line": 112
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "stored",
-          "parameters" : [
+          "modifiers": [],
+          "name": "stored",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "Session"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "Session"
               },
-              "is_variadic" : false,
-              "label" : "_",
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 3376,
-                  "start_position" : 3358
+              "is_variadic": false,
+              "label": "_",
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 3376,
+                  "start_position": 3358,
+                  "start_line": 108,
+                  "end_line": 108
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "session",
-              "order" : 0
+              "modifiers": [],
+              "name": "session",
+              "order": 0
             }
           ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "Session"
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "Session"
             },
-            "description" : "-> Session"
+            "description": "-> Session"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let expect = expectation(description: \"all assertions are complete\")\n\n        queue.async {\n            assertions()\n            expect.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)"
+          "attributes": [],
+          "body": {
+            "content": "let expect = expectation(description: \"all assertions are complete\")\n\n        queue.async {\n            assertions()\n            expect.fulfill()\n        }\n\n        waitForExpectations(timeout: timeout)"
           },
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 3965,
-              "start_position" : 3451
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 3965,
+              "start_position": 3451,
+              "start_line": 112,
+              "end_line": 128
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "assert",
-          "parameters" : [
+          "modifiers": [],
+          "name": "assert",
+          "parameters": [
             {
-              "attributes" : [
-
-              ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "DispatchQueue"
+              "attributes": [],
+              "data_type": {
+                "is_optional": false,
+                "name": "DispatchQueue"
               },
-              "is_variadic" : false,
-              "label" : "on",
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 3713,
-                  "start_position" : 3688
+              "is_variadic": false,
+              "label": "on",
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 3713,
+                  "start_position": 3688,
+                  "start_line": 119,
+                  "end_line": 119
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "queue",
-              "order" : 0
+              "modifiers": [],
+              "name": "queue",
+              "order": 0
             },
             {
-              "attributes" : [
+              "attributes": [
                 {
-                  "annotation" : {
-                    "escaping" : {
-
-                    }
+                  "annotation": {
+                    "escaping": {}
                   },
-                  "arguments" : [
-
-                  ]
+                  "arguments": []
                 }
               ],
-              "data_type" : {
-                "is_optional" : false,
-                "name" : "@escaping () -> Void"
+              "data_type": {
+                "is_optional": false,
+                "name": "@escaping () -> Void"
               },
-              "is_variadic" : false,
-              "location_info" : {
-                "file_path" : "Tests/BaseTestCase.swift",
-                "location" : {
-                  "end_position" : 3745,
-                  "start_position" : 3713
+              "is_variadic": false,
+              "location_info": {
+                "file_path": "Tests/BaseTestCase.swift",
+                "location": {
+                  "end_position": 3745,
+                  "start_position": 3713,
+                  "start_line": 119,
+                  "end_line": 119
                 }
               },
-              "modifiers" : [
-
-              ],
-              "name" : "assertions",
-              "order" : 1
+              "modifiers": [],
+              "name": "assertions",
+              "order": 1
             }
           ]
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/BaseTestCase.swift",
-        "location" : {
-          "end_position" : 3967,
-          "start_position" : 1253
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/BaseTestCase.swift",
+        "location": {
+          "end_position": 3967,
+          "start_position": 1253,
+          "start_line": 27,
+          "end_line": 129
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "BaseTestCase",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
+      "modifiers": [],
+      "name": "BaseTestCase",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": [
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "TimeInterval"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "TimeInterval"
           },
-          "initializer_clause" : {
-            "has_self_reference" : false,
-            "value" : {
-              "other" : {
-                "_0" : "3"
+          "initializer_clause": {
+            "has_self_reference": false,
+            "value": {
+              "other": {
+                "_0": "3"
               }
             }
           },
-          "is_constant" : true,
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 1973,
-              "start_position" : 1948
+          "is_constant": true,
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 1973,
+              "start_position": 1948,
+              "start_line": 57,
+              "end_line": 57
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "timeout"
+          "modifiers": [],
+          "name": "timeout"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "SkipVersion"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "SkipVersion"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : ".none"
+          "getter_block": {
+            "body": {
+              "content": ".none"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2017,
-              "start_position" : 1983
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2017,
+              "start_position": 1983,
+              "start_line": 59,
+              "end_line": 59
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "skipVersion"
+          "modifiers": [],
+          "name": "skipVersion"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "URL"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "URL"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "FileManager.temporaryDirectoryURL.appendingPathComponent(\"org.alamofire.tests\")"
+          "getter_block": {
+            "body": {
+              "content": "FileManager.temporaryDirectoryURL.appendingPathComponent(\"org.alamofire.tests\")"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2144,
-              "start_position" : 2027
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2144,
+              "start_position": 2027,
+              "start_line": 61,
+              "end_line": 63
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testDirectoryURL"
+          "modifiers": [],
+          "name": "testDirectoryURL"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : false,
-            "name" : "URL"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": false,
+            "name": "URL"
           },
-          "getter_block" : {
-            "body" : {
-              "content" : "testDirectoryURL.appendingPathComponent(UUID().uuidString)"
+          "getter_block": {
+            "body": {
+              "content": "testDirectoryURL.appendingPathComponent(UUID().uuidString)"
             },
-            "modifier" : "get"
+            "modifier": "get"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2250,
-              "start_position" : 2154
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2250,
+              "start_position": 2154,
+              "start_line": 65,
+              "end_line": 67
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "temporaryFileURL"
+          "modifiers": [],
+          "name": "temporaryFileURL"
         },
         {
-          "accessors" : [
-
-          ],
-          "attributes" : [
-
-          ],
-          "data_type" : {
-            "is_optional" : true,
-            "name" : "Session?"
+          "accessors": [],
+          "attributes": [],
+          "data_type": {
+            "is_optional": true,
+            "name": "Session?"
           },
-          "is_constant" : false,
-          "location_info" : {
-            "file_path" : "Tests/BaseTestCase.swift",
-            "location" : {
-              "end_position" : 2285,
-              "start_position" : 2268
+          "is_constant": false,
+          "location_info": {
+            "file_path": "Tests/BaseTestCase.swift",
+            "location": {
+              "end_position": 2285,
+              "start_position": 2268,
+              "start_line": 69,
+              "end_line": 69
             }
           },
-          "modifiers" : [
+          "modifiers": [
             "private"
           ],
-          "name" : "session"
+          "name": "session"
         }
       ]
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 36,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 36,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/BaseTestCase.swift"
   ]
 }

@@ -1,10 +1,10 @@
 {
-  "caseID" : "case-9f8c449a8a9b993f57fdfe6e",
-  "commitHash" : "69a2505aeb815538ca0732b59c1e3ec2da127c25",
-  "commitMessage" : "Migrates container run integration tests. (#1857)\n\n- Part of #1833.",
-  "commitURL" : "https://github.com/apple/container/commit/69a2505aeb815538ca0732b59c1e3ec2da127c25",
-  "durationSeconds" : 7.4378420114517212,
-  "entityNames" : [
+  "caseID": "case-9f8c449a8a9b993f57fdfe6e",
+  "commitHash": "69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "commitMessage": "Migrates container run integration tests. (#1857)\n\n- Part of #1833.",
+  "commitURL": "https://github.com/apple/container/commit/69a2505aeb815538ca0732b59c1e3ec2da127c25",
+  "durationSeconds": 7.437842011451721,
+  "entityNames": [
     "CLITest",
     "String",
     "String?",
@@ -14,503 +14,437 @@
     "getTestName",
     "testForwardTCP"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "old_content" : {
-      "attributes" : [
+  "rawRefactoring": {
+    "category": "basic",
+    "old_content": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "Suite"
+          "annotation": {
+            "unsupported": {
+              "_0": "Suite"
             }
           },
-          "arguments" : [
+          "arguments": [
             {
-              "value" : ".serialSuites"
+              "value": ".serialSuites"
             }
           ]
         }
       ],
-      "classes" : [
-
-      ],
-      "conformed_types" : [
+      "classes": [],
+      "conformed_types": [
         {
-          "name" : "CLITest"
+          "name": "CLITest"
         }
       ],
-      "enums" : [
-
-      ],
-      "functions" : [
+      "enums": [],
+      "functions": [
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "Test.current!.name.trimmingCharacters(in: [\"(\", \")\"]).lowercased()"
+          "attributes": [],
+          "body": {
+            "content": "Test.current!.name.trimmingCharacters(in: [\"(\", \")\"]).lowercased()"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 23874,
-              "start_position" : 23758
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 23874,
+              "start_position": 23758,
+              "start_line": 598,
+              "end_line": 601
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "getTestName",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "String"
+          "modifiers": [],
+          "name": "getTestName",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "String"
             },
-            "description" : "-> String"
+            "description": "-> String"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "getTestName().lowercased()"
+          "attributes": [],
+          "body": {
+            "content": "getTestName().lowercased()"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 23961,
-              "start_position" : 23874
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 23961,
+              "start_position": 23874,
+              "start_line": 601,
+              "end_line": 605
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "getLowercasedTestName",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : false,
-              "name" : "String"
+          "modifiers": [],
+          "name": "getLowercasedTestName",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": false,
+              "name": "String"
             },
-            "description" : "-> String"
+            "description": "-> String"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "do {\n            let name = getTestName()\n            try doLongRun(name: name, args: [])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let output = try doExec(name: name, cmd: [\"cat\", \"/etc/resolv.conf\"])\n            let actualLines = output.components(separatedBy: .newlines)\n                .filter { !$0.isEmpty }\n                .map { $0.components(separatedBy: .whitespaces) }\n                .map { $0.joined(separator: \" \") }\n\n            let inspectOutput = try inspectContainer(name)\n            let ip = inspectOutput.networks[0].ipv4Address.address\n            let expectedNameserver = IPv4Address((ip.value & Prefix(length: 24)!.prefixMask32) + 1).description\n            let defaultDomain = try getDefaultDomain()\n            let expectedLines: [String] = [\n                \"nameserver \\(expectedNameserver)\",\n                defaultDomain.map { \"domain \\($0)\" },\n            ].compactMap { $0 }\n\n            #expect(expectedLines == actualLines)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
+          "body": {
+            "content": "do {\n            let name = getTestName()\n            try doLongRun(name: name, args: [])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let output = try doExec(name: name, cmd: [\"cat\", \"/etc/resolv.conf\"])\n            let actualLines = output.components(separatedBy: .newlines)\n                .filter { !$0.isEmpty }\n                .map { $0.components(separatedBy: .whitespaces) }\n                .map { $0.joined(separator: \" \") }\n\n            let inspectOutput = try inspectContainer(name)\n            let ip = inspectOutput.networks[0].ipv4Address.address\n            let expectedNameserver = IPv4Address((ip.value & Prefix(length: 24)!.prefixMask32) + 1).description\n            let defaultDomain = try getDefaultDomain()\n            let expectedLines: [String] = [\n                \"nameserver \\(expectedNameserver)\",\n                defaultDomain.map { \"domain \\($0)\" },\n            ].compactMap { $0 }\n\n            #expect(expectedLines == actualLines)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 25145,
-              "start_position" : 23961
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 25145,
+              "start_position": 23961,
+              "start_line": 605,
+              "end_line": 635
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testRunCommandDefaultResolvConf",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testRunCommandDefaultResolvConf",
+          "parameters": [],
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "do {\n            let expectedDns: String = \"8.8.8.8\"\n            let expectedDomain = \"example.com\"\n            let expectedSearch = \"test.com\"\n            let expectedOption = \"debug\"\n            let name = getTestName()\n            try doLongRun(\n                name: name,\n                args: [\n                    \"--dns\", expectedDns,\n                    \"--dns-domain\", expectedDomain,\n                    \"--dns-search\", expectedSearch,\n                    \"--dns-option\", expectedOption,\n                ])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let output = try doExec(name: name, cmd: [\"cat\", \"/etc/resolv.conf\"])\n            let actualLines = output.components(separatedBy: .newlines)\n                .filter { !$0.isEmpty }\n                .map { $0.components(separatedBy: .whitespaces) }\n                .map { $0.joined(separator: \" \") }\n\n            let expectedLines: [String] = [\n                \"nameserver \\(expectedDns)\",\n                \"domain \\(expectedDomain)\",\n                \"search \\(expectedSearch)\",\n                \"options \\(expectedOption)\",\n            ]\n            #expect(expectedLines == actualLines)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
+          "body": {
+            "content": "do {\n            let expectedDns: String = \"8.8.8.8\"\n            let expectedDomain = \"example.com\"\n            let expectedSearch = \"test.com\"\n            let expectedOption = \"debug\"\n            let name = getTestName()\n            try doLongRun(\n                name: name,\n                args: [\n                    \"--dns\", expectedDns,\n                    \"--dns-domain\", expectedDomain,\n                    \"--dns-search\", expectedSearch,\n                    \"--dns-option\", expectedOption,\n                ])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let output = try doExec(name: name, cmd: [\"cat\", \"/etc/resolv.conf\"])\n            let actualLines = output.components(separatedBy: .newlines)\n                .filter { !$0.isEmpty }\n                .map { $0.components(separatedBy: .whitespaces) }\n                .map { $0.joined(separator: \" \") }\n\n            let expectedLines: [String] = [\n                \"nameserver \\(expectedDns)\",\n                \"domain \\(expectedDomain)\",\n                \"search \\(expectedSearch)\",\n                \"options \\(expectedOption)\",\n            ]\n            #expect(expectedLines == actualLines)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 26520,
-              "start_position" : 25145
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 26520,
+              "start_position": 25145,
+              "start_line": 635,
+              "end_line": 673
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testRunCommandNonDefaultResolvConf",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testRunCommandNonDefaultResolvConf",
+          "parameters": [],
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "do {\n            let name = getTestName()\n            try doLongRun(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n\n            let inspectOutput = try inspectContainer(name)\n            let ip = inspectOutput.networks[0].ipv4Address.address\n\n            let output = try doExec(name: name, cmd: [\"cat\", \"/etc/hosts\"])\n            let lines = output.split(separator: \"\\n\")\n\n            let expectedEntries = [(\"127.0.0.1\", \"localhost\"), (ip.description, name)]\n\n            for (i, line) in lines.enumerated() {\n                let words = line.split(separator: \" \").map { String($0) }\n                #expect(words.count >= 2, \"expected /etc/hosts entry to have 2 or more entries\")\n                let expected = expectedEntries[i]\n                #expect(expected.0 == words[0], \"expected /etc/hosts entries IP to be \\(expected.0), instead got \\(words[0])\")\n                #expect(expected.1 == words[1], \"expected /etc/hosts entries host to be \\(expected.1), instead got \\(words[1])\")\n            }\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
+          "body": {
+            "content": "do {\n            let name = getTestName()\n            try doLongRun(name: name)\n            defer {\n                try? doStop(name: name)\n            }\n\n            let inspectOutput = try inspectContainer(name)\n            let ip = inspectOutput.networks[0].ipv4Address.address\n\n            let output = try doExec(name: name, cmd: [\"cat\", \"/etc/hosts\"])\n            let lines = output.split(separator: \"\\n\")\n\n            let expectedEntries = [(\"127.0.0.1\", \"localhost\"), (ip.description, name)]\n\n            for (i, line) in lines.enumerated() {\n                let words = line.split(separator: \" \").map { String($0) }\n                #expect(words.count >= 2, \"expected /etc/hosts entry to have 2 or more entries\")\n                let expected = expectedEntries[i]\n                #expect(expected.0 == words[0], \"expected /etc/hosts entries IP to be \\(expected.0), instead got \\(words[0])\")\n                #expect(expected.1 == words[1], \"expected /etc/hosts entries host to be \\(expected.1), instead got \\(words[1])\")\n            }\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 27738,
-              "start_position" : 26520
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 27738,
+              "start_position": 26520,
+              "start_line": 673,
+              "end_line": 702
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testRunDefaultHostsEntries",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testRunDefaultHostsEntries",
+          "parameters": [],
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "let retries = 10\n        let retryDelaySeconds = Int64(3)\n        do {\n            let name = getLowercasedTestName()\n            let proxyIp = \"127.0.0.1\"\n            let proxyPort = UInt16.random(in: 50000..<55000)\n            let serverPort = UInt16.random(in: 55000..<60000)\n            try doLongRun(\n                name: name,\n                image: \"docker.io/library/python:alpine\",\n                args: [\"--publish\", \"\\(proxyIp):\\(proxyPort):\\(serverPort)/tcp\"],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(serverPort)\"])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let url = \"http://\\(proxyIp):\\(proxyPort)\"\n            var request = HTTPClientRequest(url: url)\n            request.method = .GET\n            let config = HTTPClient.Configuration(proxy: nil)\n            let client = HTTPClient(eventLoopGroupProvider: .singleton, configuration: config)\n            defer { _ = client.shutdown() }\n            var retriesRemaining = retries\n            var success = false\n            while !success && retriesRemaining > 0 {\n                do {\n                    let response = try await client.execute(request, timeout: .seconds(retryDelaySeconds))\n                    try #require(response.status == .ok)\n                    success = true\n                    print(\"request to \\(url) succeeded\")\n                } catch {\n                    print(\"request to \\(url) failed, error \\(error)\")\n                    try await Task.sleep(for: .seconds(retryDelaySeconds))\n                }\n                retriesRemaining -= 1\n            }\n            try #require(success, \"Request to \\(url) failed after \\(retries - retriesRemaining) retries\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
+          "body": {
+            "content": "let retries = 10\n        let retryDelaySeconds = Int64(3)\n        do {\n            let name = getLowercasedTestName()\n            let proxyIp = \"127.0.0.1\"\n            let proxyPort = UInt16.random(in: 50000..<55000)\n            let serverPort = UInt16.random(in: 55000..<60000)\n            try doLongRun(\n                name: name,\n                image: \"docker.io/library/python:alpine\",\n                args: [\"--publish\", \"\\(proxyIp):\\(proxyPort):\\(serverPort)/tcp\"],\n                containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(serverPort)\"])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let url = \"http://\\(proxyIp):\\(proxyPort)\"\n            var request = HTTPClientRequest(url: url)\n            request.method = .GET\n            let config = HTTPClient.Configuration(proxy: nil)\n            let client = HTTPClient(eventLoopGroupProvider: .singleton, configuration: config)\n            defer { _ = client.shutdown() }\n            var retriesRemaining = retries\n            var success = false\n            while !success && retriesRemaining > 0 {\n                do {\n                    let response = try await client.execute(request, timeout: .seconds(retryDelaySeconds))\n                    try #require(response.status == .ok)\n                    success = true\n                    print(\"request to \\(url) succeeded\")\n                } catch {\n                    print(\"request to \\(url) failed, error \\(error)\")\n                    try await Task.sleep(for: .seconds(retryDelaySeconds))\n                }\n                retriesRemaining -= 1\n            }\n            try #require(success, \"Request to \\(url) failed after \\(retries - retriesRemaining) retries\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 29691,
-              "start_position" : 27738
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 29691,
+              "start_position": 27738,
+              "start_line": 702,
+              "end_line": 747
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testForwardTCP",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testForwardTCP",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "let range = UInt16(10)\n        for portOffset in 0..<range {\n            let retries = 10\n            let retryDelaySeconds = Int64(3)\n            do {\n                let name = getLowercasedTestName()\n                let proxyIp = \"127.0.0.1\"\n                let proxyPortStart = UInt16.random(in: 50000..<55000)\n                let serverPortStart = UInt16.random(in: 55000..<60000)\n                let proxyPortEnd = proxyPortStart + range\n                let serverPortEnd = serverPortStart + range\n                try doLongRun(\n                    name: name,\n                    image: \"docker.io/library/python:alpine\",\n                    args: [\"--publish\", \"\\(proxyIp):\\(proxyPortStart)-\\(proxyPortEnd):\\(serverPortStart)-\\(serverPortEnd)/tcp\"],\n                    containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(serverPortStart + portOffset)\"])\n                defer {\n                    try? doStop(name: name)\n                }\n\n                let url = \"http://\\(proxyIp):\\(proxyPortStart + portOffset)\"\n                var request = HTTPClientRequest(url: url)\n                request.method = .GET\n                let config = HTTPClient.Configuration(proxy: nil)\n                let client = HTTPClient(eventLoopGroupProvider: .singleton, configuration: config)\n                defer { _ = client.shutdown() }\n                var retriesRemaining = retries\n                var success = false\n                while !success && retriesRemaining > 0 {\n                    do {\n                        let response = try await client.execute(request, timeout: .seconds(retryDelaySeconds))\n                        try #require(response.status == .ok)\n                        success = true\n                        print(\"request to \\(url) succeeded\")\n                    } catch {\n                        print(\"request to \\(url) failed, error: \\(error)\")\n                        try await Task.sleep(for: .seconds(retryDelaySeconds))\n                    }\n                    retriesRemaining -= 1\n                }\n                try #require(success, \"Request to \\(url) failed after \\(retries - retriesRemaining) retries\")\n                try doStop(name: name)\n            } catch {\n                Issue.record(\"failed to run container \\(error)\")\n                return\n            }\n        }"
+          "body": {
+            "content": "let range = UInt16(10)\n        for portOffset in 0..<range {\n            let retries = 10\n            let retryDelaySeconds = Int64(3)\n            do {\n                let name = getLowercasedTestName()\n                let proxyIp = \"127.0.0.1\"\n                let proxyPortStart = UInt16.random(in: 50000..<55000)\n                let serverPortStart = UInt16.random(in: 55000..<60000)\n                let proxyPortEnd = proxyPortStart + range\n                let serverPortEnd = serverPortStart + range\n                try doLongRun(\n                    name: name,\n                    image: \"docker.io/library/python:alpine\",\n                    args: [\"--publish\", \"\\(proxyIp):\\(proxyPortStart)-\\(proxyPortEnd):\\(serverPortStart)-\\(serverPortEnd)/tcp\"],\n                    containerArgs: [\"python3\", \"-m\", \"http.server\", \"--bind\", \"0.0.0.0\", \"\\(serverPortStart + portOffset)\"])\n                defer {\n                    try? doStop(name: name)\n                }\n\n                let url = \"http://\\(proxyIp):\\(proxyPortStart + portOffset)\"\n                var request = HTTPClientRequest(url: url)\n                request.method = .GET\n                let config = HTTPClient.Configuration(proxy: nil)\n                let client = HTTPClient(eventLoopGroupProvider: .singleton, configuration: config)\n                defer { _ = client.shutdown() }\n                var retriesRemaining = retries\n                var success = false\n                while !success && retriesRemaining > 0 {\n                    do {\n                        let response = try await client.execute(request, timeout: .seconds(retryDelaySeconds))\n                        try #require(response.status == .ok)\n                        success = true\n                        print(\"request to \\(url) succeeded\")\n                    } catch {\n                        print(\"request to \\(url) failed, error: \\(error)\")\n                        try await Task.sleep(for: .seconds(retryDelaySeconds))\n                    }\n                    retriesRemaining -= 1\n                }\n                try #require(success, \"Request to \\(url) failed after \\(retries - retriesRemaining) retries\")\n                try doStop(name: name)\n            } catch {\n                Issue.record(\"failed to run container \\(error)\")\n                return\n            }\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 32104,
-              "start_position" : 29691
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 32104,
+              "start_position": 29691,
+              "start_line": 747,
+              "end_line": 797
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testForwardTCPPortRange",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testForwardTCPPortRange",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "available" : {
-
-                }
+              "annotation": {
+                "available": {}
               },
-              "arguments" : [
+              "arguments": [
                 {
-                  "label" : "macOS",
-                  "value" : "26"
+                  "label": "macOS",
+                  "value": "26"
                 },
                 {
-                  "value" : ","
+                  "value": ","
                 },
                 {
-                  "value" : "*"
+                  "value": "*"
                 }
               ]
             },
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "let retries = 10\n        let retryDelaySeconds = Int64(3)\n        do {\n            let name = getLowercasedTestName()\n            let proxyIp = \"[::1]\"\n            let proxyPort = UInt16.random(in: 50000..<55000)\n            let serverPort = UInt16.random(in: 55000..<60000)\n            try doLongRun(\n                name: name,\n                image: \"docker.io/library/node:alpine\",\n                args: [\"--publish\", \"\\(proxyIp):\\(proxyPort):\\(serverPort)/tcp\"],\n                containerArgs: [\"npx\", \"http-server\", \"-a\", \"::\", \"-p\", \"\\(serverPort)\"])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let url = \"http://\\(proxyIp):\\(proxyPort)\"\n            var request = HTTPClientRequest(url: url)\n            request.method = .GET\n            let config = HTTPClient.Configuration(proxy: nil)\n            let client = HTTPClient(eventLoopGroupProvider: .singleton, configuration: config)\n            defer { _ = client.shutdown() }\n            var retriesRemaining = retries\n            var success = false\n            while !success && retriesRemaining > 0 {\n                do {\n                    let response = try await client.execute(request, timeout: .seconds(retryDelaySeconds))\n                    try #require(response.status == .ok)\n                    success = true\n                    print(\"request to \\(url) succeeded\")\n                } catch {\n                    print(\"request to \\(url) failed, error \\(error)\")\n                    try await Task.sleep(for: .seconds(retryDelaySeconds))\n                }\n                retriesRemaining -= 1\n            }\n            try #require(success, \"Request to \\(url) failed after \\(retries - retriesRemaining) retries\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
+          "body": {
+            "content": "let retries = 10\n        let retryDelaySeconds = Int64(3)\n        do {\n            let name = getLowercasedTestName()\n            let proxyIp = \"[::1]\"\n            let proxyPort = UInt16.random(in: 50000..<55000)\n            let serverPort = UInt16.random(in: 55000..<60000)\n            try doLongRun(\n                name: name,\n                image: \"docker.io/library/node:alpine\",\n                args: [\"--publish\", \"\\(proxyIp):\\(proxyPort):\\(serverPort)/tcp\"],\n                containerArgs: [\"npx\", \"http-server\", \"-a\", \"::\", \"-p\", \"\\(serverPort)\"])\n            defer {\n                try? doStop(name: name)\n            }\n\n            let url = \"http://\\(proxyIp):\\(proxyPort)\"\n            var request = HTTPClientRequest(url: url)\n            request.method = .GET\n            let config = HTTPClient.Configuration(proxy: nil)\n            let client = HTTPClient(eventLoopGroupProvider: .singleton, configuration: config)\n            defer { _ = client.shutdown() }\n            var retriesRemaining = retries\n            var success = false\n            while !success && retriesRemaining > 0 {\n                do {\n                    let response = try await client.execute(request, timeout: .seconds(retryDelaySeconds))\n                    try #require(response.status == .ok)\n                    success = true\n                    print(\"request to \\(url) succeeded\")\n                } catch {\n                    print(\"request to \\(url) failed, error \\(error)\")\n                    try await Task.sleep(for: .seconds(retryDelaySeconds))\n                }\n                retriesRemaining -= 1\n            }\n            try #require(success, \"Request to \\(url) failed after \\(retries - retriesRemaining) retries\")\n            try doStop(name: name)\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 34068,
-              "start_position" : 32104
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 34068,
+              "start_position": 32104,
+              "start_line": 797,
+              "end_line": 843
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testForwardTCPv6",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "async_specifier" : "async",
-            "description" : "async throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testForwardTCPv6",
+          "parameters": [],
+          "specifiers_decl": {
+            "async_specifier": "async",
+            "description": "async throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "do {\n            let name = getTestName()\n            let pipePath = FileManager.default.temporaryDirectory.appendingPathComponent(\"envfile-pipe\\(UUID().uuidString)\")\n\n            // create pipe\n            let result = mkfifo(pipePath.path(), 0o600)\n            guard result == 0 else {\n                Issue.record(\"failed to create named pipe: \\(String(cString: strerror(errno)))\")\n                return\n            }\n\n            defer {\n                try? FileManager.default.removeItem(at: pipePath)\n            }\n\n            let content = \"\"\"\n                FOO=bar\n                BAR=baz\n                \"\"\"\n\n            let group = DispatchGroup()\n\n            group.enter()\n            DispatchQueue.global().async {\n                do {\n                    let handle = try FileHandle(forWritingTo: pipePath)\n                    try handle.write(contentsOf: Data(content.utf8))\n                    try handle.close()\n                } catch {\n                    Issue.record(error)\n                    return\n                }\n\n                group.leave()\n            }\n\n            try doLongRun(name: name, args: [\"--env-file\", pipePath.path()])\n            defer {\n                try? doStop(name: name)\n            }\n\n            group.wait()\n\n            let inspectResult = try inspectContainer(name)\n            let expected = [\n                \"FOO=bar\",\n                \"BAR=baz\",\n            ]\n\n            for item in expected {\n                #expect(\n                    inspectResult.configuration.initProcess.environment.contains(item),\n                    \"expected environment variable \\(item) not found\"\n                )\n            }\n            try doStop(name: name)\n        } catch {\n            Issue.record(error)\n        }"
+          "body": {
+            "content": "do {\n            let name = getTestName()\n            let pipePath = FileManager.default.temporaryDirectory.appendingPathComponent(\"envfile-pipe\\(UUID().uuidString)\")\n\n            // create pipe\n            let result = mkfifo(pipePath.path(), 0o600)\n            guard result == 0 else {\n                Issue.record(\"failed to create named pipe: \\(String(cString: strerror(errno)))\")\n                return\n            }\n\n            defer {\n                try? FileManager.default.removeItem(at: pipePath)\n            }\n\n            let content = \"\"\"\n                FOO=bar\n                BAR=baz\n                \"\"\"\n\n            let group = DispatchGroup()\n\n            group.enter()\n            DispatchQueue.global().async {\n                do {\n                    let handle = try FileHandle(forWritingTo: pipePath)\n                    try handle.write(contentsOf: Data(content.utf8))\n                    try handle.close()\n                } catch {\n                    Issue.record(error)\n                    return\n                }\n\n                group.leave()\n            }\n\n            try doLongRun(name: name, args: [\"--env-file\", pipePath.path()])\n            defer {\n                try? doStop(name: name)\n            }\n\n            group.wait()\n\n            let inspectResult = try inspectContainer(name)\n            let expected = [\n                \"FOO=bar\",\n                \"BAR=baz\",\n            ]\n\n            for item in expected {\n                #expect(\n                    inspectResult.configuration.initProcess.environment.contains(item),\n                    \"expected environment variable \\(item) not found\"\n                )\n            }\n            try doStop(name: name)\n        } catch {\n            Issue.record(error)\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 35915,
-              "start_position" : 34068
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 35915,
+              "start_position": 34068,
+              "start_line": 843,
+              "end_line": 905
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testRunCommandEnvFileFromNamedPipe",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testRunCommandEnvFileFromNamedPipe",
+          "parameters": [],
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "do {\n            let name = getTestName()\n            try doLongRun(name: name, args: [\"--read-only\"])\n            defer {\n                try? doStop(name: name)\n            }\n            // Attempt to touch a file on the read-only rootfs should fail\n            #expect(throws: (any Error).self) {\n                try doExec(name: name, cmd: [\"touch\", \"/testfile\"])\n            }\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
+          "body": {
+            "content": "do {\n            let name = getTestName()\n            try doLongRun(name: name, args: [\"--read-only\"])\n            defer {\n                try? doStop(name: name)\n            }\n            // Attempt to touch a file on the read-only rootfs should fail\n            #expect(throws: (any Error).self) {\n                try doExec(name: name, cmd: [\"touch\", \"/testfile\"])\n            }\n        } catch {\n            Issue.record(\"failed to run container \\(error)\")\n            return\n        }"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 36469,
-              "start_position" : 35915
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 36469,
+              "start_position": 35915,
+              "start_line": 905,
+              "end_line": 922
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testRunCommandReadOnly",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testRunCommandReadOnly",
+          "parameters": [],
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
-
-          ],
-          "body" : {
-            "content" : "let config = try getSystemConfig()\n        return config.dns.domain"
+          "attributes": [],
+          "body": {
+            "content": "let config = try getSystemConfig()\n        return config.dns.domain"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 36600,
-              "start_position" : 36469
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 36600,
+              "start_position": 36469,
+              "start_line": 922,
+              "end_line": 927
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "getDefaultDomain",
-          "parameters" : [
-
-          ],
-          "return_clause" : {
-            "data_type" : {
-              "is_optional" : true,
-              "name" : "String?"
+          "modifiers": [],
+          "name": "getDefaultDomain",
+          "parameters": [],
+          "return_clause": {
+            "data_type": {
+              "is_optional": true,
+              "name": "String?"
             },
-            "description" : "-> String?"
+            "description": "-> String?"
           },
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         },
         {
-          "attributes" : [
+          "attributes": [
             {
-              "annotation" : {
-                "unsupported" : {
-                  "_0" : "Test"
+              "annotation": {
+                "unsupported": {
+                  "_0": "Test"
                 }
               },
-              "arguments" : [
-
-              ]
+              "arguments": []
             }
           ],
-          "body" : {
-            "content" : "try #require(geteuid() != 0)\n\n        let name = getTestName()\n        let privilegedPort = 80\n        let (_, _, error, status) = try run(arguments: [\n            \"run\",\n            \"--name\", name,\n            \"--publish\", \"127.0.0.1:\\(privilegedPort):80\",\n            alpine,\n        ])\n        defer {\n            try? doRemove(name: name, force: true)\n        }\n        #expect(status != 0, \"Command should have failed\")\n        #expect(\n            error.contains(\"Permission denied while binding to host port \\(privilegedPort)\"),\n            \"Error message should mention permission denied for the port. Got: \\(error)\"\n        )\n        #expect(\n            error.contains(\"root privileges\"),\n            \"Error message should mention root privileges requirement. Got: \\(error)\"\n        )"
+          "body": {
+            "content": "try #require(geteuid() != 0)\n\n        let name = getTestName()\n        let privilegedPort = 80\n        let (_, _, error, status) = try run(arguments: [\n            \"run\",\n            \"--name\", name,\n            \"--publish\", \"127.0.0.1:\\(privilegedPort):80\",\n            alpine,\n        ])\n        defer {\n            try? doRemove(name: name, force: true)\n        }\n        #expect(status != 0, \"Command should have failed\")\n        #expect(\n            error.contains(\"Permission denied while binding to host port \\(privilegedPort)\"),\n            \"Error message should mention permission denied for the port. Got: \\(error)\"\n        )\n        #expect(\n            error.contains(\"root privileges\"),\n            \"Error message should mention root privileges requirement. Got: \\(error)\"\n        )"
           },
-          "location_info" : {
-            "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-            "location" : {
-              "end_position" : 37460,
-              "start_position" : 36600
+          "location_info": {
+            "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+            "location": {
+              "end_position": 37460,
+              "start_position": 36600,
+              "start_line": 927,
+              "end_line": 952
             }
           },
-          "modifiers" : [
-
-          ],
-          "name" : "testPrivilegedPortError",
-          "parameters" : [
-
-          ],
-          "specifiers_decl" : {
-            "description" : "throws",
-            "throws_specifier" : "throws"
+          "modifiers": [],
+          "name": "testPrivilegedPortError",
+          "parameters": [],
+          "specifiers_decl": {
+            "description": "throws",
+            "throws_specifier": "throws"
           }
         }
       ],
-      "initializers" : [
-
-      ],
-      "location_info" : {
-        "file_path" : "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
-        "location" : {
-          "end_position" : 37462,
-          "start_position" : 23699
+      "initializers": [],
+      "location_info": {
+        "file_path": "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift",
+        "location": {
+          "end_position": 37462,
+          "start_position": 23699,
+          "start_line": 595,
+          "end_line": 953
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "TestCLIRunCommand3",
-      "protocols" : [
-
-      ],
-      "structs" : [
-
-      ],
-      "subscripts" : [
-
-      ],
-      "type_aliases" : [
-
-      ],
-      "variables" : [
-
-      ]
+      "modifiers": [],
+      "name": "TestCLIRunCommand3",
+      "protocols": [],
+      "structs": [],
+      "subscripts": [],
+      "type_aliases": [],
+      "variables": []
     },
-    "type" : "Remove class refactoring"
+    "type": "Remove class refactoring"
   },
-  "refactoringIndex" : 29,
-  "refactoringType" : "Remove class refactoring",
-  "repoID" : "apple-container",
-  "repoName" : "apple/container",
-  "repoURL" : "https://github.com/apple/container.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 29,
+  "refactoringType": "Remove class refactoring",
+  "repoID": "apple-container",
+  "repoName": "apple/container",
+  "repoURL": "https://github.com/apple/container.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/CLITests/Subcommands/Run/TestCLIRunCommand.swift"
   ]
 }

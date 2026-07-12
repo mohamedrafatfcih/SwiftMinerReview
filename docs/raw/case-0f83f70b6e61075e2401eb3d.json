@@ -1,123 +1,107 @@
 {
-  "caseID" : "case-0f83f70b6e61075e2401eb3d",
-  "commitHash" : "9a0e640817719b1d23939f1a304bb42938b85b22",
-  "commitMessage" : "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
-  "commitURL" : "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
-  "durationSeconds" : 52.782080054283142,
-  "entityNames" : [
+  "caseID": "case-0f83f70b6e61075e2401eb3d",
+  "commitHash": "9a0e640817719b1d23939f1a304bb42938b85b22",
+  "commitMessage": "Stabilize CI And Fix Bugs (#4030)\n\n### Goals :soccer:\nAlamofire has long had many tests which pass 100% of the time locally,\nbut occasionally fail in CI. This PR fixes those tests, and the\nunderlying issues uncovered, through a combination of manual and\ntool-assisted analysis over many, many CI runs.\n\n### Implementation Details :construction:\nSome of these fixes are actually adoptions of existing testing patterns\nbut most address timing issues in Alamofire itself.\n\n- `AuthenticationInterceptor` has been refactored to track more state\nand ensure requests are only retried once.\n- 🔥 There is a bit of a behavior change here.\n`AuthenticationInterceptor` will allow more requests to fail and wait\nfor retry rather than holding them at the request adaptation step. This\nensures they fully rerun their request pipeline to pick up the latest\nadaptations. Unfortunately, it wasn't possible to do this when held for\nadaptation.\n- `Request.suspend()` and `Request.cancel()` could be ineffective if\ncalled at narrow points within the `Request` lifecycle. These updates\nare now more atomic.\n- `Request.cancel()` (and overrides) could call `Request.finish()` when\nthe request was already completed, leading to duplicate lifecycle\nevents.\n- `Request.resume()` could create extra `URLSessionTask`s if called at\nnarrow points in the lifecycle.\n- Similarly, rapid `Request.resume()` to `Request.suspend()` and back\ncalls could lead a request performing multiple times.\n- `Request` could create multiple tasks during narrow points in its\nlifetime.\n- `Session.deinit` is now thread-safe. Unfortunately this required yet\nanother lock, but should ensure it operates safely from any thread.\n- `Session.deinit` was internally racy, which could lead to duplicate\n`Request.finish()` calls. It now allows the `Session` to shut down while\nit finishes the requests separately in the `SessionDelegate`.\n- `Request` task updates were moved to the `Request` itself, to ensure\nthey're always atomic relative to external state updates like `cancel()`\nor `resume()`.\n- `Request.onHTTPResponse`'s `.cancel` disposition didn't call the full\n`Request.cancel()`, which could lead to different behavior, like\n`EventMonitor` callbacks.\n- Most `unowned self` usage has been removed.\n- `DataStreamRequest`'s `outputStream` could have `write` called after\n`close()`, this is now properly checked.\n- `MIMEType` checking would improperly match invalid types like `text`\nto `text/plain`, this has been addressed and this parsing and matching\nare now specifically tested.\n- `DownloadRequest` now properly checks `!isCancelled` before attempting\nretry.\n- `DataTask` and `DownloadTask` didn't properly handle `cancel()` before\ncreating their task. `Task.isCancelled` is now checked immediately after\ncreation to ensure cancellation.\n\nMany test implementations have been updated:\n- All tests now use a unique `stored(Session())`, where possible. This\nensures they never share state.\n- More data is used for upload and download requests tracking progress,\nbut it may not be enough. Tests are so fast, and progress reporting\nisn't guaranteed, so the test may never be 100% reliable.\n- Separate stream setup from `async let`. Since `async let` can make\nsync work async, which means the stream setup races with the request\nitself.\n- Fixed the `URLProtocol` tests with correct event ordering.\n- Various tests were changed structurally to eliminate races. \n\n### Testing Details :mag:\n\nMany tests updated and added.",
+  "commitURL": "https://github.com/Alamofire/Alamofire/commit/9a0e640817719b1d23939f1a304bb42938b85b22",
+  "durationSeconds": 52.78208005428314,
+  "entityNames": [
     "(isTaskMapEmpty, isActiveRequestsEmpty)",
     "testThatSessionCallsRequestRetrierWhenDownloadInitiallyEncountersAdaptError"
   ],
-  "rawRefactoring" : {
-    "category" : "basic",
-    "current_content" : {
-      "accessors" : [
-
-      ],
-      "attributes" : [
-
-      ],
-      "initializer_clause" : {
-        "has_self_reference" : false,
-        "value" : {
-          "function_call" : {
-            "_0" : {
-              "additional_trailing_closures" : [
-
-              ],
-              "arguments" : [
-
-              ],
-              "call" : "read",
-              "has_self_reference" : false,
-              "internal_inline_calls" : [
-
-              ],
-              "location_info" : {
-                "file_path" : "Tests/SessionTests.swift",
-                "location" : {
-                  "end_position" : 38109,
-                  "start_position" : 37997
+  "rawRefactoring": {
+    "category": "basic",
+    "current_content": {
+      "accessors": [],
+      "attributes": [],
+      "initializer_clause": {
+        "has_self_reference": false,
+        "value": {
+          "function_call": {
+            "_0": {
+              "additional_trailing_closures": [],
+              "arguments": [],
+              "call": "read",
+              "has_self_reference": false,
+              "internal_inline_calls": [],
+              "location_info": {
+                "file_path": "Tests/SessionTests.swift",
+                "location": {
+                  "end_position": 38109,
+                  "start_position": 37997,
+                  "start_line": 1009,
+                  "end_line": 1011
                 }
               },
-              "trailing_closure" : {
-                "attributes" : [
-
-                ],
-                "body" : {
-                  "content" : "($0.requestTaskMap.isEmpty, $0.activeRequests.isEmpty)"
+              "trailing_closure": {
+                "attributes": [],
+                "body": {
+                  "content": "($0.requestTaskMap.isEmpty, $0.activeRequests.isEmpty)"
                 },
-                "captures" : [
-
-                ],
-                "location_info" : {
-                  "file_path" : "Tests/SessionTests.swift",
-                  "location" : {
-                    "end_position" : 38109,
-                    "start_position" : 38023
+                "captures": [],
+                "location_info": {
+                  "file_path": "Tests/SessionTests.swift",
+                  "location": {
+                    "end_position": 38109,
+                    "start_position": 38023,
+                    "start_line": 1009,
+                    "end_line": 1011
                   }
                 },
-                "parameters" : [
-
-                ]
+                "parameters": []
               }
             }
           }
         }
       },
-      "is_constant" : true,
-      "location_info" : {
-        "file_path" : "Tests/SessionTests.swift",
-        "location" : {
-          "end_position" : 38109,
-          "start_position" : 37955
+      "is_constant": true,
+      "location_info": {
+        "file_path": "Tests/SessionTests.swift",
+        "location": {
+          "end_position": 38109,
+          "start_position": 37955,
+          "start_line": 1009,
+          "end_line": 1011
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "(isTaskMapEmpty, isActiveRequestsEmpty)"
+      "modifiers": [],
+      "name": "(isTaskMapEmpty, isActiveRequestsEmpty)"
     },
-    "parent" : {
-      "attributes" : [
+    "parent": {
+      "attributes": [
         {
-          "annotation" : {
-            "unsupported" : {
-              "_0" : "MainActor"
+          "annotation": {
+            "unsupported": {
+              "_0": "MainActor"
             }
           },
-          "arguments" : [
-
-          ]
+          "arguments": []
         }
       ],
-      "body" : {
-        "content" : "let handler = RequestHandler(adaptedCount: 1, throwsErrorOnSecondAdapt: true, shouldApplyAuthorizationHeader: true)\n\n        let session = Session()\n\n        let expectation = expectation(description: \"request should eventually fail\")\n        var response: DownloadResponse<TestResponse, AFError>?\n\n        let destination: DownloadRequest.Destination = { _, _ in\n            let fileURL = self.testDirectoryURL.appendingPathComponent(\"test-output.json\")\n            return (fileURL, [.removePreviousFile])\n        }\n\n        // When\n        session.download(.basicAuth(), interceptor: handler, to: destination)\n            .validate()\n            .responseDecodable(of: TestResponse.self) { jsonResponse in\n                response = jsonResponse\n                expectation.fulfill()\n            }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(handler.adaptCalledCount, 2)\n        XCTAssertEqual(handler.adaptedCount, 2)\n        XCTAssertEqual(handler.retryCalledCount, 1)\n        XCTAssertEqual(handler.retryCount, 1)\n        XCTAssertEqual(response?.result.isSuccess, true)\n        assert(on: session.rootQueue) {\n            let (isTaskMapEmpty, isActiveRequestsEmpty) = session.mutableState.read {\n                ($0.requestTaskMap.isEmpty, $0.activeRequests.isEmpty)\n            }\n            XCTAssertTrue(isTaskMapEmpty)\n            XCTAssertTrue(isActiveRequestsEmpty)\n        }"
+      "body": {
+        "content": "let handler = RequestHandler(adaptedCount: 1, throwsErrorOnSecondAdapt: true, shouldApplyAuthorizationHeader: true)\n\n        let session = Session()\n\n        let expectation = expectation(description: \"request should eventually fail\")\n        var response: DownloadResponse<TestResponse, AFError>?\n\n        let destination: DownloadRequest.Destination = { _, _ in\n            let fileURL = self.testDirectoryURL.appendingPathComponent(\"test-output.json\")\n            return (fileURL, [.removePreviousFile])\n        }\n\n        // When\n        session.download(.basicAuth(), interceptor: handler, to: destination)\n            .validate()\n            .responseDecodable(of: TestResponse.self) { jsonResponse in\n                response = jsonResponse\n                expectation.fulfill()\n            }\n\n        waitForExpectations(timeout: timeout)\n\n        // Then\n        XCTAssertEqual(handler.adaptCalledCount, 2)\n        XCTAssertEqual(handler.adaptedCount, 2)\n        XCTAssertEqual(handler.retryCalledCount, 1)\n        XCTAssertEqual(handler.retryCount, 1)\n        XCTAssertEqual(response?.result.isSuccess, true)\n        assert(on: session.rootQueue) {\n            let (isTaskMapEmpty, isActiveRequestsEmpty) = session.mutableState.read {\n                ($0.requestTaskMap.isEmpty, $0.activeRequests.isEmpty)\n            }\n            XCTAssertTrue(isTaskMapEmpty)\n            XCTAssertTrue(isActiveRequestsEmpty)\n        }"
       },
-      "location_info" : {
-        "file_path" : "Tests/SessionTests.swift",
-        "location" : {
-          "end_position" : 38216,
-          "start_position" : 36649
+      "location_info": {
+        "file_path": "Tests/SessionTests.swift",
+        "location": {
+          "end_position": 38216,
+          "start_position": 36649,
+          "start_line": 975,
+          "end_line": 1015
         }
       },
-      "modifiers" : [
-
-      ],
-      "name" : "testThatSessionCallsRequestRetrierWhenDownloadInitiallyEncountersAdaptError",
-      "parameters" : [
-
-      ]
+      "modifiers": [],
+      "name": "testThatSessionCallsRequestRetrierWhenDownloadInitiallyEncountersAdaptError",
+      "parameters": []
     },
-    "type" : "Add variable refactoring"
+    "type": "Add variable refactoring"
   },
-  "refactoringIndex" : 581,
-  "refactoringType" : "Add variable refactoring",
-  "repoID" : "alamofire-alamofire",
-  "repoName" : "Alamofire/Alamofire",
-  "repoURL" : "https://github.com/Alamofire/Alamofire.git",
-  "runID" : "app-batch",
-  "swiftPaths" : [
+  "refactoringIndex": 581,
+  "refactoringType": "Add variable refactoring",
+  "repoID": "alamofire-alamofire",
+  "repoName": "Alamofire/Alamofire",
+  "repoURL": "https://github.com/Alamofire/Alamofire.git",
+  "runID": "app-batch",
+  "swiftPaths": [
     "Tests/SessionTests.swift"
   ]
 }
