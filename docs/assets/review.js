@@ -272,6 +272,17 @@
       return typeGroups.flatMap(group => group.types.map(typeEntry => typeEntry.name));
     }
 
+    function selectDefaultTypes() {
+      for (const group of typeGroups) {
+        for (const typeEntry of group.types) {
+          if (group.category === "Swift" || group.category === "Complex"
+              || (group.category === "Basic" && typeEntry.name.toLowerCase().includes("replace"))) {
+            selectedTypes.add(typeEntry.name);
+          }
+        }
+      }
+    }
+
     function typeMatchesSearch(typeName, category, query) {
       if (!query) return true;
       const text = `${typeName} ${category}`.toLowerCase();
@@ -374,6 +385,7 @@
       visibleCount.textContent = allCases.length.toLocaleString();
       populateSelect(repo, [...new Set(allCases.map(reviewCase => reviewCase.repoName))].sort((left, right) => left.localeCompare(right)));
       buildTypeGroups();
+      selectDefaultTypes();
       updateTypePicker();
 
       search.addEventListener("input", () => {
