@@ -950,6 +950,66 @@
     return cleaned ? JSON.stringify(cleaned, null, 2) : "";
   }
 
+  function configureVisualization(reviewCase) {
+    const button = document.getElementById("visualize-button");
+    const dialog = document.getElementById("visualization-dialog");
+    const frame = document.getElementById("visualization-frame");
+    const loading = document.getElementById("visualization-loading");
+    const error = document.getElementById("visualization-error");
+    const close = document.getElementById("visualization-close");
+    const reference = reviewCase.visualization;
+    if (!button || !dialog || !frame || !reference
+        || typeof reference.path !== "string"
+        || !Number.isInteger(reference.refactoringID)
+        || reference.refactoringID < 1
+        || reference.path.startsWith("/")
+        || reference.path.includes("..")) return;
+
+    const url = new URL(reference.path, location.href);
+    if (url.origin !== location.origin) return;
+    url.searchParams.set("refactoring", String(reference.refactoringID));
+    button.disabled = false;
+    button.textContent = "Visualize refactoring";
+    document.getElementById("visualization-title").textContent = detectorType(reviewCase);
+    let started = false;
+    let timeout;
+
+    const showError = () => {
+      loading.hidden = true;
+      frame.hidden = true;
+      error.hidden = false;
+      error.textContent = "Unable to load this refactoring visualization.";
+    };
+    const onReady = event => {
+      if (event.source !== frame.contentWindow || event.data?.type !== "swiftminer-visualization-ready") return;
+      clearTimeout(timeout);
+      loading.hidden = true;
+      error.hidden = true;
+      frame.hidden = false;
+    };
+    window.addEventListener("message", onReady);
+
+    button.addEventListener("click", () => {
+      dialog.showModal();
+      if (started) return;
+      started = true;
+      loading.hidden = false;
+      error.hidden = true;
+      frame.src = url.href;
+      timeout = setTimeout(showError, 20_000);
+    });
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      dialog.close();
+    });
+    dialog.addEventListener("click", event => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("close", () => button.focus());
+  }
+
 
 
 
@@ -965,7 +1025,7 @@
       return;
     }
     try {
-      const response = await fetch("raw/" + encodeURIComponent(caseID) + ".json?v=2", { cache: "no-store" });
+      const response = await fetch("raw/" + encodeURIComponent(caseID) + ".json?v=3", { cache: "no-store" });
       if (!response.ok) throw new Error("Detection not found.");
       const reviewCase = await response.json();
       document.title = detectorType(reviewCase) + " · SwiftMiner Review";
@@ -974,6 +1034,7 @@
       renderDetectionSummary(reviewCase);
       renderInterpretationHighlights(reviewCase);
       renderDetectorDetails(reviewCase.rawRefactoring || {});
+      configureVisualization(reviewCase);
       const metadata = document.getElementById("case-metadata");
       addMetadata(metadata, "Repository", reviewCase.repoName || reviewCase.repoID, reviewCase.repoURL);
       addMetadata(metadata, "Commit", reviewCase.commitHash, reviewCase.commitURL);
