@@ -3,6 +3,17 @@
   const themeStorageKey = "swiftminer.theme";
   const params = new URLSearchParams(location.search);
 
+  async function fetchDeflated(path, options) {
+    const response = await fetch(path, options);
+    if (!response.ok || !response.body) throw new Error(`Unable to load ${path}.`);
+    if (!("DecompressionStream" in window)) throw new Error("This browser cannot open compressed review data.");
+    return new Response(response.body.pipeThrough(new DecompressionStream("deflate")));
+  }
+
+  async function fetchDeflatedJSON(path, options) {
+    return (await fetchDeflated(path, options)).json();
+  }
+
   function initializeTheme() {
     const saved = localStorage.getItem(themeStorageKey);
     const theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -55,8 +66,9 @@
     localStorage.setItem(reviewStorageKey, JSON.stringify(reviews));
   }
 
-  function caseURL(caseID, runID) {
+  function caseURL(caseID, runID, rawPath) {
     const query = new URLSearchParams({ case_id: caseID, reviewer_id: reviewer, run_id: runID || "", review_key: reviewer + "--" + caseID });
+    if (rawPath) query.set("raw_path", rawPath);
     return "case.html?" + query;
   }
 
@@ -198,8 +210,9 @@
 
     function rowHTML(reviewCase) {
       const reviewed = Boolean(reviews[reviewCase.caseID]);
-      const reviewHref = escapeHTML(caseURL(reviewCase.caseID, reviewCase.runID));
-      const rawHref = `raw/${encodeURIComponent(reviewCase.caseID)}.json`;
+      const rawPath = reviewCase.rawPath || `raw/${encodeURIComponent(reviewCase.caseID)}.json`;
+      const reviewHref = escapeHTML(caseURL(reviewCase.caseID, reviewCase.runID, rawPath));
+      const rawHref = escapeHTML(rawPath);
       const commitHref = commitURL(reviewCase);
       const shortCommit = escapeHTML((reviewCase.commitHash || "").slice(0, 12));
       const repository = escapeHTML(reviewCase.repoName);
@@ -214,7 +227,7 @@
   <td data-column="type" data-label="Type"><span class="badge badge--accent">${typeLabel}</span></td>
   <td data-column="paths" data-label="Swift paths">${multilineHTML(reviewCase.swiftPathsText)}</td>
   <td data-column="status" data-label="My status"><span class="status-badge${statusClass}" data-review-status>${statusLabel}</span></td>
-  <td data-column="raw" data-label="Actions"><div class="table-actions"><a data-case-link href="${reviewHref}">Review</a><a href="${escapeHTML(rawHref)}">JSON</a></div></td>
+  <td data-column="raw" data-label="Actions"><div class="table-actions"><a data-case-link href="${reviewHref}">Review</a><a href="${rawHref}" download>Data</a></div></td>
 </tr>`;
     }
 
@@ -364,9 +377,14 @@
     pageIndicator.textContent = "Loading…";
 
     try {
-      const response = await fetch("cases-index.json?v=1");
-      if (!response.ok) throw new Error("Unable to load detections.");
-      const loadedCases = await response.json();
+      let loadedCases;
+      try {
+        loadedCases = await fetchDeflatedJSON("cases-index.json.deflate?v=2");
+      } catch {
+        const response = await fetch("cases-index.json?v=1");
+        if (!response.ok) throw new Error("Unable to load detections.");
+        loadedCases = await response.json();
+      }
       allCases = loadedCases.map(reviewCase => ({
         ...reviewCase,
         searchText: [
@@ -700,22 +718,41 @@
     return side === "old" ? reviewCase.beforeSource : reviewCase.afterSource;
   }
 
-  function locationLineInfo(location, evidence) {
+  function visualizationAnchor(reviewCase, side, location) {
+    const expectedSide = side === "old" ? "before" : "after";
+    const candidates = (reviewCase.visualization?.anchors || []).filter(anchor =>
+      anchor.side === expectedSide && anchor.startLine != null
+    );
+    if (!candidates.length) return null;
+    const normalize = path => String(path || "").replaceAll("\\", "/").replace(/^\.\//, "");
+    const requested = normalize(location?.filePath);
+    const matching = requested ? candidates.filter(anchor => {
+      const path = normalize(anchor.path);
+      return path === requested || path.endsWith("/" + requested) || requested.endsWith("/" + path);
+    }) : candidates;
+    return (matching.length ? matching : candidates).sort((left, right) =>
+      ((left.endLine ?? left.startLine) - left.startLine)
+        - ((right.endLine ?? right.startLine) - right.startLine)
+    )[0];
+  }
+
+  function locationLineInfo(location, evidence, anchor) {
     const sameFile = !location?.filePath || !evidence?.filePath || location.filePath === evidence.filePath;
-    const start = location?.startLine ?? (sameFile ? evidence?.focusedStartLine : null);
-    const end = location?.endLine ?? (sameFile ? evidence?.focusedEndLine : null);
+    const start = anchor?.startLine ?? (sameFile ? evidence?.focusedStartLine : null) ?? location?.startLine;
+    const end = anchor?.endLine ?? (sameFile ? evidence?.focusedEndLine : null) ?? location?.endLine;
     return { start, end };
   }
 
-  function locationFields(location, evidence) {
-    const filePath = location?.filePath || evidence?.filePath || "";
-    const lines = locationLineInfo(location, evidence);
+  function locationFields(location, evidence, reviewCase, side) {
+    const anchor = visualizationAnchor(reviewCase, side, location);
+    const filePath = location?.filePath || evidence?.filePath || anchor?.path || "";
+    const lines = locationLineInfo(location, evidence, anchor);
     if (!filePath && lines.start == null && lines.end == null) return null;
     return { filePath, startLine: lines.start, endLine: lines.end };
   }
 
-  function addLocationValue(container, label, location, evidence) {
-    const fields = locationFields(location, evidence);
+  function addLocationValue(container, label, location, evidence, reviewCase, side) {
+    const fields = locationFields(location, evidence, reviewCase, side);
     if (!fields) return false;
     addDetectionValue(container, label === "Location" ? "File path" : `${label} file path`, fields.filePath || "Not available");
     addDetectionValue(container, "Start line", fields.startLine ?? "Not available");
@@ -723,9 +760,9 @@
     return true;
   }
 
-  function addLocationChange(container, label, before, after, beforeEvidence, afterEvidence) {
-    const oldFields = locationFields(before, beforeEvidence);
-    const newFields = locationFields(after, afterEvidence);
+  function addLocationChange(container, label, before, after, beforeEvidence, afterEvidence, reviewCase) {
+    const oldFields = locationFields(before, beforeEvidence, reviewCase, "old");
+    const newFields = locationFields(after, afterEvidence, reviewCase, "current");
     if (!oldFields && !newFields) return false;
     const formatter = value => value == null || value === "" ? "Not available" : String(value);
     addDetectionChange(container, label === "Location" ? "File path" : `${label} file path`, oldFields?.filePath, newFields?.filePath, formatter);
@@ -807,10 +844,11 @@
           firstLocation(moveLocationSources(raw, "old")),
           firstLocation(moveLocationSources(raw, "current")),
           sourceEvidence(reviewCase, "old"),
-          sourceEvidence(reviewCase, "current")
+          sourceEvidence(reviewCase, "current"),
+          reviewCase
         ) || rendered;
       } else {
-        rendered = addLocationValue(fields, "Location", findLocationInfo(extracted) || firstLocation([parent]), sourceEvidence(reviewCase, "current")) || rendered;
+        rendered = addLocationValue(fields, "Location", findLocationInfo(extracted) || firstLocation([parent]), sourceEvidence(reviewCase, "current"), reviewCase, "current") || rendered;
       }
     } else if (typeHasWord(type, "move")) {
       rendered = addLocationChange(
@@ -819,17 +857,18 @@
         firstLocation(moveLocationSources(raw, "old")),
         firstLocation(moveLocationSources(raw, "current")),
         sourceEvidence(reviewCase, "old"),
-        sourceEvidence(reviewCase, "current")
+        sourceEvidence(reviewCase, "current"),
+        reviewCase
       ) || rendered;
     } else {
       const oldValue = firstHighlightValue(raw, "old", spec.paths);
       const currentValue = firstHighlightValue(raw, "current", spec.paths);
       if (action === "add") {
         rendered = addHighlightValue(fields, "Added", currentValue) || rendered;
-        rendered = addLocationValue(fields, "Location", firstLocation(locationSources(raw, "current")), sourceEvidence(reviewCase, "current")) || rendered;
+        rendered = addLocationValue(fields, "Location", firstLocation(locationSources(raw, "current")), sourceEvidence(reviewCase, "current"), reviewCase, "current") || rendered;
       } else if (action === "remove") {
         rendered = addHighlightValue(fields, "Removed", oldValue) || rendered;
-        rendered = addLocationValue(fields, "Location", firstLocation(locationSources(raw, "old")), sourceEvidence(reviewCase, "old")) || rendered;
+        rendered = addLocationValue(fields, "Location", firstLocation(locationSources(raw, "old")), sourceEvidence(reviewCase, "old"), reviewCase, "old") || rendered;
       } else {
         if (compactHighlightText(oldValue) || compactHighlightText(currentValue)) {
           addDetectionChange(fields, spec.label, oldValue, currentValue, compactHighlightText);
@@ -841,7 +880,8 @@
           firstLocation(locationSources(raw, "old")),
           firstLocation(locationSources(raw, "current")),
           sourceEvidence(reviewCase, "old"),
-          sourceEvidence(reviewCase, "current")
+          sourceEvidence(reviewCase, "current"),
+          reviewCase
         ) || rendered;
       }
     }
@@ -967,7 +1007,9 @@
 
     const url = new URL(reference.path, location.href);
     if (url.origin !== location.origin) return;
-    url.searchParams.set("refactoring", String(reference.refactoringID));
+    if (Number.isInteger(reference.artifactVersion)) {
+      url.searchParams.set("v", String(reference.artifactVersion));
+    }
     button.disabled = false;
     button.textContent = "Visualize refactoring";
     document.getElementById("visualization-title").textContent = detectorType(reviewCase);
@@ -989,14 +1031,31 @@
     };
     window.addEventListener("message", onReady);
 
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       dialog.showModal();
       if (started) return;
       started = true;
       loading.hidden = false;
       error.hidden = true;
-      frame.src = url.href;
       timeout = setTimeout(showError, 20_000);
+      try {
+        if (reference.path.endsWith(".deflate")) {
+          const html = await (await fetchDeflated(url.href, { cache: "no-store" })).text();
+          const selectedHTML = html
+            .replace('<html lang="en">', `<html lang="en" data-refactoring="${reference.refactoringID}">`)
+            .replace(
+              "new URLSearchParams(location.search).get('refactoring')",
+              JSON.stringify(String(reference.refactoringID))
+            );
+          frame.srcdoc = selectedHTML;
+        } else {
+          url.searchParams.set("refactoring", String(reference.refactoringID));
+          frame.src = url.href;
+        }
+      } catch {
+        clearTimeout(timeout);
+        showError();
+      }
     });
     close.addEventListener("click", () => dialog.close());
     dialog.addEventListener("keydown", event => {
@@ -1025,9 +1084,28 @@
       return;
     }
     try {
-      const response = await fetch("raw/" + encodeURIComponent(caseID) + ".json?v=3", { cache: "no-store" });
-      if (!response.ok) throw new Error("Detection not found.");
-      const reviewCase = await response.json();
+      let rawPath = params.get("raw_path") || "";
+      if (!rawPath) {
+        try {
+          const paths = await fetchDeflatedJSON("case-files.json.deflate?v=1");
+          rawPath = paths[caseID] || "";
+        } catch {}
+      }
+      if (!rawPath) rawPath = "raw/" + encodeURIComponent(caseID) + ".json";
+      if (rawPath.startsWith("/") || rawPath.includes("..")) throw new Error("Invalid detection path.");
+      const rawURL = new URL(rawPath, location.href);
+      if (rawURL.origin !== location.origin) throw new Error("Invalid detection path.");
+      let reviewCase;
+      if (rawPath.endsWith(".deflate")) {
+        rawURL.searchParams.set("v", "1");
+        const bundle = await fetchDeflatedJSON(rawURL.href, { cache: "no-store" });
+        reviewCase = bundle[caseID];
+      } else {
+        rawURL.searchParams.set("v", "3");
+        const response = await fetch(rawURL.href, { cache: "no-store" });
+        if (response.ok) reviewCase = await response.json();
+      }
+      if (!reviewCase) throw new Error("Detection not found.");
       document.title = detectorType(reviewCase) + " · SwiftMiner Review";
       document.getElementById("case-id").textContent = reviewCase.caseID;
       document.getElementById("case-type").textContent = detectorType(reviewCase);
