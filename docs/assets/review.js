@@ -1,4 +1,6 @@
 (() => {
+  const config = window.SWIFTMINER_REVIEW_CONFIG || {};
+  const studyID = config.studyID || "pilot";
   const reviewerStorageKey = "swiftminer.reviewer_id";
   const themeStorageKey = "swiftminer.theme";
   const params = new URLSearchParams(location.search);
@@ -52,8 +54,8 @@
 
   initializeTheme();
   const reviewer = reviewerID();
-  const reviewStorageKey = "swiftminer.reviews." + reviewer;
-  const profileStorageKey = "swiftminer.profile_complete." + reviewer;
+  const reviewStorageKey = `swiftminer.reviews.${studyID}.${reviewer}`;
+  const profileStorageKey = `swiftminer.profile_complete.${studyID}.${reviewer}`;
 
   function storedReviews() {
     try { return JSON.parse(localStorage.getItem(reviewStorageKey) || "{}"); }
@@ -67,7 +69,7 @@
   }
 
   function caseURL(caseID, runID, rawPath) {
-    const query = new URLSearchParams({ case_id: caseID, reviewer_id: reviewer, run_id: runID || "", review_key: reviewer + "--" + caseID });
+    const query = new URLSearchParams({ case_id: caseID, reviewer_id: reviewer, run_id: runID || "", study_id: studyID, review_key: studyID + "--" + reviewer + "--" + caseID });
     if (rawPath) query.set("raw_path", rawPath);
     return "case.html?" + query;
   }
@@ -129,7 +131,7 @@
     const start = document.getElementById("start-reviewing");
     if (!start) return;
     start.href = "cases.html?reviewer_id=" + encodeURIComponent(reviewer);
-    const profileFormID = window.SWIFTMINER_REVIEW_CONFIG?.tallyProfileFormID || "";
+    const profileFormID = config.tallyProfileFormID || "";
     const profileConfigured = profileFormID && !profileFormID.includes("FORM_ID");
     if (!profileConfigured || localStorage.getItem(profileStorageKey) === "true") return;
     start.addEventListener("click", event => {
@@ -142,7 +144,7 @@
       window.Tally.openPopup(profileFormID, {
         layout: "modal",
         width: 640,
-        hiddenFields: { reviewer_id: reviewer },
+        hiddenFields: { reviewer_id: reviewer, study_id: studyID },
         onSubmit: () => {
           localStorage.setItem(profileStorageKey, "true");
           location.href = start.href;
@@ -1134,7 +1136,7 @@
         savedReview.hidden = false;
         document.getElementById("my-review-json").firstElementChild.textContent = JSON.stringify(previous.answers || {}, null, 2);
       }
-      const formID = window.SWIFTMINER_REVIEW_CONFIG?.tallyJudgmentFormID || "";
+      const formID = config.tallyJudgmentFormID || "";
       if (!formID || formID.includes("FORM_ID")) {
         button.disabled = true;
         status.textContent = "Tally form ID has not been configured yet.";
@@ -1148,7 +1150,11 @@
               case_id: caseID,
               reviewer_id: reviewer,
               run_id: reviewCase.runID,
-              review_key: reviewer + "--" + caseID,
+              study_id: studyID,
+              refactoring_category: reviewCase.rawRefactoring?.category || "",
+              refactoring_type: detectorType(reviewCase),
+              repository_id: reviewCase.repoID || "",
+              review_key: studyID + "--" + reviewer + "--" + caseID,
               revision_of: storedReviews()[caseID]?.submissionID || ""
             },
             onSubmit: payload => {

@@ -9,7 +9,7 @@ Visit the [SwiftMiner Expert Review website](https://mohamedrafatfcih.github.io/
 
 1. Open the detections catalogue and choose any case.
 2. Compare its highlighted before and after source evidence.
-3. Submit your judgment through the review form.
+3. Answer Yes or No through the review form. A No answer requires an explanation and the expected correction, if any.
 
 Review any number of detections, in any order, at any time. You may leave,
 return later, and revise an earlier judgment.
